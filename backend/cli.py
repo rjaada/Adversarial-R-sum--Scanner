@@ -3,11 +3,15 @@
 Adversarial source scanner CLI.
 
 Loads a JSON fixture, resolves relative timestamps, runs the pure scanner,
-and prints a human-readable summary or raw JSON.
+and prints a human-readable summary or raw JSON. Optionally exports results
+to JSON or Markdown files.
 
 Usage:
     python cli.py --fixture fixtures/sample_clean.json
     python cli.py --fixture fixtures/sample_quarantine.json --json
+    python cli.py --fixture fixtures/sample_quarantine.json --out-json report.json
+    python cli.py --fixture fixtures/sample_quarantine.json --out-md report.md
+    python cli.py --fixture fixtures/sample_watch.json --out-json out.json --out-md out.md
 """
 
 import argparse
@@ -61,12 +65,11 @@ def _resolve_fixture(raw: dict) -> dict:
 
 def _print_summary(result: dict) -> None:
     level = result["risk_level"]
-    badge = {"CLEAN": "CLEAN", "WATCH": "WATCH", "SUSPECT": "SUSPECT", "QUARANTINE": "QUARANTINE"}.get(level, level)
     sigs = ", ".join(result["active_signatures"]) or "none"
 
     print(f"\n{'=' * 52}")
     print(f"  Source:      {result['source_id']}")
-    print(f"  Risk level:  {badge}")
+    print(f"  Risk level:  {level}")
     print(f"  Risk score:  {result['adversarial_risk_score']:.4f}")
     print(f"  Signatures:  {sigs}")
     if result.get("note"):
@@ -84,6 +87,45 @@ def _print_summary(result: dict) -> None:
     print()
 
 
+def _build_markdown_report(result: dict) -> str:
+    """Pure function — builds a Markdown report string from a scanner result dict."""
+    scanned_at = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    lines: list[str] = []
+
+    lines += [
+        "# Adversarial Source Scan Report",
+        "",
+        f"**Source:** {result['source_id']}  ",
+        f"**Scanned at:** {scanned_at}  ",
+        f"**Risk level:** {result['risk_level']}  ",
+        f"**Risk score:** {result['adversarial_risk_score']:.4f}  ",
+    ]
+
+    if result.get("note"):
+        lines += [f"**Note:** {result['note']}  "]
+
+    lines += [""]
+
+    active = result["active_signatures"]
+    if active:
+        lines += ["## Active Signatures", ""]
+        for sig in active:
+            lines.append(f"- {sig}")
+        lines += ["", "## Signature Details", ""]
+        details = result.get("signature_details", {})
+        for sig in active:
+            vals = details.get(sig, {})
+            lines.append(f"### {sig}")
+            lines.append("")
+            for k, v in vals.items():
+                lines.append(f"- **{k}:** {v}")
+            lines.append("")
+    else:
+        lines += ["## Active Signatures", "", "No adversarial signatures detected.", ""]
+
+    return "\n".join(lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run the adversarial source scanner against a JSON fixture."
@@ -97,7 +139,17 @@ def main() -> None:
     parser.add_argument(
         "--json",
         action="store_true",
-        help="Output raw JSON instead of the human-readable summary.",
+        help="Print raw JSON result to stdout.",
+    )
+    parser.add_argument(
+        "--out-json",
+        metavar="PATH",
+        help="Write full scanner result as JSON to this file.",
+    )
+    parser.add_argument(
+        "--out-md",
+        metavar="PATH",
+        help="Write a Markdown scan report to this file.",
     )
     args = parser.parse_args()
 
@@ -119,11 +171,21 @@ def main() -> None:
         prior_injection_detected=resolved["prior_injection_detected"],
     )
 
+    # stdout output — --json replaces human summary, both are independent of file exports
     if args.json:
         json.dump(result, sys.stdout, indent=2)
         print()
     else:
         _print_summary(result)
+
+    # file exports — additive, independent of stdout mode
+    if args.out_json:
+        Path(args.out_json).write_text(json.dumps(result, indent=2))
+        print(f"JSON report written: {args.out_json}", file=sys.stderr)
+
+    if args.out_md:
+        Path(args.out_md).write_text(_build_markdown_report(result))
+        print(f"Markdown report written: {args.out_md}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 CLI and fixture tests — no subprocess, no DB required.
 
 Tests that _resolve_fixture() produces correct scanner inputs and that
-each fixture produces the expected risk level.
+each fixture produces the expected risk level. Also tests JSON/Markdown export.
 """
 
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from adversarial_scanner import scan_source_for_adversarial_signatures
-from cli import _resolve_fixture
+from cli import _build_markdown_report, _resolve_fixture
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -77,3 +77,72 @@ def test_quarantine_fixture_is_quarantine():
     assert "HIGH_IMPACT_INJECTION" in result["active_signatures"]
     assert "CORROBORATION_DESERT" in result["active_signatures"]
     assert result["adversarial_risk_score"] == pytest.approx(0.80)
+
+
+# ---------------------------------------------------------------------------
+# Report export — JSON
+# ---------------------------------------------------------------------------
+
+
+def test_out_json_writes_valid_json(tmp_path):
+    result = _run_fixture("sample_quarantine.json")
+    out = tmp_path / "report.json"
+    out.write_text(json.dumps(result, indent=2))
+
+    loaded = json.loads(out.read_text())
+    assert loaded["source_id"] == result["source_id"]
+    assert loaded["risk_level"] == "QUARANTINE"
+    assert loaded["adversarial_risk_score"] == pytest.approx(0.80)
+    assert "active_signatures" in loaded
+
+
+def test_out_json_contains_signature_details(tmp_path):
+    result = _run_fixture("sample_quarantine.json")
+    out = tmp_path / "report.json"
+    out.write_text(json.dumps(result, indent=2))
+
+    loaded = json.loads(out.read_text())
+    assert "signature_details" in loaded
+    assert "TRUST_PUMPING" in loaded["signature_details"]
+
+
+# ---------------------------------------------------------------------------
+# Report export — Markdown
+# ---------------------------------------------------------------------------
+
+
+def test_build_markdown_report_contains_source_id():
+    result = _run_fixture("sample_quarantine.json")
+    md = _build_markdown_report(result)
+    assert result["source_id"] in md
+
+
+def test_build_markdown_report_contains_risk_level():
+    result = _run_fixture("sample_quarantine.json")
+    md = _build_markdown_report(result)
+    assert "QUARANTINE" in md
+
+
+def test_build_markdown_report_lists_active_signatures():
+    result = _run_fixture("sample_quarantine.json")
+    md = _build_markdown_report(result)
+    for sig in result["active_signatures"]:
+        assert sig in md
+
+
+def test_build_markdown_report_clean_says_no_signatures():
+    result = _run_fixture("sample_clean.json")
+    md = _build_markdown_report(result)
+    assert "No adversarial signatures detected" in md
+
+
+def test_build_markdown_report_writes_to_file(tmp_path):
+    result = _run_fixture("sample_watch.json")
+    md = _build_markdown_report(result)
+    out = tmp_path / "report.md"
+    out.write_text(md)
+
+    content = out.read_text()
+    assert "# Adversarial Source Scan Report" in content
+    assert result["source_id"] in content
+    assert "WATCH" in content

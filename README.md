@@ -43,6 +43,11 @@ cd backend
 python cli.py --fixture fixtures/sample_clean.json
 python cli.py --fixture fixtures/sample_quarantine.json
 python cli.py --fixture fixtures/sample_watch.json --json
+
+# Export to file (additive — stdout summary still prints)
+python cli.py --fixture fixtures/sample_quarantine.json --out-json report.json
+python cli.py --fixture fixtures/sample_quarantine.json --out-md report.md
+python cli.py --fixture fixtures/sample_quarantine.json --out-json report.json --out-md report.md
 ```
 
 Example output:
@@ -64,7 +69,7 @@ Three fixtures are included: `sample_clean.json`, `sample_watch.json`, `sample_q
 cd backend && pytest test_adversarial_scanner.py test_cli.py -v
 ```
 
-Expected: **39 passed**.
+Expected: **46 passed**.
 
 ## Run integration tests (requires Postgres)
 
