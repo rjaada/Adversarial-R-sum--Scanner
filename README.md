@@ -69,7 +69,7 @@ Three fixtures are included: `sample_clean.json`, `sample_watch.json`, `sample_q
 cd backend && pytest test_adversarial_scanner.py test_cli.py -v
 ```
 
-Expected: **46 passed**.
+Expected: **50 passed**.
 
 ## Run integration tests (requires Postgres)
 
