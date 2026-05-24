@@ -143,9 +143,9 @@ export default function WorkspacePage() {
   const isMock = result === null
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/scans")
+    fetch("http://localhost:8001/api/scans")
       .then((r) => r.json())
-      .then((data: ScanSummary[]) => setHistory(data))
+      .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
       .catch(() => {})
   }, [])
 
@@ -158,7 +158,7 @@ export default function WorkspacePage() {
       const form = new FormData()
       form.append("file", file)
       form.append("jd_text", jdText)
-      const res = await fetch("http://localhost:8000/api/scan", { method: "POST", body: form })
+      const res = await fetch("http://localhost:8001/api/scan", { method: "POST", body: form })
       if (!res.ok) {
         const msg = await res.text()
         throw new Error(msg || "HTTP " + String(res.status))
@@ -179,7 +179,7 @@ export default function WorkspacePage() {
 
   async function loadScan(scanId: string) {
     try {
-      const res = await fetch("http://localhost:8000/api/scans/" + scanId)
+      const res = await fetch("http://localhost:8001/api/scans/" + scanId)
       if (res.ok) {
         setResult(await res.json() as ScanResult)
         setSelectedIssue(null)
