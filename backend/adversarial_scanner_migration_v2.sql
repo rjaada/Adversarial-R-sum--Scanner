@@ -17,6 +17,17 @@ ALTER TABLE source_trust_history
 ALTER TABLE source_trust_history
     DROP CONSTRAINT IF EXISTS source_trust_history_source_id_snapshot_time_key;
 
+-- Deduplicate rows within the same hour before adding the new unique constraint.
+-- Frequent scans produce many rows per hour; keep the latest per (source_id, hour).
+-- Safe to re-run: deletes nothing if already deduplicated.
+DELETE FROM source_trust_history
+WHERE id NOT IN (
+    SELECT DISTINCT ON (source_id, date_trunc('hour', snapshot_time))
+        id
+    FROM source_trust_history
+    ORDER BY source_id, date_trunc('hour', snapshot_time), snapshot_time DESC
+);
+
 -- Add hourly unique constraint (idempotent).
 DO $$
 BEGIN
