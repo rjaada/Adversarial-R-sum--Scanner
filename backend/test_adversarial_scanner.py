@@ -205,7 +205,7 @@ def test_corroboration_desert_skipped_when_few_high():
 def test_narrative_isolation_detected():
     history = [_snap(0.70, 10), _snap(0.75, 0.1)]
     events = (
-        [_event("Protests::Peaceful protest", float(h)) for h in range(13)]
+        [_event("Protests::Peaceful protest", float(h)) for h in range(14)]  # 14 + 1 Battles = 15 >= MIN
         + [_event("Battles", 10.0)]
     )
     clusters = [{"members": ["src_iso"], "propagation_count": 0}]
@@ -230,11 +230,12 @@ def test_narrative_isolation_not_triggered_low_trust():
 
 
 def test_dormancy_triggers_from_prior_injection_flag():
-    # prior_injection_detected=True passed in; no current-scan injection needed
+    # prior_injection_detected=True passed in; no current-scan injection needed.
+    # All events must be >72h ago so _hours_since_last_event exceeds the threshold.
     history = _base_history(0.60, 0.65)
     events = (
-        [_event("Protests::Peaceful protest", float(h)) for h in range(5, 20)]
-        + [_event("Battles", 80.0, event_id="evt_old_high")]  # last event 80h ago
+        [_event("Protests::Peaceful protest", float(h + 73)) for h in range(15)]  # 73-87h ago
+        + [_event("Battles", 80.0, event_id="evt_old_high")]  # 80h ago — all >72h
     )
     result = _scan("src_dorm", history, events, prior_injection=True)
     assert "POST_INJECTION_DORMANCY" in result["active_signatures"]

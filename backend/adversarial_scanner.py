@@ -11,9 +11,10 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import asyncpg
+if TYPE_CHECKING:
+    import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -255,9 +256,11 @@ async def adversarial_resume_scan(
     Hook into update_source_reliability(). Runs scanner, persists trust
     snapshot, writes alert if needed, auto-quarantines on QUARANTINE level.
     """
+    import asyncpg as _asyncpg  # noqa: PLC0415 — deferred so module loads without asyncpg installed
+
     own_conn = conn is None
     if own_conn:
-        conn = await asyncpg.connect(database_url)
+        conn = await _asyncpg.connect(database_url)
 
     try:
         trust_history = await _load_trust_history(conn, source_id, days=30)
