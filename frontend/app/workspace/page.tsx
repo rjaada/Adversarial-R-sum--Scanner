@@ -32,25 +32,29 @@ interface ScanResult {
   matched_keywords: string[]
 }
 
+const MOCK_ATS = [
+  "Jane Smith",
+  "jane@email.com | linkedin.com/in/janesmith",
+  "",
+  "Software Engineer with 5 years of experience building distributed systems.",
+  "",
+  "EXPERIENCE",
+  "Senior Software Engineer - Acme Corp (2021-2024)",
+  "- Responsible for migration of monolith to microservices",
+  "- Helped reduce infrastructure costs",
+  "- Worked on CI/CD improvements",
+  "",
+  "SKILLS",
+  "Python, JavaScript, Docker, PostgreSQL",
+  "",
+  "EDUCATION",
+  "B.S. Computer Science - State University, 2019",
+].join("\n")
+
 const MOCK: ScanResult = {
   scan_id: "mock-001",
   source_id: "sample_resume.pdf",
-  ats_text_preview: `Jane Smith
-jane@email.com | linkedin.com/in/janesmith
-
-Software Engineer with 5 years of experience building distributed systems.
-
-EXPERIENCE
-Senior Software Engineer - Acme Corp (2021-2024)
-- Responsible for migration of monolith to microservices
-- Helped reduce infrastructure costs
-- Worked on CI/CD improvements
-
-SKILLS
-Python, JavaScript, Docker, PostgreSQL
-
-EDUCATION
-B.S. Computer Science - State University, 2019`,
+  ats_text_preview: MOCK_ATS,
   scores: {
     overall: 0.52,
     keyword_match: 0.38,
@@ -75,7 +79,7 @@ B.S. Computer Science - State University, 2019`,
       title: "Most bullets lack measurable impact",
       description: "4 of 4 experience bullets have no numbers or percentages.",
       source_excerpt: "- Responsible for migration of monolith to microservices",
-      suggested_fix: "Add metrics: Migrated monolith to 12 microservices, reducing p99 latency by 35%",
+      suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
       impact_score: 3.2,
     },
     {
@@ -83,7 +87,7 @@ B.S. Computer Science - State University, 2019`,
       severity: "medium",
       title: "Weak verb: responsible for",
       description: "Passive phrasing reduces impact score in LLM screeners.",
-      source_excerpt: "...Responsible for migration of monolith to microservices...",
+      source_excerpt: "...Responsible for migration of monolith...",
       suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
       impact_score: 1.6,
     },
@@ -142,9 +146,9 @@ export default function WorkspacePage() {
       const res = await fetch("http://localhost:8000/api/scan", { method: "POST", body: form })
       if (!res.ok) {
         const msg = await res.text()
-        throw new Error(msg || "HTTP " + res.status)
+        throw new Error(msg || "HTTP " + String(res.status))
       }
-      setResult(await res.json())
+      setResult(await res.json() as ScanResult)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Scan failed")
     } finally {
@@ -160,6 +164,7 @@ export default function WorkspacePage() {
 
   return (
     <div style={{ background: "#f6f3ee", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+
       <nav style={{ borderBottom: "1px solid #d9d3ca", padding: "0 1.5rem", height: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fbfaf7", flexShrink: 0 }}>
         <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", textDecoration: "none" }}>
           TraceRank
@@ -222,7 +227,9 @@ export default function WorkspacePage() {
           </button>
 
           <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "1rem" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>Scan History</div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
+              Scan History
+            </div>
             <div style={{ fontSize: "0.78rem", color: "#a0998e" }}>No saved scans yet.</div>
           </div>
         </div>
@@ -230,9 +237,11 @@ export default function WorkspacePage() {
         <div style={{ flex: 1, padding: "1.5rem", overflowY: "auto", borderRight: "1px solid #d9d3ca" }}>
           <div style={{ maxWidth: "640px" }}>
             <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>What ATS sees</span>
+              <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
+                What ATS sees
+              </span>
               {isMock && (
-                <span style={{ fontSize: "0.65rem", color: "#9a4d22", padding: "0.15rem 0.5rem", borderRadius: "1px", border: "1px solid #d9d3ca" }}>
+                <span style={{ fontSize: "0.65rem", color: "#9a4d22", padding: "0.15rem 0.5rem", border: "1px solid #d9d3ca", borderRadius: "1px" }}>
                   sample
                 </span>
               )}
@@ -244,8 +253,11 @@ export default function WorkspacePage() {
         </div>
 
         <div style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+
           <div style={{ padding: "1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>Scores</div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
+              Scores
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
               {[
                 { label: "Overall", value: display.scores.overall, span: true },
@@ -256,16 +268,16 @@ export default function WorkspacePage() {
                 { label: "Impact", value: display.scores.quantified_impact, span: false },
               ].map((s) => {
                 const p = pct(s.value)
-                const color = scoreColor(p)
+                const c = scoreColor(p)
                 return (
                   <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
                     <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>{s.label}</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color }}>{p}</span>
+                      <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color: c }}>{p}</span>
                       <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>/100</span>
                     </div>
                     <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem" }}>
-                      <div style={{ height: "2px", width: p + "%", background: color, borderRadius: "1px" }} />
+                      <div style={{ height: "2px", width: p + "%", background: c, borderRadius: "1px" }} />
                     </div>
                   </div>
                 )
@@ -274,13 +286,15 @@ export default function WorkspacePage() {
           </div>
 
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>Keywords</div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
+              Keywords
+            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
               {display.matched_keywords.map((k) => (
                 <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{k}</span>
               ))}
               {display.missing_keywords.map((k) => (
-                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{"x " + k}</span>
+                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{"miss: " + k}</span>
               ))}
             </div>
           </div>
@@ -305,7 +319,7 @@ export default function WorkspacePage() {
                     {selectedIssue === i && (
                       <div style={{ marginTop: "0.75rem", padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", fontSize: "0.76rem", color: "#1f1d1a" }}>
                         <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Suggested fix</div>
-                        {issue.suggested_fix}
+                        <div>{issue.suggested_fix}</div>
                         {issue.source_excerpt && (
                           <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
                             {issue.source_excerpt}
@@ -318,8 +332,8 @@ export default function WorkspacePage() {
               </div>
             ))}
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   )
