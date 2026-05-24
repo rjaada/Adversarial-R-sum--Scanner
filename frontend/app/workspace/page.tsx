@@ -42,6 +42,13 @@ interface ScanSummary {
   overall_score: number
 }
 
+interface RewriteResponse {
+  variants: string[]
+  available: boolean
+  model: string
+  error: string
+}
+
 const MOCK_ATS = [
   "Jane Smith",
   "jane@email.com | linkedin.com/in/janesmith",
@@ -152,6 +159,8 @@ export default function WorkspacePage() {
   const [file, setFile] = useState<File | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
   const [history, setHistory] = useState<ScanSummary[]>([])
+  const [rewriteVariants, setRewriteVariants] = useState<Record<number, string[]>>({})
+  const [rewriteLoading, setRewriteLoading] = useState<Record<number, boolean>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const display = result ?? MOCK
@@ -200,6 +209,37 @@ export default function WorkspacePage() {
         setSelectedIssue(null)
       }
     } catch (_) {}
+  }
+
+  async function handleGenerateRewrites(issueIndex: number, issue: Issue) {
+    setRewriteLoading((prev) => ({ ...prev, [issueIndex]: true }))
+    try {
+      const res = await fetch("http://localhost:8001/api/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issue_type: issue.issue_type,
+          original_text: issue.source_excerpt || issue.rewrite_starter || "",
+          evidence: issue.evidence || "",
+          fix_pattern: issue.fix_pattern || "",
+          rewrite_starter: issue.rewrite_starter || "",
+          jd_keywords: display.matched_keywords.slice(0, 8),
+          count: 3,
+        }),
+      })
+      const data = await res.json() as RewriteResponse
+      if (!data.available) {
+        setRewriteVariants((prev) => ({ ...prev, [issueIndex]: ["LLM not configured — set LLM_ENDPOINT in backend .env"] }))
+      } else if (data.variants.length > 0) {
+        setRewriteVariants((prev) => ({ ...prev, [issueIndex]: data.variants }))
+      } else {
+        setRewriteVariants((prev) => ({ ...prev, [issueIndex]: [data.error || "Generation returned no output."] }))
+      }
+    } catch {
+      setRewriteVariants((prev) => ({ ...prev, [issueIndex]: ["Could not reach backend."] }))
+    } finally {
+      setRewriteLoading((prev) => ({ ...prev, [issueIndex]: false }))
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -407,6 +447,37 @@ export default function WorkspacePage() {
                           <div style={{ marginTop: "0.5rem", padding: "0.6rem 0.75rem", background: "#f0f7f5", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
                             <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Rewrite starter</div>
                             <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#1f1d1a", lineHeight: 1.6 }}>{issue.rewrite_starter}</div>
+                          </div>
+                        )}
+                        {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
+                          <div style={{ marginTop: "0.6rem" }}>
+                            {!rewriteVariants[i] && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); void handleGenerateRewrites(i, issue) }}
+                                disabled={rewriteLoading[i]}
+                                style={{ fontSize: "0.7rem", padding: "0.3rem 0.75rem", background: "transparent", border: "1px solid #0f5c52", color: "#0f5c52", borderRadius: "2px", cursor: rewriteLoading[i] ? "default" : "pointer", opacity: rewriteLoading[i] ? 0.6 : 1 }}
+                              >
+                                {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
+                              </button>
+                            )}
+                            {rewriteVariants[i] && rewriteVariants[i].length > 0 && (
+                              <div style={{ marginTop: "0.4rem" }}>
+                                <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6f6b64", fontWeight: 600, marginBottom: "0.4rem" }}>
+                                  AI-assisted rewrites
+                                </div>
+                                {rewriteVariants[i].map((v, vi) => (
+                                  <div key={vi} style={{ padding: "0.45rem 0.65rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", marginBottom: "0.3rem", fontFamily: "monospace", fontSize: "0.74rem", color: "#1f1d1a", lineHeight: 1.6 }}>
+                                    {v}
+                                  </div>
+                                ))}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setRewriteVariants((prev) => { const n = {...prev}; delete n[i]; return n }) }}
+                                  style={{ fontSize: "0.65rem", color: "#a0998e", background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0" }}
+                                >
+                                  clear
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

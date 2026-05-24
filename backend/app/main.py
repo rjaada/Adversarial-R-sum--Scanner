@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_pool, close_pool
-from app.routes import scan
+from app.routes import scan, rewrite
 
 
 @asynccontextmanager
@@ -24,3 +24,4 @@ app.add_middleware(
 )
 
 app.include_router(scan.router, prefix="/api")
+app.include_router(rewrite.router, prefix="/api")

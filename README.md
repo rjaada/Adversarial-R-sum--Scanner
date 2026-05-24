@@ -73,6 +73,31 @@ psql tracerank < backend/schema.sql
 export DATABASE_URL=postgresql://localhost/tracerank
 ```
 
+### Local LLM (optional)
+
+Enables the "Generate AI rewrites" button in the findings pane. Works with any OpenAI-compatible local server.
+
+**With Ollama (recommended):**
+```bash
+# Install: https://ollama.com
+ollama pull llama3
+ollama serve   # starts on http://localhost:11434
+```
+
+**With llama.cpp:**
+```bash
+./server -m your-model.gguf --port 8080
+# LLM_ENDPOINT=http://localhost:8080
+```
+
+Then set env vars before starting the backend:
+```bash
+export LLM_ENDPOINT=http://localhost:11434
+export LLM_MODEL=llama3
+```
+
+Without `LLM_ENDPOINT` the button is not rendered. The deterministic analysis pipeline always runs regardless.
+
 ### Tests
 ```bash
 cd backend && python3 -m pytest tests/ -v

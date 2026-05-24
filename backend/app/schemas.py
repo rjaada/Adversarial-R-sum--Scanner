@@ -36,6 +36,23 @@ class ScanSummary(BaseModel):
     overall_score: float
 
 
+class RewriteRequest(BaseModel):
+    issue_type: str
+    original_text: str
+    evidence: str = ""
+    fix_pattern: str = ""
+    rewrite_starter: str = ""
+    jd_keywords: list[str] = []
+    count: int = 3
+
+
+class RewriteResponse(BaseModel):
+    variants: list[str]
+    available: bool
+    model: str = ""
+    error: str = ""
+
+
 class ScanResult(BaseModel):
     scan_id: str
     source_id: str
