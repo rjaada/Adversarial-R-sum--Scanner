@@ -262,7 +262,9 @@ def test_alert_upsert_stores_reliability_score():
             # Column stores reliability
             assert abs(row["trust_score_at_alert"] - reliability_score) < 1e-6
 
-            payload = json.loads(row["payload_json"])
+            # asyncpg may return JSONB already decoded or as a string depending on codec config.
+            raw = row["payload_json"]
+            payload = raw if isinstance(raw, dict) else json.loads(raw)
             # Payload trust_score_at_alert = reliability
             assert abs(payload["trust_score_at_alert"] - reliability_score) < 1e-6
             # Payload adversarial_risk_score = composite risk score, distinct

@@ -480,23 +480,34 @@ async def _quarantine_source(
     source_id: str,
     source_label: str,
 ) -> None:
-    """Demote reliability to 0.10. Caller must exclude source from SITREP generation."""
+    """
+    Integration hook — demotes source reliability in the host system's sources table.
+
+    This function is intentionally left as a template. The standalone repo schema
+    does not define a `sources` table. In a full pipeline integration, adapt the
+    UPDATE below to match your sources table schema before deploying.
+
+    Until wired up, QUARANTINE risk level is still written to adversarial_source_alerts
+    and logged as a warning — analyst review can act on that without this write path.
+    """
     logger.warning(
-        "QUARANTINE: source %s (%s) demoted to reliability 0.10",
+        "QUARANTINE: source %s (%s) — update sources table to demote reliability. "
+        "Implement _quarantine_source() for your schema before enabling.",
         source_id,
         source_label,
     )
-    await conn.execute(
-        """
-        UPDATE sources
-        SET reliability_score = 0.10,
-            quarantined = TRUE,
-            quarantined_at = NOW(),
-            quarantine_reason = 'adversarial_scanner_auto'
-        WHERE source_id = $1
-        """,
-        source_id,
-    )
+    # Adapt column names to your sources table before enabling.
+    # await conn.execute(
+    #     """
+    #     UPDATE sources
+    #     SET reliability_score = 0.10,
+    #         quarantined = TRUE,
+    #         quarantined_at = NOW(),
+    #         quarantine_reason = 'adversarial_scanner_auto'
+    #     WHERE source_id = $1
+    #     """,
+    #     source_id,
+    # )
 
 
 # ---------------------------------------------------------------------------

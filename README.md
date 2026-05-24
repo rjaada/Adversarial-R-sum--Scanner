@@ -39,7 +39,7 @@ cp .env.example .env
 ## Run unit tests (no DB required)
 
 ```bash
-pytest backend/test_adversarial_scanner.py -v
+cd backend && pytest test_adversarial_scanner.py -v
 ```
 
 Expected: **30 passed**.
@@ -55,8 +55,8 @@ psql $DATABASE_URL -f backend/adversarial_scanner_schema.sql
 Then run:
 
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost:5432/dbname \
-  pytest backend/test_db_integration.py -m integration -v
+cd backend && DATABASE_URL=postgresql://user:pass@localhost:5432/dbname \
+  pytest test_db_integration.py -m integration -v
 ```
 
 Tests cover: hourly snapshot upsert + dedupe, prior injection lookup (including resolved-alert handling), alert row correctness (`trust_score_at_alert` = source reliability, not composite risk score).
@@ -76,7 +76,7 @@ If upgrading from the original schema (which used raw `snapshot_time` as the ded
 psql $DATABASE_URL -f backend/adversarial_scanner_migration_v2.sql
 ```
 
-The migration is fully idempotent and safe to re-run. It deduplicates rows within the same hour (keeping the latest per source) before adding the new unique constraint.
+The migration is safe to re-run on pre-v2 installs (those where `snapshot_time` still exists as the dedup column). It deduplicates rows within the same hour (keeping the latest per source) before adding the new unique constraint. It assumes the old `snapshot_time` column is present; do not run on a fresh v2 install.
 
 ## Integration point
 
