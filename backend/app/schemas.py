@@ -26,6 +26,13 @@ class Scores(BaseModel):
     quantified_impact: float
 
 
+class ScanSummary(BaseModel):
+    scan_id: str
+    source_id: str
+    scanned_at: str
+    overall_score: float
+
+
 class ScanResult(BaseModel):
     scan_id: str
     source_id: str

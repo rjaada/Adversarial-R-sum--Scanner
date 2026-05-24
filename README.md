@@ -14,16 +14,19 @@ Analyzes résumés against automated hiring systems and shows where machine scre
 
 ```
 backend/
+  schema.sql                   # Postgres schema (run once to init)
   app/
-    main.py                    # FastAPI app, CORS
+    main.py                    # FastAPI app, CORS, lifespan pool init
     schemas.py                 # Pydantic models
-    routes/scan.py             # POST /api/scan
+    db.py                      # asyncpg pool (None when DATABASE_URL unset)
+    routes/scan.py             # POST /api/scan, GET /api/scans, GET /api/scans/{id}
     services/
       extract_resume.py        # PDF/DOCX text extraction, ATS preview
       parse_sections.py        # Section header heuristics
       jd_requirements.py       # JD keyword + years-of-experience extraction
       scoring.py               # 5-dimension explainable scorer
       rewrite_suggestions.py   # Deterministic issue ranker
+      persistence.py           # save_scan / get_recent_scans / get_scan_by_id
   tests/test_services.py       # Unit tests (no DB, no file I/O)
 
 frontend/
@@ -54,6 +57,22 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
+### Database (optional)
+
+Without `DATABASE_URL` the scanner runs stateless — scans are not saved and history is not shown.
+
+To enable persistence:
+```bash
+# 1. Create a Postgres database
+createdb tracerank
+
+# 2. Apply the schema
+psql tracerank < backend/schema.sql
+
+# 3. Set the env var before starting the backend
+export DATABASE_URL=postgresql://localhost/tracerank
+```
+
 ### Tests
 ```bash
 cd backend && python3 -m pytest tests/ -v
@@ -71,7 +90,7 @@ Off-white paper surface, graphite text, one deep accent (#0f5c52). No gradient b
 ## Current limitations
 - Keyword matching is lexical — multi-word phrases ("machine learning") match only if they appear verbatim in the JD token set
 - Section parser uses exact header matching; headers embedded mid-paragraph or in all-caps are not detected
-- No Postgres persistence yet — scan history is not saved between sessions
+- Scan history requires `DATABASE_URL`; without it the app runs stateless
 - No auth, billing, or multi-user support
 - No LLM rewrite suggestions — all analysis is deterministic heuristics
 - Backend API URL is hardcoded to `localhost:8000` in the frontend fetch call

@@ -1,11 +1,15 @@
 import uuid
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from app.schemas import ScanResult
+
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+
+from app.db import get_pool
+from app.schemas import ScanResult, ScanSummary
 from app.services.extract_resume import extract_resume_text
-from app.services.parse_sections import parse_resume_sections
 from app.services.jd_requirements import extract_jd_requirements
-from app.services.scoring import compute_scores
+from app.services.parse_sections import parse_resume_sections
+from app.services.persistence import get_recent_scans, get_scan_by_id, save_scan
 from app.services.rewrite_suggestions import generate_fix_suggestions
+from app.services.scoring import compute_scores
 
 router = APIRouter()
 
@@ -28,7 +32,7 @@ async def scan_resume(
     scores = compute_scores(sections, jd_reqs, extracted["parse_integrity"])
     issues = generate_fix_suggestions(sections, jd_reqs)
 
-    return ScanResult(
+    result = ScanResult(
         scan_id=str(uuid.uuid4()),
         source_id=file.filename,
         ats_text_preview=extracted["ats_preview"],
@@ -39,3 +43,28 @@ async def scan_resume(
         missing_keywords=jd_reqs.get("missing_from_resume", []),
         matched_keywords=jd_reqs.get("matched_keywords", []),
     )
+
+    pool = get_pool()
+    if pool is not None:
+        await save_scan(pool, result)
+
+    return result
+
+
+@router.get("/scans", response_model=list[ScanSummary])
+async def list_scans():
+    pool = get_pool()
+    if pool is None:
+        return []
+    return await get_recent_scans(pool)
+
+
+@router.get("/scans/{scan_id}", response_model=ScanResult)
+async def fetch_scan(scan_id: str):
+    pool = get_pool()
+    if pool is None:
+        raise HTTPException(503, "Database not configured")
+    result = await get_scan_by_id(pool, scan_id)
+    if result is None:
+        raise HTTPException(404, "Scan not found")
+    return result

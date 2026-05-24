@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 
 interface Issue {
@@ -30,6 +30,13 @@ interface ScanResult {
   issues: Issue[]
   missing_keywords: string[]
   matched_keywords: string[]
+}
+
+interface ScanSummary {
+  scan_id: string
+  source_id: string
+  scanned_at: string
+  overall_score: number
 }
 
 const MOCK_ATS = [
@@ -129,10 +136,18 @@ export default function WorkspacePage() {
   const [jdText, setJdText] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
+  const [history, setHistory] = useState<ScanSummary[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const display = result ?? MOCK
   const isMock = result === null
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/scans")
+      .then((r) => r.json())
+      .then((data: ScanSummary[]) => setHistory(data))
+      .catch(() => {})
+  }, [])
 
   async function handleScan() {
     if (!file) { setError("Upload a resume first."); return }
@@ -148,12 +163,28 @@ export default function WorkspacePage() {
         const msg = await res.text()
         throw new Error(msg || "HTTP " + String(res.status))
       }
-      setResult(await res.json() as ScanResult)
+      const data = await res.json() as ScanResult
+      setResult(data)
+      setSelectedIssue(null)
+      setHistory((prev) => [
+        { scan_id: data.scan_id, source_id: data.source_id, scanned_at: new Date().toISOString(), overall_score: data.scores.overall },
+        ...prev.filter((h) => h.scan_id !== data.scan_id),
+      ])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Scan failed")
     } finally {
       setScanning(false)
     }
+  }
+
+  async function loadScan(scanId: string) {
+    try {
+      const res = await fetch("http://localhost:8000/api/scans/" + scanId)
+      if (res.ok) {
+        setResult(await res.json() as ScanResult)
+        setSelectedIssue(null)
+      }
+    } catch (_) {}
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -208,7 +239,7 @@ export default function WorkspacePage() {
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               placeholder="Paste the full job description here"
-              style={{ flex: 1, minHeight: "180px", resize: "vertical", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "0.75rem", fontSize: "0.8rem", fontFamily: "Inter, system-ui, sans-serif", color: "#1f1d1a", background: "#f6f3ee", outline: "none" }}
+              style={{ flex: 1, minHeight: "160px", resize: "vertical", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "0.75rem", fontSize: "0.8rem", fontFamily: "Inter, system-ui, sans-serif", color: "#1f1d1a", background: "#f6f3ee", outline: "none" }}
             />
           </div>
 
@@ -230,7 +261,32 @@ export default function WorkspacePage() {
             <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
               Scan History
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#a0998e" }}>No saved scans yet.</div>
+            {history.length === 0 ? (
+              <div style={{ fontSize: "0.78rem", color: "#a0998e" }}>No saved scans yet.</div>
+            ) : (
+              history.map((h) => {
+                const p = pct(h.overall_score)
+                return (
+                  <div
+                    key={h.scan_id}
+                    onClick={() => loadScan(h.scan_id)}
+                    style={{ padding: "0.5rem 0", borderBottom: "1px solid #d9d3ca", cursor: "pointer" }}
+                  >
+                    <div style={{ fontSize: "0.78rem", color: "#1f1d1a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {h.source_id}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.2rem" }}>
+                      <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>
+                        {new Date(h.scanned_at).toLocaleDateString()}
+                      </span>
+                      <span style={{ fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600, color: scoreColor(p) }}>
+                        {p}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
 
