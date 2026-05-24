@@ -172,3 +172,12 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# TraceRank
+frontend/.next/
+frontend/node_modules/
+backend/.venv/
+*.pyc
+__pycache__/
+.env
+pytest-of-*/
