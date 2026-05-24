@@ -181,3 +181,4 @@ backend/.venv/
 __pycache__/
 .env
 pytest-of-*/
+node-jiti/
