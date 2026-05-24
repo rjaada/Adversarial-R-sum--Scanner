@@ -21,11 +21,13 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
+# Top-level ACLED event families — matched against top-level only (before "::").
 HIGH_IMPACT_FAMILIES = frozenset(
     ["Battles", "Explosions/Remote violence", "Violence against civilians"]
 )
 
-LOW_IMPACT_FAMILIES = frozenset(
+# Exact ACLED subtype strings for low-impact classification.
+LOW_IMPACT_EVENT_TYPES = frozenset(
     [
         "Strategic developments::Agreement",
         "Protests::Peaceful protest",
@@ -41,7 +43,7 @@ SIGNATURE_WEIGHTS: dict[str, float] = {
     "POST_INJECTION_DORMANCY": 0.05,
 }
 
-# Risk thresholds
+# Risk thresholds — TRUST_PUMPING alone (0.25) is below WATCH (0.35) → CLEAN.
 WATCH_THRESHOLD = 0.35
 SUSPECT_THRESHOLD = 0.60
 QUARANTINE_THRESHOLD = 0.80
@@ -58,9 +60,10 @@ MIN_HIGH_IMPACT_FOR_CORR_SPLIT = 3
 
 def scan_source_for_adversarial_signatures(
     source_id: str,
-    trust_history: list[dict],  # [{snapshot_time, reliability_score, ...}]
-    recent_events: list[dict],  # last 30d events from this source
-    cluster_data: list[dict],  # current disinfo clusters from disinfo_detector
+    trust_history: list[dict],       # [{snapshot_time, reliability_score, ...}]
+    recent_events: list[dict],        # last 30d events from this source
+    cluster_data: list[dict],         # current disinfo clusters from disinfo_detector
+    prior_injection_detected: bool = False,  # True if source has unresolved HIGH_IMPACT_INJECTION alert
 ) -> dict:
     """
     Returns:
@@ -85,30 +88,22 @@ def scan_source_for_adversarial_signatures(
     # Pre-compute shared metrics
     # -----------------------------------------------------------------------
 
-    high_impact_events = [
-        e for e in recent_events
-        if _event_family(e) in HIGH_IMPACT_FAMILIES
-    ]
-    low_impact_events = [
-        e for e in recent_events
-        if _event_family(e) in LOW_IMPACT_FAMILIES
-    ]
+    high_impact_events = [e for e in recent_events if _is_high_impact(e)]
+    low_impact_events = [e for e in recent_events if _is_low_impact(e)]
 
     total_high = len(high_impact_events)
     total_low = len(low_impact_events)
 
     # 7-day window
-    events_7d = [
-        e for e in recent_events
-        if _age_hours(e, now) <= 168
-    ]
-    high_7d = [e for e in events_7d if _event_family(e) in HIGH_IMPACT_FAMILIES]
-    low_7d = [e for e in events_7d if _event_family(e) in LOW_IMPACT_FAMILIES]
+    events_7d = [e for e in recent_events if _age_hours(e, now) <= 168]
+    high_7d = [e for e in events_7d if _is_high_impact(e)]
+    low_7d = [e for e in events_7d if _is_low_impact(e)]
     total_7d = len(events_7d)
 
     current_reliability = _current_reliability(trust_history)
     reliability_7d_ago = _reliability_at_offset_days(trust_history, 7)
-    max_reliability_30d = _max_reliability(trust_history, days=30)
+    # Exclude the last (current) snapshot so the peak comparison is against prior history only.
+    prior_max_reliability = _max_prior_reliability(trust_history)
 
     # -----------------------------------------------------------------------
     # Signature 1 — Trust Pumping
@@ -131,13 +126,13 @@ def scan_source_for_adversarial_signatures(
     # Signature 2 — High-Impact Injection After Trust Peak
     # -----------------------------------------------------------------------
 
-    # Skip on very first high-impact report (new-peak condition trivially true)
+    # Skip on the very first high-impact report (new-peak condition trivially true at baseline).
     is_first_high_impact = total_high == 1 and len(high_7d) == 1
-    is_new_trust_peak = current_reliability > max_reliability_30d
+    # Compare current score against prior history only — excludes current snapshot.
+    is_new_trust_peak = current_reliability > prior_max_reliability
 
     injection_event = None
     if is_new_trust_peak and not is_first_high_impact and high_7d:
-        # Find first high-impact within 48h of reaching current score
         for e in high_7d:
             if _age_hours(e, now) <= 48:
                 injection_event = e
@@ -146,7 +141,7 @@ def scan_source_for_adversarial_signatures(
     sig2_details = {
         "is_new_trust_peak": is_new_trust_peak,
         "current_reliability": round(current_reliability, 4),
-        "max_reliability_30d": round(max_reliability_30d, 4),
+        "prior_max_reliability": round(prior_max_reliability, 4),
         "injection_event_id": injection_event.get("event_id") if injection_event else None,
     }
     details["HIGH_IMPACT_INJECTION"] = sig2_details
@@ -187,7 +182,6 @@ def scan_source_for_adversarial_signatures(
     # -----------------------------------------------------------------------
 
     source_cluster_size, propagation_count = _cluster_stats(source_id, cluster_data)
-
     is_isolated = source_cluster_size == 1 and propagation_count == 0
 
     sig4_details = {
@@ -203,26 +197,27 @@ def scan_source_for_adversarial_signatures(
 
     # -----------------------------------------------------------------------
     # Signature 5 — Sudden Dormancy After Injection
+    #
+    # Uses prior_injection_detected (persisted alert history), not same-scan
+    # coincidence. The DB wrapper queries prior alerts and passes the flag in.
     # -----------------------------------------------------------------------
 
-    has_prior_injection = "HIGH_IMPACT_INJECTION" in active
     last_event_hours_ago = _hours_since_last_event(recent_events, now)
 
     sig5_details = {
         "hours_since_last_report": round(last_event_hours_ago, 1),
-        "has_prior_injection": has_prior_injection,
+        "prior_injection_detected": prior_injection_detected,
     }
     details["POST_INJECTION_DORMANCY"] = sig5_details
 
-    if last_event_hours_ago > 72 and has_prior_injection:
+    if last_event_hours_ago > 72 and prior_injection_detected:
         active.append("POST_INJECTION_DORMANCY")
 
     # -----------------------------------------------------------------------
     # Composite score + risk level
     # -----------------------------------------------------------------------
 
-    score = sum(SIGNATURE_WEIGHTS[sig] for sig in active)
-    score = round(min(score, 1.0), 4)
+    score = round(min(sum(SIGNATURE_WEIGHTS[sig] for sig in active), 1.0), 4)
 
     if score >= QUARANTINE_THRESHOLD:
         risk_level = "QUARANTINE"
@@ -266,30 +261,43 @@ async def adversarial_resume_scan(
 
     try:
         trust_history = await _load_trust_history(conn, source_id, days=30)
+        prior_injection = await _has_prior_injection_alert(conn, source_id)
 
         result = scan_source_for_adversarial_signatures(
             source_id=source_id,
             trust_history=trust_history,
             recent_events=recent_events,
             cluster_data=cluster_data,
+            prior_injection_detected=prior_injection,
         )
 
         await _snapshot_trust(conn, source_id, source_label, updated_score, recent_events, result)
 
         if result["active_signatures"]:
-            injection_event = _first_injection_event(result, recent_events)
+            injection_event_id = (
+                result["signature_details"]
+                .get("HIGH_IMPACT_INJECTION", {})
+                .get("injection_event_id")
+            )
+            trust_velocity_7d = (
+                result["signature_details"]
+                .get("TRUST_PUMPING", {})
+                .get("trust_velocity_7d", 0.0)
+            )
+            low_impact_buildup = (
+                result["signature_details"]
+                .get("TRUST_PUMPING", {})
+                .get("low_impact_share_7d", 0.0)
+            )
             await _upsert_alert(
                 conn,
                 source_id=source_id,
                 source_label=source_label,
+                source_reliability_score=updated_score,
                 result=result,
-                trust_velocity_7d=result["signature_details"]
-                    .get("TRUST_PUMPING", {})
-                    .get("trust_velocity_7d", 0.0),
-                low_impact_buildup=result["signature_details"]
-                    .get("TRUST_PUMPING", {})
-                    .get("low_impact_share_7d", 0.0),
-                injection_event_id=injection_event,
+                trust_velocity_7d=trust_velocity_7d,
+                low_impact_buildup=low_impact_buildup,
+                injection_event_id=injection_event_id,
             )
 
         if result["risk_level"] == "QUARANTINE":
@@ -312,17 +320,31 @@ async def _load_trust_history(
 ) -> list[dict]:
     rows = await conn.fetch(
         """
-        SELECT snapshot_time, reliability_score, corroboration_rate,
+        SELECT snapshot_hour AS snapshot_time, reliability_score, corroboration_rate,
                avg_event_impact, report_count_7d, trust_velocity
         FROM source_trust_history
         WHERE source_id = $1
-          AND snapshot_time >= NOW() - make_interval(days => $2)
-        ORDER BY snapshot_time ASC
+          AND snapshot_hour >= NOW() - make_interval(days => $2)
+        ORDER BY snapshot_hour ASC
         """,
         source_id,
         days,
     )
     return [dict(r) for r in rows]
+
+
+async def _has_prior_injection_alert(conn: asyncpg.Connection, source_id: str) -> bool:
+    row = await conn.fetchrow(
+        """
+        SELECT 1 FROM adversarial_source_alerts
+        WHERE source_id = $1
+          AND high_impact_injection_detected = TRUE
+          AND resolved = FALSE
+        LIMIT 1
+        """,
+        source_id,
+    )
+    return row is not None
 
 
 async def _snapshot_trust(
@@ -334,14 +356,15 @@ async def _snapshot_trust(
     scan_result: dict,
 ) -> None:
     now = datetime.now(tz=timezone.utc)
-    total = len(recent_events)
-    high = sum(1 for e in recent_events if _event_family(e) in HIGH_IMPACT_FAMILIES)
-    low = sum(1 for e in recent_events if _event_family(e) in LOW_IMPACT_FAMILIES)
+    # Bucket to the current hour — prevents unbounded row growth on frequent scans.
+    snapshot_hour = now.replace(minute=0, second=0, microsecond=0)
 
+    total = len(recent_events)
+    high = sum(1 for e in recent_events if _is_high_impact(e))
+    low = sum(1 for e in recent_events if _is_low_impact(e))
     corr = sum(1 for e in recent_events if e.get("corroborated"))
     corr_rate = corr / max(total, 1)
     avg_impact = sum(e.get("impact_score", 0.5) for e in recent_events) / max(total, 1)
-
     trust_velocity = (
         scan_result["signature_details"]
         .get("TRUST_PUMPING", {})
@@ -351,15 +374,22 @@ async def _snapshot_trust(
     await conn.execute(
         """
         INSERT INTO source_trust_history
-            (source_id, source_label, snapshot_time, reliability_score,
+            (source_id, source_label, snapshot_hour, reliability_score,
              corroboration_rate, avg_event_impact, report_count_7d,
              high_impact_share, low_impact_share, trust_velocity)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-        ON CONFLICT (source_id, snapshot_time) DO NOTHING
+        ON CONFLICT (source_id, snapshot_hour) DO UPDATE SET
+            reliability_score  = EXCLUDED.reliability_score,
+            corroboration_rate = EXCLUDED.corroboration_rate,
+            avg_event_impact   = EXCLUDED.avg_event_impact,
+            report_count_7d    = EXCLUDED.report_count_7d,
+            high_impact_share  = EXCLUDED.high_impact_share,
+            low_impact_share   = EXCLUDED.low_impact_share,
+            trust_velocity     = EXCLUDED.trust_velocity
         """,
         source_id,
         source_label,
-        now,
+        snapshot_hour,
         reliability_score,
         corr_rate,
         avg_impact,
@@ -370,34 +400,57 @@ async def _snapshot_trust(
     )
 
 
-async def _upsert_alert(
-    conn: asyncpg.Connection,
+def _build_alert_payload(
     source_id: str,
     source_label: str,
+    source_reliability_score: float,
     result: dict,
     trust_velocity_7d: float,
     low_impact_buildup: float,
     injection_event_id: str | None,
-) -> None:
-    alert_type = result["risk_level"]
-    payload = {
+) -> dict:
+    """Pure helper — builds alert payload dict. Testable without DB."""
+    return {
         "alert_type": "adversarial_source",
         "source_id": source_id,
         "source_label": source_label,
-        "trust_score_at_alert": result["adversarial_risk_score"],
-        "trust_velocity_7d": trust_velocity_7d,
-        "active_signatures": result["active_signatures"],
-        "adversarial_risk_score": result["adversarial_risk_score"],
+        "trust_score_at_alert": source_reliability_score,   # actual source reliability
+        "adversarial_risk_score": result["adversarial_risk_score"],  # composite risk score
         "risk_level": result["risk_level"],
+        "active_signatures": result["active_signatures"],
+        "trust_velocity_7d": trust_velocity_7d,
         "low_impact_buildup_rate": low_impact_buildup,
-        "corroboration_split": result["signature_details"]
+        "corroboration_split": (
+            result["signature_details"]
             .get("CORROBORATION_DESERT", {})
-            .get("corr_split", 0.0),
+            .get("corr_split", 0.0)
+        ),
         "high_impact_injection_detected": "HIGH_IMPACT_INJECTION" in result["active_signatures"],
         "trigger_event_id": injection_event_id,
         "created_at": datetime.now(tz=timezone.utc).isoformat(),
         "recommended_action": _recommended_action(result["risk_level"]),
     }
+
+
+async def _upsert_alert(
+    conn: asyncpg.Connection,
+    source_id: str,
+    source_label: str,
+    source_reliability_score: float,
+    result: dict,
+    trust_velocity_7d: float,
+    low_impact_buildup: float,
+    injection_event_id: str | None,
+) -> None:
+    payload = _build_alert_payload(
+        source_id=source_id,
+        source_label=source_label,
+        source_reliability_score=source_reliability_score,
+        result=result,
+        trust_velocity_7d=trust_velocity_7d,
+        low_impact_buildup=low_impact_buildup,
+        injection_event_id=injection_event_id,
+    )
 
     await conn.execute(
         """
@@ -409,8 +462,8 @@ async def _upsert_alert(
         """,
         source_id,
         source_label,
-        alert_type,
-        result["adversarial_risk_score"],
+        result["risk_level"],
+        source_reliability_score,          # actual reliability score
         trust_velocity_7d,
         low_impact_buildup,
         "HIGH_IMPACT_INJECTION" in result["active_signatures"],
@@ -430,7 +483,6 @@ async def _quarantine_source(
         source_id,
         source_label,
     )
-    # Update your sources table — adapt column names to match your schema.
     await conn.execute(
         """
         UPDATE sources
@@ -449,10 +501,23 @@ async def _quarantine_source(
 # ---------------------------------------------------------------------------
 
 
-def _event_family(event: dict) -> str:
-    """Return the ACLED event family string. Handles 'Battles', 'Battles::Armed clash', etc."""
+def _top_level_family(event: dict) -> str:
+    """Return ACLED top-level event family, stripping any subtype after '::'."""
     raw = event.get("acled_event_type", event.get("event_type", ""))
-    return raw.split("::")[0].strip() if "::" not in raw else raw
+    return raw.split("::")[0].strip()
+
+
+def _exact_event_type(event: dict) -> str:
+    """Return full ACLED event type string as-is (for exact subtype matching)."""
+    return event.get("acled_event_type", event.get("event_type", ""))
+
+
+def _is_high_impact(event: dict) -> bool:
+    return _top_level_family(event) in HIGH_IMPACT_FAMILIES
+
+
+def _is_low_impact(event: dict) -> bool:
+    return _exact_event_type(event) in LOW_IMPACT_EVENT_TYPES
 
 
 def _age_hours(event: dict, now: datetime) -> float:
@@ -480,49 +545,33 @@ def _reliability_at_offset_days(trust_history: list[dict], days: int) -> float:
         ts = snap["snapshot_time"]
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
         if ts.timestamp() <= cutoff:
             return snap["reliability_score"]
     return trust_history[0]["reliability_score"]
 
 
-def _max_reliability(trust_history: list[dict], days: int) -> float:
-    if not trust_history:
+def _max_prior_reliability(trust_history: list[dict]) -> float:
+    """Max reliability across all snapshots except the last (current) one."""
+    prior = trust_history[:-1]
+    if not prior:
         return 0.0
-    cutoff = datetime.now(tz=timezone.utc).timestamp() - days * 86400
-    scores = []
-    for snap in trust_history:
-        ts = snap["snapshot_time"]
-        if isinstance(ts, str):
-            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        if ts.timestamp() >= cutoff:
-            scores.append(snap["reliability_score"])
-    return max(scores) if scores else 0.0
+    return max(s["reliability_score"] for s in prior)
 
 
 def _cluster_stats(source_id: str, cluster_data: list[dict]) -> tuple[int, int]:
-    """Return (cluster_size, cross_cluster_propagation_count) for source_id."""
     for cluster in cluster_data:
         members = cluster.get("members", [])
         if source_id in members:
             return len(members), cluster.get("propagation_count", 0)
-    # Source not in any cluster → effectively isolated singleton
     return 1, 0
 
 
 def _hours_since_last_event(events: list[dict], now: datetime) -> float:
     if not events:
         return 9999.0
-    ages = [_age_hours(e, now) for e in events]
-    return min(ages)
-
-
-def _first_injection_event(result: dict, events: list[dict]) -> str | None:
-    event_id = (
-        result.get("signature_details", {})
-        .get("HIGH_IMPACT_INJECTION", {})
-        .get("injection_event_id")
-    )
-    return event_id
+    return min(_age_hours(e, now) for e in events)
 
 
 def _recommended_action(risk_level: str) -> str:

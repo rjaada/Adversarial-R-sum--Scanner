@@ -1,16 +1,30 @@
 """
-Unit tests for adversarial_scanner.scan_source_for_adversarial_signatures().
-All tests use synthetic data — no I/O, no DB.
+Unit tests for adversarial_scanner — pure scanner logic only, no DB.
 """
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from adversarial_scanner import scan_source_for_adversarial_signatures
+
+from adversarial_scanner import (
+    scan_source_for_adversarial_signatures,
+    _build_alert_payload,
+    _max_prior_reliability,
+    _is_high_impact,
+    _age_hours,
+    WATCH_THRESHOLD,
+    SUSPECT_THRESHOLD,
+    QUARANTINE_THRESHOLD,
+    SIGNATURE_WEIGHTS,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _ts(hours_ago: float) -> str:
-    t = datetime.now(tz=timezone.utc) - timedelta(hours=hours_ago)
-    return t.isoformat()
+    return (datetime.now(tz=timezone.utc) - timedelta(hours=hours_ago)).isoformat()
 
 
 def _event(
@@ -43,17 +57,43 @@ def _base_history(start: float = 0.50, end: float = 0.55) -> list[dict]:
     ]
 
 
+def _scan(source_id, history, events, clusters=None, prior_injection=False):
+    return scan_source_for_adversarial_signatures(
+        source_id, history, events, clusters or [], prior_injection
+    )
+
+
+# ---------------------------------------------------------------------------
+# Event family normalization
+# ---------------------------------------------------------------------------
+
+
+def test_battles_subtype_is_high_impact():
+    assert _is_high_impact({"acled_event_type": "Battles::Armed clash"})
+
+
+def test_explosions_subtype_is_high_impact():
+    assert _is_high_impact(
+        {"acled_event_type": "Explosions/Remote violence::Air/drone strike"}
+    )
+
+
+def test_top_level_battles_is_high_impact():
+    assert _is_high_impact({"acled_event_type": "Battles"})
+
+
+def test_protests_peaceful_is_not_high_impact():
+    assert not _is_high_impact({"acled_event_type": "Protests::Peaceful protest"})
+
+
 # ---------------------------------------------------------------------------
 # Cold-start guard
 # ---------------------------------------------------------------------------
 
 
 def test_insufficient_history_returns_clean():
-    events = [
-        _event("Protests::Peaceful protest", h)
-        for h in range(10)  # only 10 events, below MIN_EVENTS_30D=15
-    ]
-    result = scan_source_for_adversarial_signatures("src_1", _base_history(), events, [])
+    events = [_event("Protests::Peaceful protest", float(h)) for h in range(10)]
+    result = _scan("src_cold", _base_history(), events)
     assert result["risk_level"] == "CLEAN"
     assert result["note"] == "insufficient_history"
 
@@ -64,20 +104,26 @@ def test_insufficient_history_returns_clean():
 
 
 def test_trust_pumping_detected():
-    # +0.20 velocity in 7 days, 80% low-impact events
     history = [_snap(0.40, 8), _snap(0.60, 0.1)]
-    events = [
-        _event("Protests::Peaceful protest", float(h))
-        for h in range(1, 17)  # 16 low-impact events
-    ]
-    result = scan_source_for_adversarial_signatures("src_pump", history, events, [])
+    events = [_event("Protests::Peaceful protest", float(h)) for h in range(1, 17)]
+    result = _scan("src_pump", history, events)
     assert "TRUST_PUMPING" in result["active_signatures"]
 
 
-def test_trust_pumping_not_triggered_stable():
-    history = [_snap(0.55, 8), _snap(0.57, 0.1)]  # +0.02 velocity
+def test_trust_pumping_alone_is_clean_not_watch():
+    # TRUST_PUMPING weight 0.25 < WATCH threshold 0.35 → CLEAN
+    history = [_snap(0.40, 8), _snap(0.60, 0.1)]
     events = [_event("Protests::Peaceful protest", float(h)) for h in range(1, 17)]
-    result = scan_source_for_adversarial_signatures("src_stable", history, events, [])
+    result = _scan("src_pump_clean", history, events)
+    if result["active_signatures"] == ["TRUST_PUMPING"]:
+        assert result["risk_level"] == "CLEAN"
+        assert result["adversarial_risk_score"] == pytest.approx(0.25)
+
+
+def test_trust_pumping_not_triggered_stable():
+    history = [_snap(0.55, 8), _snap(0.57, 0.1)]
+    events = [_event("Protests::Peaceful protest", float(h)) for h in range(1, 17)]
+    result = _scan("src_stable", history, events)
     assert "TRUST_PUMPING" not in result["active_signatures"]
 
 
@@ -87,17 +133,14 @@ def test_trust_pumping_not_triggered_stable():
 
 
 def test_high_impact_injection_detected():
-    # New peak + high-impact event within 24h + not first ever high-impact
-    history = [_snap(0.50, 30), _snap(0.60, 8), _snap(0.80, 0.1)]  # new peak
+    # history[-1] = 0.80, prior max = 0.60 → new peak
+    history = [_snap(0.50, 30), _snap(0.60, 8), _snap(0.80, 0.1)]
     events = (
-        # 14 low-impact for sample threshold
         [_event("Protests::Peaceful protest", float(h)) for h in range(5, 20)]
-        # 1 older high-impact (so not "first ever")
         + [_event("Battles", 200.0, event_id="evt_old")]
-        # injection within 24h
         + [_event("Battles", 12.0, event_id="evt_inject")]
     )
-    result = scan_source_for_adversarial_signatures("src_inject", history, events, [])
+    result = _scan("src_inject", history, events)
     assert "HIGH_IMPACT_INJECTION" in result["active_signatures"]
     assert result["signature_details"]["HIGH_IMPACT_INJECTION"]["injection_event_id"] == "evt_inject"
 
@@ -106,10 +149,25 @@ def test_first_ever_high_impact_skipped():
     history = [_snap(0.50, 30), _snap(0.80, 0.1)]
     events = (
         [_event("Protests::Peaceful protest", float(h)) for h in range(2, 17)]
-        + [_event("Battles", 6.0, event_id="evt_first")]  # only 1 high-impact ever
+        + [_event("Battles", 6.0, event_id="evt_first")]
     )
-    result = scan_source_for_adversarial_signatures("src_first", history, events, [])
+    result = _scan("src_first", history, events)
     assert "HIGH_IMPACT_INJECTION" not in result["active_signatures"]
+
+
+def test_trust_peak_excludes_current_snapshot():
+    # history = [0.50, 0.60, 0.75] — last is current
+    # prior max = 0.60; current 0.75 > 0.60 → is_new_trust_peak = True
+    history = [_snap(0.50, 20), _snap(0.60, 10), _snap(0.75, 0.1)]
+    assert _max_prior_reliability(history) == pytest.approx(0.60)
+    current = history[-1]["reliability_score"]
+    assert current > _max_prior_reliability(history)
+
+
+def test_trust_peak_not_triggered_when_not_new_peak():
+    # current 0.65 < prior max 0.70 → no peak
+    history = [_snap(0.70, 20), _snap(0.68, 10), _snap(0.65, 0.1)]
+    assert history[-1]["reliability_score"] < _max_prior_reliability(history)
 
 
 # ---------------------------------------------------------------------------
@@ -120,24 +178,21 @@ def test_first_ever_high_impact_skipped():
 def test_corroboration_desert_detected():
     history = _base_history()
     events = (
-        # 10 low-impact, 8 corroborated
         [_event("Protests::Peaceful protest", float(h), corroborated=(h < 8)) for h in range(10)]
-        # 5 high-impact, 0 corroborated
         + [_event("Battles", float(h + 20)) for h in range(5)]
     )
-    result = scan_source_for_adversarial_signatures("src_corr", history, events, [])
+    result = _scan("src_corr", history, events)
     assert "CORROBORATION_DESERT" in result["active_signatures"]
-    split = result["signature_details"]["CORROBORATION_DESERT"]["corr_split"]
-    assert split > 0.50
+    assert result["signature_details"]["CORROBORATION_DESERT"]["corr_split"] > 0.50
 
 
 def test_corroboration_desert_skipped_when_few_high():
     history = _base_history()
     events = (
         [_event("Protests::Peaceful protest", float(h), corroborated=True) for h in range(14)]
-        + [_event("Battles", 5.0)]  # only 1 high-impact — below MIN=3
+        + [_event("Battles", 5.0)]
     )
-    result = scan_source_for_adversarial_signatures("src_few_hi", history, events, [])
+    result = _scan("src_few_hi", history, events)
     assert "CORROBORATION_DESERT" not in result["active_signatures"]
     assert result["signature_details"]["CORROBORATION_DESERT"].get("skipped")
 
@@ -153,9 +208,8 @@ def test_narrative_isolation_detected():
         [_event("Protests::Peaceful protest", float(h)) for h in range(13)]
         + [_event("Battles", 10.0)]
     )
-    # Source is in a singleton cluster with no propagation
     clusters = [{"members": ["src_iso"], "propagation_count": 0}]
-    result = scan_source_for_adversarial_signatures("src_iso", history, events, clusters)
+    result = _scan("src_iso", history, events, clusters)
     assert "NARRATIVE_ISOLATION" in result["active_signatures"]
 
 
@@ -166,7 +220,7 @@ def test_narrative_isolation_not_triggered_low_trust():
         + [_event("Battles", 10.0)]
     )
     clusters = [{"members": ["src_lo"], "propagation_count": 0}]
-    result = scan_source_for_adversarial_signatures("src_lo", history, events, clusters)
+    result = _scan("src_lo", history, events, clusters)
     assert "NARRATIVE_ISOLATION" not in result["active_signatures"]
 
 
@@ -175,45 +229,135 @@ def test_narrative_isolation_not_triggered_low_trust():
 # ---------------------------------------------------------------------------
 
 
-def test_post_injection_dormancy_detected():
-    # Build a scan that first triggers HIGH_IMPACT_INJECTION, then goes dormant
+def test_dormancy_triggers_from_prior_injection_flag():
+    # prior_injection_detected=True passed in; no current-scan injection needed
+    history = _base_history(0.60, 0.65)
+    events = (
+        [_event("Protests::Peaceful protest", float(h)) for h in range(5, 20)]
+        + [_event("Battles", 80.0, event_id="evt_old_high")]  # last event 80h ago
+    )
+    result = _scan("src_dorm", history, events, prior_injection=True)
+    assert "POST_INJECTION_DORMANCY" in result["active_signatures"]
+    assert "HIGH_IMPACT_INJECTION" not in result["active_signatures"]
+
+
+def test_dormancy_not_triggered_without_prior_flag():
+    # Same-scan HIGH_IMPACT_INJECTION alone must NOT trigger dormancy
     history = [_snap(0.50, 30), _snap(0.60, 8), _snap(0.80, 0.1)]
     events = (
         [_event("Protests::Peaceful protest", float(h)) for h in range(5, 20)]
         + [_event("Battles", 200.0, event_id="evt_old")]
-        # Last report is 80h ago — dormancy
         + [_event("Battles", 80.0, event_id="evt_inject")]
     )
-    result = scan_source_for_adversarial_signatures("src_dorm", history, events, [])
-    assert "HIGH_IMPACT_INJECTION" in result["active_signatures"]
-    assert "POST_INJECTION_DORMANCY" in result["active_signatures"]
+    result = _scan("src_no_dorm", history, events, prior_injection=False)
+    assert "POST_INJECTION_DORMANCY" not in result["active_signatures"]
+
+
+def test_dormancy_not_triggered_when_source_active():
+    # prior flag set but source is still reporting (last event 2h ago)
+    history = _base_history(0.60, 0.65)
+    events = (
+        [_event("Protests::Peaceful protest", float(h)) for h in range(5, 20)]
+        + [_event("Battles", 2.0, event_id="evt_recent")]
+    )
+    result = _scan("src_active", history, events, prior_injection=True)
+    assert "POST_INJECTION_DORMANCY" not in result["active_signatures"]
 
 
 # ---------------------------------------------------------------------------
-# Composite scoring
+# Alert payload correctness
 # ---------------------------------------------------------------------------
 
 
-def test_risk_level_watch():
-    # Only TRUST_PUMPING (0.25) → WATCH
-    history = [_snap(0.40, 8), _snap(0.60, 0.1)]
-    events = [_event("Protests::Peaceful protest", float(h)) for h in range(1, 17)]
-    result = scan_source_for_adversarial_signatures("src_watch", history, events, [])
-    if "TRUST_PUMPING" in result["active_signatures"]:
-        assert result["risk_level"] in ("WATCH", "SUSPECT", "QUARANTINE")
-        assert result["adversarial_risk_score"] >= 0.25
+def test_alert_payload_trust_score_is_reliability_not_risk_score():
+    payload = _build_alert_payload(
+        source_id="src_x",
+        source_label="Test Source",
+        source_reliability_score=0.78,
+        result={
+            "adversarial_risk_score": 0.60,
+            "risk_level": "SUSPECT",
+            "active_signatures": ["HIGH_IMPACT_INJECTION"],
+            "signature_details": {
+                "CORROBORATION_DESERT": {},
+                "TRUST_PUMPING": {},
+            },
+        },
+        trust_velocity_7d=0.19,
+        low_impact_buildup=0.82,
+        injection_event_id="evt_123",
+    )
+    assert payload["trust_score_at_alert"] == pytest.approx(0.78)
+    assert payload["adversarial_risk_score"] == pytest.approx(0.60)
+    assert payload["trust_score_at_alert"] != payload["adversarial_risk_score"]
+
+
+# ---------------------------------------------------------------------------
+# Composite scoring + threshold boundaries
+# ---------------------------------------------------------------------------
+
+
+def _classify(score: float) -> str:
+    if score >= QUARANTINE_THRESHOLD:
+        return "QUARANTINE"
+    if score >= SUSPECT_THRESHOLD:
+        return "SUSPECT"
+    if score >= WATCH_THRESHOLD:
+        return "WATCH"
+    return "CLEAN"
+
+
+def test_threshold_boundary_0_25_is_clean():
+    assert _classify(0.25) == "CLEAN"
+
+
+def test_threshold_boundary_0_35_is_watch():
+    assert _classify(0.35) == "WATCH"
+
+
+def test_threshold_boundary_0_60_is_suspect():
+    assert _classify(0.60) == "SUSPECT"
+
+
+def test_threshold_boundary_0_80_is_quarantine():
+    assert _classify(0.80) == "QUARANTINE"
+
+
+def test_threshold_just_below_watch_is_clean():
+    assert _classify(round(WATCH_THRESHOLD - 0.001, 4)) == "CLEAN"
+
+
+def test_threshold_just_below_suspect_is_watch():
+    assert _classify(round(SUSPECT_THRESHOLD - 0.001, 4)) == "WATCH"
+
+
+def test_threshold_just_below_quarantine_is_suspect():
+    assert _classify(round(QUARANTINE_THRESHOLD - 0.001, 4)) == "SUSPECT"
+
+
+def test_score_capped_at_1():
+    assert abs(sum(SIGNATURE_WEIGHTS.values()) - 1.0) < 1e-9
 
 
 def test_risk_level_clean_no_signatures():
     history = _base_history()
-    events = [_event("Protests::Peaceful protest", float(h), corroborated=True) for h in range(16)]
-    result = scan_source_for_adversarial_signatures("src_clean", history, events, [])
+    events = [
+        _event("Protests::Peaceful protest", float(h), corroborated=True)
+        for h in range(16)
+    ]
+    result = _scan("src_clean", history, events)
     assert result["risk_level"] == "CLEAN"
     assert result["adversarial_risk_score"] == 0.0
 
 
-def test_score_capped_at_1():
-    # All 5 signatures active → 0.25+0.35+0.20+0.15+0.05 = 1.00
-    from adversarial_scanner import SIGNATURE_WEIGHTS
-    total = sum(SIGNATURE_WEIGHTS.values())
-    assert abs(total - 1.0) < 1e-9
+# ---------------------------------------------------------------------------
+# Timezone safety
+# ---------------------------------------------------------------------------
+
+
+def test_age_hours_naive_datetime_treated_as_utc():
+    now = datetime.now(tz=timezone.utc)
+    naive_ts = (now - timedelta(hours=5)).replace(tzinfo=None)
+    event = {"timestamp": naive_ts}
+    age = _age_hours(event, now)
+    assert 4.9 < age < 5.1
