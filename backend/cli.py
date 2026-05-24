@@ -126,6 +126,40 @@ def _build_markdown_report(result: dict) -> str:
     return "\n".join(lines)
 
 
+def run_fixture_scan(
+    fixture_path: Path | str,
+    out_json: Path | str | None = None,
+    out_md: Path | str | None = None,
+) -> dict:
+    """
+    Load a fixture, run the scanner, optionally write export files.
+
+    Returns the scanner result dict. Extracted from main() so tests can
+    exercise the full load→scan→export path without subprocess invocation.
+    """
+    fixture_path = Path(fixture_path)
+    with fixture_path.open() as fh:
+        raw = json.load(fh)
+
+    resolved = _resolve_fixture(raw)
+
+    result = scan_source_for_adversarial_signatures(
+        source_id=resolved["source_id"],
+        trust_history=resolved["trust_history"],
+        recent_events=resolved["recent_events"],
+        cluster_data=resolved["cluster_data"],
+        prior_injection_detected=resolved["prior_injection_detected"],
+    )
+
+    if out_json is not None:
+        Path(out_json).write_text(json.dumps(result, indent=2))
+
+    if out_md is not None:
+        Path(out_md).write_text(_build_markdown_report(result))
+
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run the adversarial source scanner against a JSON fixture."
@@ -158,33 +192,18 @@ def main() -> None:
         print(f"error: fixture not found: {fixture_path}", file=sys.stderr)
         sys.exit(1)
 
-    with fixture_path.open() as fh:
-        raw = json.load(fh)
+    result = run_fixture_scan(fixture_path, out_json=args.out_json, out_md=args.out_md)
 
-    resolved = _resolve_fixture(raw)
-
-    result = scan_source_for_adversarial_signatures(
-        source_id=resolved["source_id"],
-        trust_history=resolved["trust_history"],
-        recent_events=resolved["recent_events"],
-        cluster_data=resolved["cluster_data"],
-        prior_injection_detected=resolved["prior_injection_detected"],
-    )
-
-    # stdout output — --json replaces human summary, both are independent of file exports
+    # stdout output — --json replaces human summary, both independent of file exports
     if args.json:
         json.dump(result, sys.stdout, indent=2)
         print()
     else:
         _print_summary(result)
 
-    # file exports — additive, independent of stdout mode
     if args.out_json:
-        Path(args.out_json).write_text(json.dumps(result, indent=2))
         print(f"JSON report written: {args.out_json}", file=sys.stderr)
-
     if args.out_md:
-        Path(args.out_md).write_text(_build_markdown_report(result))
         print(f"Markdown report written: {args.out_md}", file=sys.stderr)
 
 

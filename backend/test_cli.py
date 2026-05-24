@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from adversarial_scanner import scan_source_for_adversarial_signatures
-from cli import _build_markdown_report, _resolve_fixture
+from cli import _build_markdown_report, _resolve_fixture, run_fixture_scan
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -146,3 +146,43 @@ def test_build_markdown_report_writes_to_file(tmp_path):
     assert "# Adversarial Source Scan Report" in content
     assert result["source_id"] in content
     assert "WATCH" in content
+
+
+# ---------------------------------------------------------------------------
+# run_fixture_scan — direct export-path tests
+# ---------------------------------------------------------------------------
+
+
+def test_run_fixture_scan_out_json_creates_file(tmp_path):
+    out = tmp_path / "report.json"
+    run_fixture_scan(FIXTURES / "sample_quarantine.json", out_json=out)
+
+    assert out.exists()
+    loaded = json.loads(out.read_text())
+    assert loaded["risk_level"] == "QUARANTINE"
+
+
+def test_run_fixture_scan_out_md_creates_file(tmp_path):
+    out = tmp_path / "report.md"
+    run_fixture_scan(FIXTURES / "sample_quarantine.json", out_md=out)
+
+    assert out.exists()
+    assert "# Adversarial Source Scan Report" in out.read_text()
+
+
+def test_run_fixture_scan_both_flags_create_both_files(tmp_path):
+    json_out = tmp_path / "report.json"
+    md_out = tmp_path / "report.md"
+    run_fixture_scan(FIXTURES / "sample_quarantine.json", out_json=json_out, out_md=md_out)
+
+    assert json_out.exists()
+    assert md_out.exists()
+
+
+def test_run_fixture_scan_return_value_matches_file_content(tmp_path):
+    out = tmp_path / "report.json"
+    result = run_fixture_scan(FIXTURES / "sample_quarantine.json", out_json=out)
+
+    loaded = json.loads(out.read_text())
+    assert loaded["source_id"] == result["source_id"]
+    assert loaded["risk_level"] == result["risk_level"]
