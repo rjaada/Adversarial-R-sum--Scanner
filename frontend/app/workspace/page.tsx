@@ -10,6 +10,7 @@ interface Issue {
   description: string
   evidence?: string
   fix_pattern?: string
+  rewrite_starter?: string
   source_excerpt: string
   suggested_fix: string
   impact_score: number
@@ -80,6 +81,7 @@ const MOCK: ScanResult = {
       description: "The JD requires kubernetes but your resume does not mention it.",
       evidence: '"kubernetes" does not appear anywhere in your résumé text.',
       fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
+      rewrite_starter: "",
       source_excerpt: "",
       suggested_fix: "Add kubernetes in your Skills section.",
       impact_score: 3.2,
@@ -91,6 +93,7 @@ const MOCK: ScanResult = {
       description: "4 of 4 experience bullets have no numbers or percentages.",
       evidence: "4 of 4 experience bullets contain no numbers, percentages, currency, or scale indicators.",
       fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
+      rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].",
       source_excerpt: "- Responsible for migration of monolith to microservices",
       suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
       impact_score: 3.2,
@@ -102,6 +105,7 @@ const MOCK: ScanResult = {
       description: "Passive phrasing reduces impact score in LLM screeners.",
       evidence: 'Phrase "responsible for" signals passive ownership. Screeners weight active verbs more heavily.',
       fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
+      rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].",
       source_excerpt: "...Responsible for migration of monolith...",
       suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
       impact_score: 1.6,
@@ -113,6 +117,7 @@ const MOCK: ScanResult = {
       description: "The JD requires aws but your resume does not mention it.",
       evidence: '"aws" does not appear anywhere in your résumé text.',
       fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
+      rewrite_starter: "",
       source_excerpt: "",
       suggested_fix: "Add aws to your Skills section if applicable.",
       impact_score: 3.2,
@@ -398,6 +403,12 @@ export default function WorkspacePage() {
                             </pre>
                           )}
                         </div>
+                        {issue.rewrite_starter && (
+                          <div style={{ marginTop: "0.5rem", padding: "0.6rem 0.75rem", background: "#f0f7f5", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
+                            <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Rewrite starter</div>
+                            <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#1f1d1a", lineHeight: 1.6 }}>{issue.rewrite_starter}</div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

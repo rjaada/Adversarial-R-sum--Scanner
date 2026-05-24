@@ -213,3 +213,73 @@ def test_summary_mismatch_evidence_contains_percentage():
     assert len(issues) == 1
     assert "%" in issues[0].evidence
     assert issues[0].fix_pattern != ""
+
+
+# --- Rewrite starters ---
+
+def test_weak_phrasing_issue_has_rewrite_starter():
+    """Weak phrasing issues must produce a non-empty rewrite_starter."""
+    resume = (
+        "Experience\n"
+        "- Responsible for database migrations across 5 services\n"
+        "- Helped with CI/CD pipeline setup\n"
+    )
+    sections = parse_resume_sections(resume)
+    reqs = {"missing_from_resume": [], "required_keywords": []}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    issues = generate_fix_suggestions(sections, reqs)
+    weak = [i for i in issues if i.issue_type == "weak_phrasing"]
+    assert len(weak) > 0
+    assert all(i.rewrite_starter != "" for i in weak)
+
+
+def test_weak_phrasing_starter_uses_placeholder_brackets():
+    """Rewrite starters must use [placeholder] syntax, not fabricated metrics."""
+    from app.services.rewrite_suggestions import _build_rewrite_weak
+    starter = _build_rewrite_weak("- Responsible for digital marketing strategies", "responsible for")
+    assert "[" in starter and "]" in starter
+    assert starter != ""
+
+
+def test_weak_phrasing_starter_has_active_verb():
+    """Rewrite starter for a database bullet should use a strong active verb."""
+    from app.services.rewrite_suggestions import _build_rewrite_weak
+    starter = _build_rewrite_weak("- Responsible for database migrations", "responsible for")
+    # Should not start with "Responsible" or any weak verb
+    assert not starter.lower().startswith("responsible")
+    assert starter[0].isupper()
+
+
+def test_quantification_issue_has_rewrite_starter():
+    """Low-quantification issues must produce a non-empty rewrite_starter."""
+    resume = (
+        "Experience\n"
+        "- Built backend API for the platform\n"
+        "- Designed the authentication system\n"
+        "- Set up monitoring and alerting\n"
+        "- Reviewed pull requests weekly\n"
+    )
+    sections = parse_resume_sections(resume)
+    reqs = {"missing_from_resume": [], "required_keywords": []}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    issues = generate_fix_suggestions(sections, reqs)
+    quant = [i for i in issues if i.issue_type == "low_quantification"]
+    if quant:
+        assert quant[0].rewrite_starter != ""
+        assert "[" in quant[0].rewrite_starter
+
+
+def test_keyword_gap_has_no_rewrite_starter():
+    """Keyword gap issues should not generate a rewrite_starter."""
+    reqs = {"missing_from_resume": ["kubernetes"], "required_keywords": ["kubernetes"]}
+    from app.services.rewrite_suggestions import _check_missing_keywords
+    issues = _check_missing_keywords(reqs)
+    assert issues[0].rewrite_starter == ""
+
+
+def test_missing_section_has_no_rewrite_starter():
+    """Missing section issues should not generate a rewrite_starter."""
+    from app.services.rewrite_suggestions import _check_missing_sections
+    issues = _check_missing_sections({"experience": "Engineer at Corp"})
+    for issue in issues:
+        assert issue.rewrite_starter == ""

@@ -14,6 +14,7 @@ class Issue(BaseModel):
     description: str
     evidence: str = ""
     fix_pattern: str = ""
+    rewrite_starter: str = ""
     source_excerpt: str
     suggested_fix: str
     impact_score: float

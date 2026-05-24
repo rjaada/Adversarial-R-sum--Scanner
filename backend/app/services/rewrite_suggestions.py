@@ -21,9 +21,98 @@ WEAK_VERBS = [
 ]
 _WEAK_RE = re.compile("|".join(re.escape(v) for v in WEAK_VERBS), re.IGNORECASE)
 
+# Matches weak verb at the START of a stripped bullet line (for rewrite_starter)
+_WEAK_PREFIX_RE = re.compile(
+    r"^(?:responsible for|helped(?:\s+with)?|assisted(?:\s+with)?|worked on"
+    r"|involved in|participated in|contributed to|did|made)\s+",
+    re.IGNORECASE,
+)
+
 QUANTIFICATION_RE = re.compile(r"\d+%|\$[\d,]+|\d+[kKmM]\b|\d+ (users|customers|clients|engineers|teams?)")
 
 _KEYWORD_NOISE = frozenset({"it", "do", "no", "io", "ui", "ux", "qa", "hr", "ml", "ai"})
+
+# Priority-ordered: first match wins
+_VERB_HINTS: list[tuple[frozenset[str], str]] = [
+    (frozenset({"ci/cd", "cicd", "deploy", "pipeline", "automat", "workflow"}), "Automated"),
+    (frozenset({"database", "db", "migration", "schema", "postgres", "mysql", "mongo", "sql", "redis"}), "Migrated"),
+    (frozenset({"performance", "latency", "speed", "slow", "optimiz", "efficienc", "throughput"}), "Reduced"),
+    (frozenset({"cost", "budget", "saving", "spend", "resource", "bill"}), "Reduced"),
+    (frozenset({"test", "testing", "coverage", "qa", "quality", "unittest"}), "Increased"),
+    (frozenset({"team", "engineers", "developers", "sprint", "roadmap", "agile", "scrum"}), "Led"),
+    (frozenset({"marketing", "campaign", "content", "seo", "ads", "social", "brand", "email"}), "Improved"),
+    (frozenset({"security", "vulnerabilit", "auth", "authentication", "penetration", "rbac"}), "Hardened"),
+    (frozenset({"infrastructure", "infra", "cloud", "aws", "gcp", "azure", "kubernetes", "k8s", "terraform"}), "Architected"),
+    (frozenset({"monitor", "alert", "observ", "log", "metric", "telemetry", "tracing"}), "Implemented"),
+    (frozenset({"scale", "scaling", "traffic", "load", "growth", "capacity"}), "Scaled"),
+    (frozenset({"api", "endpoint", "service", "microservice", "backend", "server", "rest", "grpc"}), "Built"),
+    (frozenset({"feature", "product", "launch", "release", "ship", "deliver"}), "Delivered"),
+    (frozenset({"design", "architect", "platform", "framework", "system"}), "Designed"),
+    (frozenset({"integrat", "connect", "sync", "webhook", "etl", "data"}), "Built"),
+]
+
+_METRIC_HINTS: list[tuple[frozenset[str], str]] = [
+    (frozenset({"latency", "speed", "response", "p99", "p95"}), "reducing latency by [X ms] and improving throughput by [Y%]"),
+    (frozenset({"cost", "budget", "saving", "spend", "bill"}), "saving $[X] per month across [N] environments"),
+    (frozenset({"user", "customer", "client", "traffic", "dau", "mau"}), "supporting [N users] with [X%] availability improvement"),
+    (frozenset({"team", "engineer", "developer", "sprint", "velocity"}), "across a [N]-person team, reducing [cycle time / incidents] by [X%]"),
+    (frozenset({"test", "coverage", "qa"}), "increasing test coverage from [X%] to [Y%] with [N] new test cases"),
+    (frozenset({"deploy", "release", "ci/cd", "cicd", "pipeline"}), "cutting deployment time by [X%] and rollback time to [Y min]"),
+    (frozenset({"security", "vulnerabilit", "auth", "rbac"}), "eliminating [N] vulnerabilities and reducing attack surface by [X%]"),
+    (frozenset({"scale", "traffic", "load", "throughput", "capacity"}), "handling [N]× peak traffic with [X%] reduction in error rate"),
+]
+
+_METRIC_DEFAULT = "improving [key metric] by [X%] across [scope/scale]"
+
+
+def _suggest_verb(text: str) -> str:
+    tl = text.lower()
+    for keywords, verb in _VERB_HINTS:
+        if any(kw in tl for kw in keywords):
+            return verb
+    return "Led"
+
+
+def _suggest_metric(text: str) -> str:
+    tl = text.lower()
+    for keywords, metric in _METRIC_HINTS:
+        if any(kw in tl for kw in keywords):
+            return metric
+    return _METRIC_DEFAULT
+
+
+def _build_rewrite_weak(full_line: str, weak_phrase: str) -> str:
+    """Rewrite starter for a weak-phrasing bullet: replace verb, add metric placeholders."""
+    stripped = full_line.strip().lstrip("-•*· ").rstrip(".").strip()
+    if not stripped:
+        return ""
+    # Remove the weak verb prefix to extract the payload
+    payload = _WEAK_PREFIX_RE.sub("", stripped).strip().lstrip(",: ").strip()
+    if not payload or payload.lower() == stripped.lower():
+        # Phrase is mid-line — fall back to stripping just the matched phrase
+        payload = re.sub(re.escape(weak_phrase), "", stripped, flags=re.IGNORECASE, count=1).strip().lstrip(",: ").strip()
+    if not payload:
+        return ""
+    verb = _suggest_verb(payload)
+    metric = _suggest_metric(payload)
+    return f"{verb} {payload}, {metric}."
+
+
+def _build_rewrite_quantify(bullet: str) -> str:
+    """Rewrite starter for an unquantified bullet: preserve or improve verb, add metric placeholders."""
+    line = bullet.strip().lstrip("-•*· ").rstrip(".").strip()
+    if not line:
+        return ""
+    # If line starts with a weak verb, replace it first
+    m = _WEAK_PREFIX_RE.match(line)
+    if m:
+        payload = line[m.end():].strip()
+        verb = _suggest_verb(payload)
+        metric = _suggest_metric(payload)
+        return f"{verb} {payload}, {metric}."
+    # Good verb already — preserve it, append metric placeholder
+    metric = _suggest_metric(line)
+    return f"{line}, {metric}."
 
 
 def generate_fix_suggestions(
@@ -64,9 +153,18 @@ def _check_weak_phrasing(resume_sections: dict) -> list[Issue]:
     exp_text = resume_sections.get("experience", "")
     for match in _WEAK_RE.finditer(exp_text):
         phrase = match.group(0)
+        # Extract full source line for the rewrite starter
+        line_start = exp_text.rfind("\n", 0, match.start()) + 1
+        line_end = exp_text.find("\n", match.end())
+        if line_end == -1:
+            line_end = len(exp_text)
+        full_line = exp_text[line_start:line_end].strip()
+
         start = max(0, match.start() - 40)
         end = min(len(exp_text), match.end() + 40)
         excerpt = exp_text[start:end].replace("\n", " ").strip()
+
+        starter = _build_rewrite_weak(full_line, phrase)
         issues.append(Issue(
             issue_type="weak_phrasing",
             severity="medium",
@@ -74,6 +172,7 @@ def _check_weak_phrasing(resume_sections: dict) -> list[Issue]:
             description="Passive or weak phrasing reduces impact score in LLM screeners and human review.",
             evidence=f'Phrase "{phrase}" signals passive ownership. Screeners weight active verbs more heavily.',
             fix_pattern="Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
+            rewrite_starter=starter,
             source_excerpt=f"...{excerpt}...",
             suggested_fix=f'Replace "{phrase}" with an active verb like "Built", "Led", "Delivered", "Reduced", or "Scaled".',
             impact_score=_impact("medium"),
@@ -137,6 +236,7 @@ def _check_quantification(resume_sections: dict) -> list[Issue]:
     if len(bullet_lines) > 3 and len(unquantified) / max(len(bullet_lines), 1) > 0.6:
         n_unq = len(unquantified)
         n_total = len(bullet_lines)
+        starter = _build_rewrite_quantify(unquantified[0]) if unquantified else ""
         return [Issue(
             issue_type="low_quantification",
             severity="high",
@@ -144,6 +244,7 @@ def _check_quantification(resume_sections: dict) -> list[Issue]:
             description=f"{n_unq} of {n_total} experience bullets have no numbers, percentages, or dollar figures.",
             evidence=f"{n_unq} of {n_total} experience bullets contain no numbers, percentages, currency, or scale indicators.",
             fix_pattern="Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
+            rewrite_starter=starter,
             source_excerpt=unquantified[0][:120] if unquantified else "",
             suggested_fix='Add metrics to at least 50% of bullets. Example: "Reduced API latency by 40%" instead of "Improved API performance".',
             impact_score=_impact("high"),
