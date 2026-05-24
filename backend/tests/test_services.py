@@ -91,3 +91,70 @@ def test_fix_suggestions_have_nonzero_impact_scores():
     compute_scores(sections, reqs, parse_integrity=1.0)
     issues = generate_fix_suggestions(sections, reqs)
     assert all(i.impact_score > 0 for i in issues)
+
+
+# --- Keyword extraction quality ---
+
+def test_go_in_prose_not_a_keyword():
+    """Prose uses of 'go' should not be extracted as the Go language."""
+    jd = "We go above and beyond for our customers. You will go through onboarding."
+    reqs = extract_jd_requirements(jd)
+    assert "go" not in reqs["required_keywords"]
+
+
+def test_golang_in_jd_extracts_go():
+    """'golang' explicitly in JD should produce 'go' keyword."""
+    jd = "We are looking for a Golang developer with 3+ years of experience."
+    reqs = extract_jd_requirements(jd)
+    assert "go" in reqs["required_keywords"]
+
+
+def test_go_technical_context_extracts_go():
+    """'go developer' and similar technical phrases should extract 'go'."""
+    jd = "You will build microservices in Python and Go. Go developer experience preferred."
+    reqs = extract_jd_requirements(jd)
+    assert "go" in reqs["required_keywords"]
+
+
+def test_phrase_keyword_machine_learning():
+    """Multi-word phrase 'machine learning' should be extracted."""
+    jd = "Experience with machine learning and deep learning required."
+    reqs = extract_jd_requirements(jd)
+    assert "machine learning" in reqs["required_keywords"]
+    assert "deep learning" in reqs["required_keywords"]
+
+
+# --- Section parsing robustness ---
+
+def test_parse_skills_tech_stack_variant():
+    resume = "Tech Stack\nPython, Docker, Kubernetes\n\nExperience\nEngineer at Corp"
+    sections = parse_resume_sections(resume)
+    assert "skills" in sections
+
+
+def test_parse_skills_competencies_variant():
+    resume = "Core Competencies\nPython, AWS, Docker\n\nExperience\nEngineer at Corp"
+    sections = parse_resume_sections(resume)
+    assert "skills" in sections
+
+
+def test_parse_skills_technologies_variant():
+    resume = "Technologies\nReact, Node.js, PostgreSQL\n\nExperience\nEngineer at Corp"
+    sections = parse_resume_sections(resume)
+    assert "skills" in sections
+
+
+# --- Issue quality ---
+
+def test_keyword_issues_skip_noise_tokens():
+    """Noise tokens like 'it', 'do', 'no' should never become user-facing issues."""
+    from app.schemas import Issue
+    reqs = {
+        "missing_from_resume": ["it", "do", "no", "python"],
+        "required_keywords": ["it", "do", "no", "python"],
+    }
+    from app.services.rewrite_suggestions import _check_missing_keywords
+    issues = _check_missing_keywords(reqs)
+    titles = [i.title for i in issues]
+    assert not any(tok in t for tok in ["it", "do", "no"] for t in titles)
+    assert any("python" in t for t in titles)

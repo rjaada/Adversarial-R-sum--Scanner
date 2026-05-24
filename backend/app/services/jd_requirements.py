@@ -5,18 +5,36 @@ No external API required.
 from __future__ import annotations
 import re
 
-# Common tech and role keywords to track
-TECH_KEYWORDS = {
-    "python", "javascript", "typescript", "java", "go", "rust", "c++", "c#",
-    "react", "next.js", "vue", "angular", "node.js", "fastapi", "django", "flask",
+# Unambiguous single-token tech keywords — all lowercase, no spaces.
+_SINGLE_KEYWORDS: frozenset[str] = frozenset({
+    "python", "javascript", "typescript", "java", "rust",
+    "react", "vue", "angular", "fastapi", "django", "flask",
     "postgresql", "mysql", "mongodb", "redis", "elasticsearch",
-    "aws", "gcp", "azure", "docker", "kubernetes", "terraform", "ci/cd",
-    "machine learning", "ml", "deep learning", "nlp", "llm", "pytorch", "tensorflow",
-    "sql", "nosql", "graphql", "rest api", "grpc",
+    "aws", "gcp", "azure", "docker", "kubernetes", "terraform",
+    "pytorch", "tensorflow", "sql", "nosql", "graphql", "grpc",
     "git", "linux", "bash", "agile", "scrum",
-    "data engineering", "data science", "analytics", "etl",
-    "product management", "stakeholder", "cross-functional",
-}
+    "analytics", "etl",
+})
+
+# Multi-word phrases matched as substrings in lowercased text.
+_PHRASE_KEYWORDS: frozenset[str] = frozenset({
+    "machine learning", "deep learning", "data engineering",
+    "data science", "rest api", "ci/cd", "next.js", "node.js",
+    "product management", "cross-functional", "natural language processing",
+})
+
+# "go" the language — only treat as a keyword when JD uses it in a technical sense.
+_GO_TECH_RE = re.compile(
+    r"\bgolang\b"
+    r"|\bgo\s+(?:developer|engineer|programming|lang|language|backend|services?|microservices?)\b"
+    r"|\b(?:proficient|experienced?|skilled|expert)\s+in\s+go\b"
+    r"|\bgo\s+(?:and|or)\s+(?:python|java|rust|typescript|javascript|kotlin|scala)\b"
+    r"|\b(?:python|java|rust|typescript|javascript)\s+(?:and|or)\s+go\b",
+    re.IGNORECASE,
+)
+
+# Exported for backward-compat (scoring.py imports this)
+TECH_KEYWORDS = _SINGLE_KEYWORDS | _PHRASE_KEYWORDS | {"go"}
 
 EXPERIENCE_PATTERN = re.compile(
     r"(\d+)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp\.?)",
@@ -32,9 +50,22 @@ REQUIREMENT_SIGNALS = [
 
 def extract_jd_requirements(jd_text: str) -> dict:
     text_lower = jd_text.lower()
-    words = set(re.findall(r"[\w\.+#]+", text_lower))
+    # Include '/' so "ci/cd" tokenizes as one unit when needed
+    words = set(re.findall(r"[\w\.+#/]+", text_lower))
 
-    matched = sorted(TECH_KEYWORDS & words)
+    matched: set[str] = set()
+
+    # Unambiguous single-token keywords
+    matched |= _SINGLE_KEYWORDS & words
+
+    # Multi-word phrase keywords — substring search in lowered text
+    for phrase in _PHRASE_KEYWORDS:
+        if phrase in text_lower:
+            matched.add(phrase)
+
+    # "go" only when clearly used as a programming language
+    if _GO_TECH_RE.search(jd_text):
+        matched.add("go")
 
     years_matches = EXPERIENCE_PATTERN.findall(jd_text)
     min_years = max((int(y) for y in years_matches), default=None)
@@ -46,11 +77,10 @@ def extract_jd_requirements(jd_text: str) -> dict:
     ]
 
     return {
-        "required_keywords": matched,
+        "required_keywords": sorted(matched),
         "min_years_experience": min_years,
         "requirement_lines": requirement_lines[:20],
         "raw_word_set": list(words),
-        # These get filled in by scoring after resume parse
         "matched_keywords": [],
         "missing_from_resume": [],
     }

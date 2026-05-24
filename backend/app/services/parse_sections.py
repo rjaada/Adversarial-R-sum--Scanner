@@ -4,14 +4,40 @@ Returns a dict of section_name -> str (joined text per section).
 """
 from __future__ import annotations
 
-SECTION_HEADERS = {
-    "contact": ["contact", "email", "phone", "linkedin", "location", "address"],
-    "summary": ["summary", "objective", "profile", "about", "overview"],
-    "experience": ["experience", "work history", "employment", "career", "professional experience"],
-    "education": ["education", "academic", "degree", "university", "college"],
-    "skills": ["skills", "technical skills", "core competencies", "technologies", "tools"],
-    "projects": ["projects", "personal projects", "portfolio", "open source"],
-    "certifications": ["certifications", "certificates", "credentials", "licenses"],
+SECTION_HEADERS: dict[str, list[str]] = {
+    "contact": [
+        "contact", "contact information", "contact info",
+        "email", "phone", "linkedin", "location", "address",
+    ],
+    "summary": [
+        "summary", "professional summary", "career summary",
+        "objective", "career objective", "profile", "professional profile",
+        "about", "overview",
+    ],
+    "experience": [
+        "experience", "work experience", "professional experience",
+        "work history", "employment", "employment history", "career",
+    ],
+    "education": [
+        "education", "academic background", "academic history",
+        "academic", "degree", "university", "college",
+    ],
+    "skills": [
+        "skills", "technical skills", "key skills", "core skills",
+        "core competencies", "competencies", "areas of expertise",
+        "technical expertise", "technologies", "technology stack",
+        "tech stack", "tools", "tools & technologies",
+        "programming languages", "languages & frameworks",
+        "proficiencies",
+    ],
+    "projects": [
+        "projects", "personal projects", "side projects",
+        "portfolio", "open source", "open-source contributions",
+    ],
+    "certifications": [
+        "certifications", "certificates", "credentials",
+        "licenses", "accreditations",
+    ],
     "awards": ["awards", "honors", "achievements", "recognition"],
     "publications": ["publications", "research", "papers"],
     "languages": ["languages", "spoken languages"],
@@ -34,13 +60,23 @@ def parse_resume_sections(text: str) -> dict:
             if line.strip():
                 sections.setdefault(current, []).append(line)
 
-    # Collapse to text per section
     return {k: "\n".join(v).strip() for k, v in sections.items() if v}
 
 
 def _match_header(line: str) -> str | None:
-    stripped = line.strip().lower().rstrip(":- ")
+    stripped = line.strip()
+    # Headers are short — skip long lines to avoid false positives
+    if not stripped or len(stripped) > 60:
+        return None
+    normalized = stripped.lower().rstrip(":- ")
+
     for section, keywords in SECTION_HEADERS.items():
-        if stripped in keywords:
-            return section
+        for kw in keywords:
+            if normalized == kw:
+                return section
+            # Accept "Skills & Technologies", "Tech Stack:", "Skills (2024)", etc.
+            if normalized.startswith(kw) and len(normalized) > len(kw):
+                next_char = normalized[len(kw)]
+                if next_char in " :&/|-(":
+                    return section
     return None

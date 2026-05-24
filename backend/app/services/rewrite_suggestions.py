@@ -37,14 +37,21 @@ def generate_fix_suggestions(
     return issues
 
 
+# Single-char or noise tokens that should never surface as user-facing issues.
+_KEYWORD_NOISE = frozenset({"it", "do", "no", "io", "ui", "ux", "qa", "hr", "ml", "ai"})
+
+
 def _check_missing_keywords(jd_requirements: dict) -> list[Issue]:
     missing = jd_requirements.get("missing_from_resume", [])
     issues = []
     for kw in missing[:10]:
+        # Skip tokens that carry no meaningful signal for a candidate
+        if len(kw) < 2 or kw in _KEYWORD_NOISE:
+            continue
         issues.append(Issue(
             issue_type="keyword_gap",
             severity="high",
-            title=f'Missing keyword: "{kw}"',
+            title=f'Missing keyword: {kw}',
             description=f'The JD requires "{kw}" but your résumé does not mention it. ATS keyword filters will penalize this.',
             source_excerpt="",
             suggested_fix=f'Add "{kw}" in your Skills section or weave it into relevant experience descriptions.',

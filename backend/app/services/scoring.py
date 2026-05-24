@@ -21,6 +21,32 @@ _IMPACT_RE = re.compile("|".join(IMPACT_PATTERNS), re.IGNORECASE)
 
 EXPECTED_SECTIONS = {"summary", "experience", "education", "skills"}
 
+# Resume-side synonyms: if the JD keyword is the key, any synonym in the set counts.
+_SYNONYMS: dict[str, set[str]] = {
+    "go": {"go", "golang"},
+    "postgresql": {"postgresql", "postgres"},
+    "javascript": {"javascript", "js"},
+    "typescript": {"typescript", "ts"},
+}
+
+
+def _match_keywords(required: set[str], resume_text: str) -> tuple[set[str], set[str]]:
+    """Match required keywords against resume text, handling phrases and synonyms."""
+    resume_words = set(re.findall(r"[\w\.+#/]+", resume_text))
+    matched: set[str] = set()
+
+    for kw in required:
+        synonyms = _SYNONYMS.get(kw, {kw})
+        if " " in kw or "/" in kw:
+            # Phrase keyword: substring search
+            if any(syn in resume_text for syn in synonyms):
+                matched.add(kw)
+        else:
+            if synonyms & resume_words:
+                matched.add(kw)
+
+    return matched, required - matched
+
 
 def compute_scores(
     resume_sections: dict,
@@ -28,19 +54,15 @@ def compute_scores(
     parse_integrity: float,
 ) -> Scores:
     resume_text = " ".join(resume_sections.values()).lower()
-    resume_words = set(re.findall(r"[\w\.+#]+", resume_text))
 
     required = set(jd_requirements.get("required_keywords", []))
-    matched = required & resume_words
-    missing = required - resume_words
+    matched, missing = _match_keywords(required, resume_text)
 
-    # Write back into jd_requirements for the route to pick up
     jd_requirements["matched_keywords"] = sorted(matched)
     jd_requirements["missing_from_resume"] = sorted(missing)
 
     keyword_score = len(matched) / len(required) if required else 1.0
 
-    # Experience: look for year mentions and compare to JD minimum
     years_in_resume = [int(y) for y in re.findall(r"(\d+)\+?\s*(?:years?|yrs?)", resume_text)]
     max_resume_years = max(years_in_resume, default=0)
     min_jd_years = jd_requirements.get("min_years_experience") or 0
@@ -53,7 +75,7 @@ def compute_scores(
 
     all_text = " ".join(resume_sections.values())
     impact_hits = len(_IMPACT_RE.findall(all_text))
-    impact_score = min(1.0, impact_hits / 8)  # 8 hits = full score
+    impact_score = min(1.0, impact_hits / 8)
 
     overall = (
         keyword_score * WEIGHT_KEYWORD
