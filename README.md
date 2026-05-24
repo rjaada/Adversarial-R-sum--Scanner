@@ -16,7 +16,7 @@ Five signatures, each with an independent weight:
 
 Composite score thresholds: **WATCH** ≥ 0.35 · **SUSPECT** ≥ 0.60 · **QUARANTINE** ≥ 0.80
 
-QUARANTINE automatically demotes source reliability to 0.10 and writes an alert flagging it for analyst review before the next SITREP.
+QUARANTINE writes an alert row and emits a warning log. Host-system reliability demotion is an integration hook — see `_quarantine_source()` in the scanner module.
 
 ## Setup
 
@@ -42,7 +42,7 @@ cp .env.example .env
 cd backend && pytest test_adversarial_scanner.py -v
 ```
 
-Expected: **30 passed**.
+Expected: **34 passed**.
 
 ## Run integration tests (requires Postgres)
 

@@ -1,9 +1,14 @@
 """
-Adversarial Résumé Scanner — Feature 5
+Adversarial Résumé Scanner
 
-Detects sources gaming the Bayesian reliability weight system via five
-named adversarial signatures. Call scan_source_for_adversarial_signatures()
-standalone or wire adversarial_resume_scan() into update_source_reliability().
+Detects sources that game Bayesian reliability weight systems by building
+a credible history of accurate low-stakes reports (their adversarial "résumé")
+before injecting high-impact disinformation at peak trust. Five named
+adversarial signatures are scored into a composite adversarial risk score.
+
+Public API:
+    scan_source_for_adversarial_signatures()  — pure function, no I/O, fully testable
+    adversarial_resume_scan()                 — async DB wrapper for pipeline integration
 """
 
 from __future__ import annotations
@@ -253,8 +258,13 @@ async def adversarial_resume_scan(
     conn: asyncpg.Connection | None = None,
 ) -> dict:
     """
-    Hook into update_source_reliability(). Runs scanner, persists trust
-    snapshot, writes alert if needed, auto-quarantines on QUARANTINE level.
+    DB wrapper. Call after update_source_reliability() resolves.
+
+    Loads trust history and prior-injection state from Postgres, runs the pure
+    scanner, persists an hourly trust snapshot, and writes an alert row if any
+    signatures are active. On QUARANTINE, calls _quarantine_source() which is
+    an integration hook — it logs a warning but does not write to a host sources
+    table unless you implement the commented UPDATE in _quarantine_source().
     """
     import asyncpg as _asyncpg  # noqa: PLC0415 — deferred so module loads without asyncpg installed
 
@@ -515,6 +525,15 @@ async def _quarantine_source(
 # ---------------------------------------------------------------------------
 
 
+def _to_aware_dt(ts: str | datetime) -> datetime:
+    """Parse a timestamp to a timezone-aware datetime. Treats naive datetimes as UTC."""
+    if isinstance(ts, str):
+        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts
+
+
 def _top_level_family(event: dict) -> str:
     """Return ACLED top-level event family, stripping any subtype after '::'."""
     raw = event.get("acled_event_type", event.get("event_type", ""))
@@ -538,11 +557,7 @@ def _age_hours(event: dict, now: datetime) -> float:
     ts = event.get("timestamp") or event.get("event_timestamp")
     if ts is None:
         return 9999.0
-    if isinstance(ts, str):
-        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return (now - ts).total_seconds() / 3600
+    return (now - _to_aware_dt(ts)).total_seconds() / 3600
 
 
 def _current_reliability(trust_history: list[dict]) -> float:
@@ -556,12 +571,7 @@ def _reliability_at_offset_days(trust_history: list[dict], days: int) -> float:
         return 0.5
     cutoff = datetime.now(tz=timezone.utc).timestamp() - days * 86400
     for snap in reversed(trust_history):
-        ts = snap["snapshot_time"]
-        if isinstance(ts, str):
-            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        if ts.timestamp() <= cutoff:
+        if _to_aware_dt(snap["snapshot_time"]).timestamp() <= cutoff:
             return snap["reliability_score"]
     return trust_history[0]["reliability_score"]
 

@@ -10,6 +10,7 @@ from adversarial_scanner import (
     _build_alert_payload,
     _max_prior_reliability,
     _is_high_impact,
+    _is_low_impact,
     _age_hours,
     WATCH_THRESHOLD,
     SUSPECT_THRESHOLD,
@@ -84,6 +85,22 @@ def test_top_level_battles_is_high_impact():
 
 def test_protests_peaceful_is_not_high_impact():
     assert not _is_high_impact({"acled_event_type": "Protests::Peaceful protest"})
+
+
+def test_low_impact_exact_match_counts():
+    assert _is_low_impact({"acled_event_type": "Protests::Peaceful protest"})
+    assert _is_low_impact({"acled_event_type": "Strategic developments::Agreement"})
+    assert _is_low_impact({"acled_event_type": "Strategic developments::Other"})
+
+
+def test_low_impact_non_exact_subtype_does_not_count():
+    # Non-enumerated subtype — not in LOW_IMPACT_EVENT_TYPES
+    assert not _is_low_impact({"acled_event_type": "Protests::Violent demonstration"})
+
+
+def test_low_impact_top_level_only_does_not_count():
+    # Top-level family without subtype is not an exact match
+    assert not _is_low_impact({"acled_event_type": "Protests"})
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +233,7 @@ def test_narrative_isolation_detected():
 def test_narrative_isolation_not_triggered_low_trust():
     history = [_snap(0.55, 10), _snap(0.60, 0.1)]
     events = (
-        [_event("Protests::Peaceful protest", float(h)) for h in range(13)]
+        [_event("Protests::Peaceful protest", float(h)) for h in range(14)]  # 14 + 1 = 15 >= MIN
         + [_event("Battles", 10.0)]
     )
     clusters = [{"members": ["src_lo"], "propagation_count": 0}]
@@ -362,3 +379,11 @@ def test_age_hours_naive_datetime_treated_as_utc():
     event = {"timestamp": naive_ts}
     age = _age_hours(event, now)
     assert 4.9 < age < 5.1
+
+
+def test_age_hours_iso_string_with_trailing_z():
+    now = datetime.now(tz=timezone.utc)
+    z_str = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    event = {"timestamp": z_str}
+    age = _age_hours(event, now)
+    assert 2.9 < age < 3.1
