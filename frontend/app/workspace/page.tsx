@@ -8,6 +8,8 @@ interface Issue {
   severity: "critical" | "high" | "medium" | "low"
   title: string
   description: string
+  evidence?: string
+  fix_pattern?: string
   source_excerpt: string
   suggested_fix: string
   impact_score: number
@@ -76,6 +78,8 @@ const MOCK: ScanResult = {
       severity: "high",
       title: "Missing keyword: kubernetes",
       description: "The JD requires kubernetes but your resume does not mention it.",
+      evidence: '"kubernetes" does not appear anywhere in your résumé text.',
+      fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
       source_excerpt: "",
       suggested_fix: "Add kubernetes in your Skills section.",
       impact_score: 3.2,
@@ -85,6 +89,8 @@ const MOCK: ScanResult = {
       severity: "high",
       title: "Most bullets lack measurable impact",
       description: "4 of 4 experience bullets have no numbers or percentages.",
+      evidence: "4 of 4 experience bullets contain no numbers, percentages, currency, or scale indicators.",
+      fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
       source_excerpt: "- Responsible for migration of monolith to microservices",
       suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
       impact_score: 3.2,
@@ -92,8 +98,10 @@ const MOCK: ScanResult = {
     {
       issue_type: "weak_phrasing",
       severity: "medium",
-      title: "Weak verb: responsible for",
+      title: 'Weak verb: "responsible for"',
       description: "Passive phrasing reduces impact score in LLM screeners.",
+      evidence: 'Phrase "responsible for" signals passive ownership. Screeners weight active verbs more heavily.',
+      fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
       source_excerpt: "...Responsible for migration of monolith...",
       suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
       impact_score: 1.6,
@@ -103,6 +111,8 @@ const MOCK: ScanResult = {
       severity: "high",
       title: "Missing keyword: aws",
       description: "The JD requires aws but your resume does not mention it.",
+      evidence: '"aws" does not appear anywhere in your résumé text.',
+      fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
       source_excerpt: "",
       suggested_fix: "Add aws to your Skills section if applicable.",
       impact_score: 3.2,
@@ -373,14 +383,21 @@ export default function WorkspacePage() {
                     <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>{issue.title}</div>
                     <div style={{ fontSize: "0.76rem", color: "#6f6b64" }}>{issue.description}</div>
                     {selectedIssue === i && (
-                      <div style={{ marginTop: "0.75rem", padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", fontSize: "0.76rem", color: "#1f1d1a" }}>
-                        <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Suggested fix</div>
-                        <div>{issue.suggested_fix}</div>
-                        {issue.source_excerpt && (
-                          <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
-                            {issue.source_excerpt}
-                          </pre>
+                      <div style={{ marginTop: "0.75rem", fontSize: "0.76rem", color: "#1f1d1a" }}>
+                        {issue.evidence && (
+                          <div style={{ padding: "0.45rem 0.65rem", background: "rgba(0,0,0,0.03)", border: "1px solid #e8e3dc", borderRadius: "2px", marginBottom: "0.5rem", fontSize: "0.72rem", color: "#6f6b64", fontStyle: "italic" }}>
+                            {issue.evidence}
+                          </div>
                         )}
+                        <div style={{ padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px" }}>
+                          <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Fix pattern</div>
+                          <div>{issue.fix_pattern || issue.suggested_fix}</div>
+                          {issue.source_excerpt && (
+                            <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
+                              {issue.source_excerpt}
+                            </pre>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

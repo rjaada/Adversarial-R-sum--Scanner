@@ -12,6 +12,8 @@ class Issue(BaseModel):
     severity: Literal["critical", "high", "medium", "low"]
     title: str
     description: str
+    evidence: str = ""
+    fix_pattern: str = ""
     source_excerpt: str
     suggested_fix: str
     impact_score: float

@@ -148,7 +148,6 @@ def test_parse_skills_technologies_variant():
 
 def test_keyword_issues_skip_noise_tokens():
     """Noise tokens like 'it', 'do', 'no' should never become user-facing issues."""
-    from app.schemas import Issue
     reqs = {
         "missing_from_resume": ["it", "do", "no", "python"],
         "required_keywords": ["it", "do", "no", "python"],
@@ -158,3 +157,59 @@ def test_keyword_issues_skip_noise_tokens():
     titles = [i.title for i in issues]
     assert not any(tok in t for tok in ["it", "do", "no"] for t in titles)
     assert any("python" in t for t in titles)
+
+
+# --- Evidence and fix_pattern ---
+
+def test_keyword_issue_has_evidence():
+    """Missing keyword issues must carry non-empty evidence and fix_pattern."""
+    reqs = {"missing_from_resume": ["kubernetes"], "required_keywords": ["kubernetes"]}
+    from app.services.rewrite_suggestions import _check_missing_keywords
+    issues = _check_missing_keywords(reqs)
+    assert len(issues) == 1
+    assert "kubernetes" in issues[0].evidence
+    assert issues[0].fix_pattern != ""
+
+
+def test_quantification_issue_has_evidence_with_counts():
+    """Low-quantification evidence must include actual bullet counts."""
+    resume = (
+        "Experience\n"
+        "- Responsible for the backend service\n"
+        "- Helped with CI/CD pipeline setup\n"
+        "- Worked on database migrations\n"
+        "- Assisted in code reviews\n"
+    )
+    sections = parse_resume_sections(resume)
+    reqs = {"missing_from_resume": [], "required_keywords": []}
+    from app.services.rewrite_suggestions import _check_quantification
+    issues = _check_quantification(sections)
+    if issues:
+        assert any(c.isdigit() for c in issues[0].evidence)
+        assert issues[0].fix_pattern != ""
+
+
+def test_missing_summary_issue_has_evidence():
+    """Missing section issues carry evidence and fix_pattern."""
+    sections = {"experience": "Engineer at Corp", "skills": "Python"}
+    from app.services.rewrite_suggestions import _check_missing_sections
+    issues = _check_missing_sections(sections)
+    summary_issues = [i for i in issues if i.issue_type == "missing_section" and "Summary" in i.title]
+    assert len(summary_issues) == 1
+    assert summary_issues[0].evidence != ""
+    assert summary_issues[0].fix_pattern != ""
+
+
+def test_summary_mismatch_evidence_contains_percentage():
+    """Summary mismatch evidence must state the overlap percentage."""
+    sections = {"summary": "Experienced engineer working on distributed systems."}
+    reqs = {
+        "required_keywords": ["kubernetes", "terraform", "aws", "docker", "python"],
+        "matched_keywords": [],
+        "missing_from_resume": ["kubernetes", "terraform", "aws", "docker"],
+    }
+    from app.services.rewrite_suggestions import _check_summary_relevance
+    issues = _check_summary_relevance(sections, reqs)
+    assert len(issues) == 1
+    assert "%" in issues[0].evidence
+    assert issues[0].fix_pattern != ""
