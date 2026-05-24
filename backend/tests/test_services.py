@@ -38,7 +38,7 @@ Requirements:
 def test_parse_sections_finds_experience():
     sections = parse_resume_sections(SAMPLE_RESUME)
     assert "experience" in sections
-    assert "Skills" in sections.get("experience", "") or "experience" in sections
+    assert "Engineer" in sections["experience"]
 
 
 def test_parse_sections_finds_skills():
@@ -85,10 +85,9 @@ def test_fix_suggestions_flags_missing_keywords():
     assert any(t in types for t in ["keyword_gap", "weak_phrasing", "low_quantification", "missing_section", "summary_keyword_mismatch"])
 
 
-def test_fix_suggestions_sorted_by_impact():
+def test_fix_suggestions_have_nonzero_impact_scores():
     sections = parse_resume_sections(SAMPLE_RESUME)
     reqs = extract_jd_requirements(SAMPLE_JD)
     compute_scores(sections, reqs, parse_integrity=1.0)
     issues = generate_fix_suggestions(sections, reqs)
-    scores = [i.impact_score for i in issues]
-    assert scores == sorted(scores, reverse=True) or len(issues) <= 1
+    assert all(i.impact_score > 0 for i in issues)

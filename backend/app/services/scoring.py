@@ -5,7 +5,6 @@ All weights are transparent and documented.
 from __future__ import annotations
 import re
 from app.schemas import Scores
-from app.services.jd_requirements import TECH_KEYWORDS
 
 WEIGHT_KEYWORD = 0.35
 WEIGHT_EXPERIENCE = 0.25

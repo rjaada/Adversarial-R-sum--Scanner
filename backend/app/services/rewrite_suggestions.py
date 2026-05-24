@@ -8,6 +8,13 @@ from app.schemas import Issue
 
 SEVERITY_WEIGHTS = {"critical": 5, "high": 4, "medium": 2, "low": 1}
 
+# Uniform heuristic confidence; multiplied by severity weight to rank issues.
+_CONFIDENCE = 0.8
+
+
+def _impact(severity: str) -> float:
+    return round(SEVERITY_WEIGHTS[severity] * _CONFIDENCE, 2)
+
 WEAK_VERBS = [
     "responsible for", "helped", "assisted", "worked on", "involved in",
     "participated in", "contributed to", "did", "made",
@@ -22,17 +29,11 @@ def generate_fix_suggestions(
     jd_requirements: dict,
 ) -> list[Issue]:
     issues: list[Issue] = []
-
     issues += _check_missing_keywords(jd_requirements)
     issues += _check_weak_phrasing(resume_sections)
     issues += _check_missing_sections(resume_sections)
     issues += _check_quantification(resume_sections)
     issues += _check_summary_relevance(resume_sections, jd_requirements)
-
-    for issue in issues:
-        sw = SEVERITY_WEIGHTS[issue.severity]
-        object.__setattr__(issue, "impact_score", round(sw * 0.8, 2))  # uniform confidence=0.8 for heuristics
-
     return issues
 
 
@@ -47,7 +48,7 @@ def _check_missing_keywords(jd_requirements: dict) -> list[Issue]:
             description=f'The JD requires "{kw}" but your résumé does not mention it. ATS keyword filters will penalize this.',
             source_excerpt="",
             suggested_fix=f'Add "{kw}" in your Skills section or weave it into relevant experience descriptions.',
-            impact_score=0.0,
+            impact_score=_impact("high"),
         ))
     return issues
 
@@ -67,7 +68,7 @@ def _check_weak_phrasing(resume_sections: dict) -> list[Issue]:
             description="Passive or weak phrasing reduces impact score in LLM screeners and human review.",
             source_excerpt=f"...{excerpt}...",
             suggested_fix=f'Replace "{phrase}" with an active verb like "Built", "Led", "Delivered", "Reduced", or "Scaled".',
-            impact_score=0.0,
+            impact_score=_impact("medium"),
         ))
         if len(issues) >= 5:
             break
@@ -91,7 +92,7 @@ def _check_missing_sections(resume_sections: dict) -> list[Issue]:
                 description=desc,
                 source_excerpt="",
                 suggested_fix=f"Add a clear '{section.capitalize()}' header followed by your content.",
-                impact_score=0.0,
+                impact_score=_impact(severity),
             ))
     return issues
 
@@ -109,7 +110,7 @@ def _check_quantification(resume_sections: dict) -> list[Issue]:
             description=f"{len(unquantified)} of {len(bullet_lines)} experience bullets have no numbers, percentages, or dollar figures.",
             source_excerpt=unquantified[0][:120] if unquantified else "",
             suggested_fix='Add metrics to at least 50% of bullets. Example: "Reduced API latency by 40%" instead of "Improved API performance".',
-            impact_score=0.0,
+            impact_score=_impact("high"),
         )]
     return []
 
@@ -129,6 +130,6 @@ def _check_summary_relevance(resume_sections: dict, jd_requirements: dict) -> li
             description="Your summary mentions fewer than 20% of the role's required keywords. LLM screeners read the summary first.",
             source_excerpt=summary[:200],
             suggested_fix="Rewrite your summary to mirror 3-5 key terms from the job description naturally.",
-            impact_score=0.0,
+            impact_score=_impact("high"),
         )]
     return []

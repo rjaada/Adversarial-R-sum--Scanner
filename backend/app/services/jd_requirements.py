@@ -4,7 +4,6 @@ No external API required.
 """
 from __future__ import annotations
 import re
-from collections import Counter
 
 # Common tech and role keywords to track
 TECH_KEYWORDS = {

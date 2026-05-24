@@ -1,9 +1,8 @@
 """
 Parse plain résumé text into labeled sections using header heuristics.
-Returns a dict of section_name -> list[str] (lines).
+Returns a dict of section_name -> str (joined text per section).
 """
 from __future__ import annotations
-import re
 
 SECTION_HEADERS = {
     "contact": ["contact", "email", "phone", "linkedin", "location", "address"],
@@ -18,11 +17,6 @@ SECTION_HEADERS = {
     "languages": ["languages", "spoken languages"],
     "volunteer": ["volunteer", "community", "nonprofit"],
 }
-
-_HEADER_RE = re.compile(
-    r"^(" + "|".join(re.escape(h) for terms in SECTION_HEADERS.values() for h in terms) + r")\s*[:\-]?\s*$",
-    re.IGNORECASE,
-)
 
 
 def parse_resume_sections(text: str) -> dict:
