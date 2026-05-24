@@ -3,8 +3,6 @@
 import { useState, useRef } from "react"
 import Link from "next/link"
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 interface Issue {
   issue_type: string
   severity: "critical" | "high" | "medium" | "low"
@@ -34,30 +32,25 @@ interface ScanResult {
   matched_keywords: string[]
 }
 
-// ─── Mock data (shown before first real scan) ─────────────────────────────────
-
 const MOCK: ScanResult = {
   scan_id: "mock-001",
   source_id: "sample_resume.pdf",
-  ats_text_preview: [
-    "Jane Smith",
-    "jane@email.com | linkedin.com/in/janesmith",
-    "",
-    "Software Engineer with 5 years of experience building distributed systems.",
-    "",
-    "EXPERIENCE",
-    "Senior Software Engineer — Acme Corp (2021–2024)",
-    "- Responsible for migration of monolith to microservices",
-    "- Helped reduce infrastructure costs",
-    "- Worked on CI/CD improvements",
-    "- Assisted with team onboarding",
-    "",
-    "SKILLS",
-    "Python, JavaScript, Docker, PostgreSQL",
-    "",
-    "EDUCATION",
-    "B.S. Computer Science — State University, 2019",
-  ].join("\n"),
+  ats_text_preview: `Jane Smith
+jane@email.com | linkedin.com/in/janesmith
+
+Software Engineer with 5 years of experience building distributed systems.
+
+EXPERIENCE
+Senior Software Engineer - Acme Corp (2021-2024)
+- Responsible for migration of monolith to microservices
+- Helped reduce infrastructure costs
+- Worked on CI/CD improvements
+
+SKILLS
+Python, JavaScript, Docker, PostgreSQL
+
+EDUCATION
+B.S. Computer Science - State University, 2019`,
   scores: {
     overall: 0.52,
     keyword_match: 0.38,
@@ -70,54 +63,43 @@ const MOCK: ScanResult = {
     {
       issue_type: "keyword_gap",
       severity: "high",
-      title: 'Missing keyword: "kubernetes"',
-      description: "The JD requires kubernetes but your résumé does not mention it. ATS keyword filters will penalize this.",
+      title: "Missing keyword: kubernetes",
+      description: "The JD requires kubernetes but your resume does not mention it.",
       source_excerpt: "",
-      suggested_fix: 'Add "kubernetes" in your Skills section or weave it into relevant experience descriptions.',
+      suggested_fix: "Add kubernetes in your Skills section.",
       impact_score: 3.2,
     },
     {
       issue_type: "low_quantification",
       severity: "high",
-      title: "Most bullet points lack measurable impact",
-      description: "4 of 4 experience bullets have no numbers, percentages, or dollar figures.",
+      title: "Most bullets lack measurable impact",
+      description: "4 of 4 experience bullets have no numbers or percentages.",
       source_excerpt: "- Responsible for migration of monolith to microservices",
-      suggested_fix: 'Add metrics: "Migrated monolith to 12 microservices, reducing p99 latency by 35%"',
+      suggested_fix: "Add metrics: Migrated monolith to 12 microservices, reducing p99 latency by 35%",
       impact_score: 3.2,
     },
     {
       issue_type: "weak_phrasing",
       severity: "medium",
-      title: 'Weak verb: "responsible for"',
-      description: "Passive phrasing reduces impact score in LLM screeners and human review.",
+      title: "Weak verb: responsible for",
+      description: "Passive phrasing reduces impact score in LLM screeners.",
       source_excerpt: "...Responsible for migration of monolith to microservices...",
-      suggested_fix: 'Replace with "Led migration of monolith to 12 microservices"',
+      suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
       impact_score: 1.6,
     },
     {
       issue_type: "keyword_gap",
       severity: "high",
-      title: 'Missing keyword: "aws"',
-      description: "The JD requires aws but your résumé does not mention it. ATS keyword filters will penalize this.",
+      title: "Missing keyword: aws",
+      description: "The JD requires aws but your resume does not mention it.",
       source_excerpt: "",
-      suggested_fix: 'Add "aws" to your Skills section if applicable.',
+      suggested_fix: "Add aws to your Skills section if applicable.",
       impact_score: 3.2,
-    },
-    {
-      issue_type: "summary_keyword_mismatch",
-      severity: "medium",
-      title: "Missing Summary section",
-      description: "No summary section detected. Many ATS systems use the summary for role classification.",
-      source_excerpt: "",
-      suggested_fix: 'Add a "Summary" header at the top with 2–3 sentences mirroring JD keywords.',
-      impact_score: 1.6,
     },
   ],
   missing_keywords: ["kubernetes", "aws", "terraform", "go"],
   matched_keywords: ["python", "docker", "postgresql"],
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SEV_COLOR: Record<string, string> = {
   critical: "#8c2f4e",
@@ -136,8 +118,6 @@ function scoreColor(p: number): string {
   return "#8c2f4e"
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function WorkspacePage() {
   const [result, setResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -151,27 +131,18 @@ export default function WorkspacePage() {
   const isMock = result === null
 
   async function handleScan() {
-    if (!file) {
-      setError("Upload a résumé first.")
-      return
-    }
-    if (!jdText.trim()) {
-      setError("Paste a job description first.")
-      return
-    }
+    if (!file) { setError("Upload a resume first."); return }
+    if (!jdText.trim()) { setError("Paste a job description first."); return }
     setScanning(true)
     setError(null)
     try {
       const form = new FormData()
       form.append("file", file)
       form.append("jd_text", jdText)
-      const res = await fetch("http://localhost:8000/api/scan", {
-        method: "POST",
-        body: form,
-      })
+      const res = await fetch("http://localhost:8000/api/scan", { method: "POST", body: form })
       if (!res.ok) {
         const msg = await res.text()
-        throw new Error(msg || `HTTP ${res.status}`)
+        throw new Error(msg || "HTTP " + res.status)
       }
       setResult(await res.json())
     } catch (e: unknown) {
@@ -187,224 +158,114 @@ export default function WorkspacePage() {
     if (f) setFile(f)
   }
 
-  const RAIL: React.CSSProperties = {
-    width: "280px",
-    flexShrink: 0,
-    borderRight: "1px solid #d9d3ca",
-    background: "#fbfaf7",
-    padding: "1.25rem",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1rem",
-    overflowY: "auto",
-  }
-
-  const FINDINGS: React.CSSProperties = {
-    width: "340px",
-    flexShrink: 0,
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-  }
-
-  const LABEL: React.CSSProperties = {
-    fontSize: "0.7rem",
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: "#6f6b64",
-    display: "block",
-    marginBottom: "0.5rem",
-  }
-
   return (
     <div style={{ background: "#f6f3ee", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-
-      {/* Nav */}
-      <nav style={{
-        borderBottom: "1px solid #d9d3ca",
-        padding: "0 1.5rem",
-        height: "48px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "#fbfaf7",
-        flexShrink: 0,
-      }}>
-        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", letterSpacing: "-0.01em", textDecoration: "none" }}>
+      <nav style={{ borderBottom: "1px solid #d9d3ca", padding: "0 1.5rem", height: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fbfaf7", flexShrink: 0 }}>
+        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", textDecoration: "none" }}>
           TraceRank
         </Link>
         <span style={{ fontSize: "0.75rem", color: "#6f6b64" }}>
-          {isMock ? "Showing sample scan" : `Scanned: ${display.source_id}`}
+          {isMock ? "Showing sample scan" : "Scanned: " + display.source_id}
         </span>
       </nav>
 
-      {/* Workspace */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
-        {/* Left rail: upload + JD + scan */}
-        <div style={RAIL}>
-
-          {/* File upload */}
+        <div style={{ width: "280px", flexShrink: 0, borderRight: "1px solid #d9d3ca", background: "#fbfaf7", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem", overflowY: "auto" }}>
           <div>
-            <label style={LABEL}>Résumé</label>
+            <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", display: "block", marginBottom: "0.5rem" }}>
+              Resume
+            </label>
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              style={{
-                border: "1px dashed #d9d3ca",
-                borderRadius: "2px",
-                padding: "1.25rem",
-                textAlign: "center",
-                cursor: "pointer",
-                background: file ? "#f0f7f5" : undefined,
-                transition: "background 0.15s",
-              }}
+              style={{ border: "1px dashed #d9d3ca", borderRadius: "2px", padding: "1.25rem", textAlign: "center", cursor: "pointer", background: file ? "#f0f7f5" : undefined }}
             >
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.docx"
                 style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) setFile(f)
-                }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }}
               />
               <span style={{ fontSize: "0.8rem", color: file ? "#0f5c52" : "#6f6b64", fontWeight: file ? 500 : undefined }}>
-                {file ? `✓ ${file.name}` : "Drop PDF or DOCX\nor click to browse"}
+                {file ? "Selected: " + file.name : "Drop PDF or DOCX, or click to browse"}
               </span>
             </div>
           </div>
 
-          {/* JD textarea */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <label style={LABEL}>Job Description</label>
+            <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", display: "block", marginBottom: "0.5rem" }}>
+              Job Description
+            </label>
             <textarea
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               placeholder="Paste the full job description here"
-              style={{
-                flex: 1,
-                minHeight: "180px",
-                resize: "vertical",
-                border: "1px solid #d9d3ca",
-                borderRadius: "2px",
-                padding: "0.75rem",
-                fontSize: "0.8rem",
-                fontFamily: "Inter, system-ui, sans-serif",
-                color: "#1f1d1a",
-                background: "#f6f3ee",
-                outline: "none",
-              }}
+              style={{ flex: 1, minHeight: "180px", resize: "vertical", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "0.75rem", fontSize: "0.8rem", fontFamily: "Inter, system-ui, sans-serif", color: "#1f1d1a", background: "#f6f3ee", outline: "none" }}
             />
           </div>
 
-          {/* Error */}
           {error && (
-            <div style={{
-              fontSize: "0.8rem",
-              color: "#8c2f4e",
-              padding: "0.5rem 0.75rem",
-              border: "1px solid rgba(140,47,78,0.15)",
-              borderRadius: "2px",
-              background: "rgba(140,47,78,0.04)",
-            }}>
+            <div style={{ fontSize: "0.8rem", color: "#8c2f4e", padding: "0.5rem 0.75rem", border: "1px solid #d9d3ca", borderRadius: "2px" }}>
               {error}
             </div>
           )}
 
-          {/* Scan button */}
           <button
             onClick={handleScan}
             disabled={scanning}
-            style={{
-              background: scanning ? "#6f6b64" : "#0f5c52",
-              color: "#fff",
-              border: "none",
-              borderRadius: "2px",
-              padding: "0.7rem",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              cursor: scanning ? "not-allowed" : "pointer",
-              letterSpacing: "0.01em",
-            }}
+            style={{ background: scanning ? "#6f6b64" : "#0f5c52", color: "#fff", border: "none", borderRadius: "2px", padding: "0.7rem", fontSize: "0.875rem", fontWeight: 500, cursor: scanning ? "not-allowed" : "pointer" }}
           >
-            {scanning ? "Scanning…" : "Run Scan"}
+            {scanning ? "Scanning..." : "Run Scan"}
           </button>
 
-          {/* Scan history placeholder */}
           <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "1rem" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
-              Scan History
-            </div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>Scan History</div>
             <div style={{ fontSize: "0.78rem", color: "#a0998e" }}>No saved scans yet.</div>
           </div>
         </div>
 
-        {/* Center: ATS plain-text preview */}
         <div style={{ flex: 1, padding: "1.5rem", overflowY: "auto", borderRight: "1px solid #d9d3ca" }}>
           <div style={{ maxWidth: "640px" }}>
             <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
-                What ATS sees
-              </span>
+              <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>What ATS sees</span>
               {isMock && (
-                <span style={{ fontSize: "0.65rem", color: "#9a4d22", background: "rgba(154,77,34,0.08)", padding: "0.15rem 0.5rem", borderRadius: "1px" }}>
+                <span style={{ fontSize: "0.65rem", color: "#9a4d22", padding: "0.15rem 0.5rem", borderRadius: "1px", border: "1px solid #d9d3ca" }}>
                   sample
                 </span>
               )}
             </div>
-            <pre style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: "0.78rem",
-              lineHeight: 1.7,
-              color: "#1f1d1a",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              background: "#fbfaf7",
-              border: "1px solid #d9d3ca",
-              borderRadius: "2px",
-              padding: "1.25rem",
-              margin: 0,
-            }}>
+            <pre style={{ fontFamily: "monospace", fontSize: "0.78rem", lineHeight: 1.7, color: "#1f1d1a", whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "1.25rem", margin: 0 }}>
               {display.ats_text_preview}
             </pre>
           </div>
         </div>
 
-        {/* Right: findings panel */}
-        <div style={FINDINGS}>
-
-          {/* Scores */}
+        <div style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
-              Scores
-            </div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>Scores</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-              {([
+              {[
                 { label: "Overall", value: display.scores.overall, span: true },
                 { label: "Keywords", value: display.scores.keyword_match, span: false },
                 { label: "Experience", value: display.scores.experience_alignment, span: false },
                 { label: "Parse", value: display.scores.parse_integrity, span: false },
                 { label: "Structure", value: display.scores.structure, span: false },
-                { label: "Impact Lang", value: display.scores.quantified_impact, span: false },
-              ] as const).map((s) => {
+                { label: "Impact", value: display.scores.quantified_impact, span: false },
+              ].map((s) => {
                 const p = pct(s.value)
                 const color = scoreColor(p)
                 return (
                   <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
-                    <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>
-                      {s.label}
-                    </div>
+                    <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>{s.label}</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color }}>
-                        {p}
-                      </span>
+                      <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color }}>{p}</span>
                       <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>/100</span>
                     </div>
                     <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem" }}>
-                      <div style={{ height: "2px", width: `${p}%`, background: color, borderRadius: "1px", transition: "width 0.4s" }} />
+                      <div style={{ height: "2px", width: p + "%", background: color, borderRadius: "1px" }} />
                     </div>
                   </div>
                 )
@@ -412,87 +273,41 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          {/* Keywords */}
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
-              Keywords
-            </div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>Keywords</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
               {display.matched_keywords.map((k) => (
-                <span
-                  key={k}
-                  style={{ fontSize: "0.7rem", fontFamily: "'IBM Plex Mono', monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.15rem 0.4rem", borderRadius: "1px" }}
-                >
-                  {k}
-                </span>
+                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{k}</span>
               ))}
               {display.missing_keywords.map((k) => (
-                <span
-                  key={k}
-                  style={{ fontSize: "0.7rem", fontFamily: "'IBM Plex Mono', monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.4rem", borderRadius: "1px" }}
-                >
-                  {"✗"} {k}
-                </span>
+                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{"x " + k}</span>
               ))}
             </div>
           </div>
 
-          {/* Issues */}
           <div style={{ flex: 1, overflowY: "auto" }}>
             <div style={{ padding: "0.75rem 1.25rem", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", borderBottom: "1px solid #d9d3ca" }}>
               Issues — {display.issues.length} found
             </div>
-
             {display.issues.map((issue, i) => (
               <div
                 key={i}
                 onClick={() => setSelectedIssue(selectedIssue === i ? null : i)}
-                style={{
-                  padding: "0.875rem 1.25rem",
-                  borderBottom: "1px solid #d9d3ca",
-                  cursor: "pointer",
-                  background: selectedIssue === i ? "#f0f7f5" : undefined,
-                  transition: "background 0.1s",
-                }}
+                style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid #d9d3ca", cursor: "pointer", background: selectedIssue === i ? "#f0f7f5" : undefined }}
               >
                 <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                  <span style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    fontSize: "0.6rem",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: SEV_COLOR[issue.severity],
-                    fontWeight: 600,
-                    minWidth: "52px",
-                    paddingTop: "2px",
-                    flexShrink: 0,
-                  }}>
+                  <span style={{ fontFamily: "monospace", fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", color: SEV_COLOR[issue.severity], fontWeight: 600, minWidth: "52px", paddingTop: "2px", flexShrink: 0 }}>
                     {issue.severity}
                   </span>
                   <div>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>
-                      {issue.title}
-                    </div>
-                    <div style={{ fontSize: "0.76rem", color: "#6f6b64" }}>
-                      {issue.description}
-                    </div>
-
+                    <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>{issue.title}</div>
+                    <div style={{ fontSize: "0.76rem", color: "#6f6b64" }}>{issue.description}</div>
                     {selectedIssue === i && (
-                      <div style={{
-                        marginTop: "0.75rem",
-                        padding: "0.6rem 0.75rem",
-                        background: "#fbfaf7",
-                        border: "1px solid #d9d3ca",
-                        borderRadius: "2px",
-                        fontSize: "0.76rem",
-                        color: "#1f1d1a",
-                      }}>
-                        <span style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600 }}>
-                          Fix{" → "}
-                        </span>
+                      <div style={{ marginTop: "0.75rem", padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", fontSize: "0.76rem", color: "#1f1d1a" }}>
+                        <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Suggested fix</div>
                         {issue.suggested_fix}
                         {issue.source_excerpt && (
-                          <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "'IBM Plex Mono', monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
+                          <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
                             {issue.source_excerpt}
                           </pre>
                         )}
