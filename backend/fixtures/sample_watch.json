@@ -1,0 +1,30 @@
+{
+  "_comment": "WATCH (score 0.40) — TRUST_PUMPING + NARRATIVE_ISOLATION. Fast trust velocity driven by low-impact events; high-impact claim isolated in singleton cluster.",
+  "source_id": "tg_chan_watch_007",
+  "prior_injection_detected": false,
+  "trust_history": [
+    {"days_ago": 30, "reliability_score": 0.45},
+    {"days_ago": 8,  "reliability_score": 0.50},
+    {"days_ago": 0.1, "reliability_score": 0.68}
+  ],
+  "recent_events": [
+    {"event_id": "w01", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 1,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w02", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 2,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w03", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 3,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w04", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 4,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w05", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 5,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w06", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 6,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w07", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 7,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w08", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 8,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w09", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 9,  "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w10", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 10, "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w11", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 11, "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w12", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 12, "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w13", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 13, "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w14", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 14, "corroborated": false, "impact_score": 0.2},
+    {"event_id": "w15", "acled_event_type": "Battles",                    "hours_ago": 36, "corroborated": false, "impact_score": 0.9}
+  ],
+  "cluster_data": [
+    {"members": ["tg_chan_watch_007"], "propagation_count": 0}
+  ]
+}

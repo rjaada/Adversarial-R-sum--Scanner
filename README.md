@@ -36,13 +36,35 @@ cp .env.example .env
 # edit .env
 ```
 
+## Run the CLI (no DB required)
+
+```bash
+cd backend
+python cli.py --fixture fixtures/sample_clean.json
+python cli.py --fixture fixtures/sample_quarantine.json
+python cli.py --fixture fixtures/sample_watch.json --json
+```
+
+Example output:
+
+```
+====================================================
+  Source:      tg_chan_quarantine_099
+  Risk level:  QUARANTINE
+  Risk score:  0.8000
+  Signatures:  TRUST_PUMPING, HIGH_IMPACT_INJECTION, CORROBORATION_DESERT
+====================================================
+```
+
+Three fixtures are included: `sample_clean.json`, `sample_watch.json`, `sample_quarantine.json`. Each uses relative `hours_ago`/`days_ago` fields so they never go stale.
+
 ## Run unit tests (no DB required)
 
 ```bash
-cd backend && pytest test_adversarial_scanner.py -v
+cd backend && pytest test_adversarial_scanner.py test_cli.py -v
 ```
 
-Expected: **34 passed**.
+Expected: **39 passed**.
 
 ## Run integration tests (requires Postgres)
 

@@ -1,0 +1,32 @@
+{
+  "_comment": "CLEAN — stable trust, all low-impact corroborated reports, multi-member cluster.",
+  "source_id": "tg_chan_clean_001",
+  "prior_injection_detected": false,
+  "trust_history": [
+    {"days_ago": 30, "reliability_score": 0.52},
+    {"days_ago": 15, "reliability_score": 0.55},
+    {"days_ago": 8,  "reliability_score": 0.56},
+    {"days_ago": 0.1, "reliability_score": 0.57}
+  ],
+  "recent_events": [
+    {"event_id": "c01", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 1,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c02", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 2,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c03", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 3,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c04", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 4,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c05", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 5,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c06", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 6,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c07", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 7,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c08", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 8,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c09", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 9,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c10", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 10, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c11", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 11, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c12", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 12, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "c13", "acled_event_type": "Strategic developments::Agreement", "hours_ago": 20, "corroborated": true, "impact_score": 0.3},
+    {"event_id": "c14", "acled_event_type": "Strategic developments::Agreement", "hours_ago": 24, "corroborated": true, "impact_score": 0.3},
+    {"event_id": "c15", "acled_event_type": "Strategic developments::Other",     "hours_ago": 30, "corroborated": true, "impact_score": 0.3},
+    {"event_id": "c16", "acled_event_type": "Strategic developments::Other",     "hours_ago": 36, "corroborated": true, "impact_score": 0.3}
+  ],
+  "cluster_data": [
+    {"members": ["tg_chan_clean_001", "ap_wire_002", "reuters_003"], "propagation_count": 5}
+  ]
+}

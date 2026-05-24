@@ -1,0 +1,31 @@
+{
+  "_comment": "QUARANTINE (score 0.80) — TRUST_PUMPING + HIGH_IMPACT_INJECTION + CORROBORATION_DESERT. Classic adversarial pattern: low-stakes buildup inflates trust, then high-impact claim injected at new peak; high-impact claims have zero corroboration while low-impact are fully corroborated.",
+  "source_id": "tg_chan_quarantine_099",
+  "prior_injection_detected": false,
+  "trust_history": [
+    {"days_ago": 30, "reliability_score": 0.40},
+    {"days_ago": 8,  "reliability_score": 0.52},
+    {"days_ago": 0.1, "reliability_score": 0.75}
+  ],
+  "recent_events": [
+    {"event_id": "q01", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 1,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q02", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 2,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q03", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 3,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q04", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 4,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q05", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 5,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q06", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 6,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q07", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 7,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q08", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 8,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q09", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 9,  "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q10", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 10, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q11", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 11, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q12", "acled_event_type": "Protests::Peaceful protest", "hours_ago": 12, "corroborated": true, "impact_score": 0.2},
+    {"event_id": "q_inject", "acled_event_type": "Battles",                                   "hours_ago": 24,  "corroborated": false, "impact_score": 0.95},
+    {"event_id": "q_old1",   "acled_event_type": "Battles",                                   "hours_ago": 200, "corroborated": false, "impact_score": 0.9},
+    {"event_id": "q_old2",   "acled_event_type": "Battles",                                   "hours_ago": 250, "corroborated": false, "impact_score": 0.9},
+    {"event_id": "q_old3",   "acled_event_type": "Explosions/Remote violence::Air/drone strike", "hours_ago": 300, "corroborated": false, "impact_score": 0.9}
+  ],
+  "cluster_data": [
+    {"members": ["tg_chan_quarantine_099", "shadow_relay_002"], "propagation_count": 1}
+  ]
+}
