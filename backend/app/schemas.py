@@ -36,6 +36,12 @@ class ScanSummary(BaseModel):
     overall_score: float
 
 
+class LLMStatusResponse(BaseModel):
+    available: bool
+    model: str = ""
+    healthy: bool | None = None
+
+
 class RewriteRequest(BaseModel):
     issue_type: str
     original_text: str

@@ -169,3 +169,64 @@ def test_parse_variants_skips_short_lines():
     variants = parse_variants(content, 3)
     assert len(variants) == 1
     assert "proper rewrite" in variants[0]
+
+
+# --- Metric sanitization ---
+
+def test_sanitize_wraps_bare_percentage(monkeypatch):
+    from app.services.llm_rewrite import _sanitize_variant
+    result = _sanitize_variant("Reduced latency by 35% across all services")
+    assert "[35%]" in result
+    assert "35%" not in result.replace("[35%]", "")
+
+
+def test_sanitize_leaves_bracketed_percentage_alone(monkeypatch):
+    from app.services.llm_rewrite import _sanitize_variant
+    result = _sanitize_variant("Reduced latency by [X%] across all services")
+    assert result == "Reduced latency by [X%] across all services"
+
+
+def test_sanitize_wraps_dollar_amount(monkeypatch):
+    from app.services.llm_rewrite import _sanitize_variant
+    result = _sanitize_variant("Saved $150,000 in infrastructure costs")
+    assert "[$150,000]" in result
+
+
+def test_sanitize_wraps_millisecond_metric(monkeypatch):
+    from app.services.llm_rewrite import _sanitize_variant
+    result = _sanitize_variant("Reduced p99 latency from 200ms to 50ms")
+    assert "[200ms]" in result
+    assert "[50ms]" in result
+
+
+def test_sanitize_leaves_plain_text_alone(monkeypatch):
+    from app.services.llm_rewrite import _sanitize_variant
+    text = "Built backend API supporting [N users] with [X%] uptime"
+    assert _sanitize_variant(text) == text
+
+
+def test_parse_variants_sanitizes_bare_metrics():
+    """parse_variants must sanitize fabricated numbers in model output."""
+    content = "1. Reduced API latency by 45%, saving $20,000 annually across 3 regions."
+    variants = parse_variants(content, 1)
+    assert len(variants) == 1
+    assert "[45%]" in variants[0]
+    assert "[$20,000]" in variants[0]
+
+
+# --- Status route behavior ---
+
+@pytest.mark.anyio(backends=["asyncio"])
+async def test_check_llm_health_returns_none_when_unconfigured(monkeypatch):
+    import app.services.llm_rewrite as mod
+    monkeypatch.setattr(mod, "_ENDPOINT", "")
+    result = await mod.check_llm_health()
+    assert result is None
+
+
+@pytest.mark.anyio(backends=["asyncio"])
+async def test_check_llm_health_returns_false_on_connection_error(monkeypatch):
+    import app.services.llm_rewrite as mod
+    monkeypatch.setattr(mod, "_ENDPOINT", "http://localhost:19999")
+    result = await mod.check_llm_health()
+    assert result is False

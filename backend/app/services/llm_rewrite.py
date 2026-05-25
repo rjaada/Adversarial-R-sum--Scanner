@@ -10,12 +10,46 @@ import re
 _ENDPOINT = os.getenv("LLM_ENDPOINT", "").rstrip("/")
 _MODEL = os.getenv("LLM_MODEL", "llama3")
 _TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
+_HEALTH_TIMEOUT = 3.0
 
 _SUPPORTED_TYPES = frozenset({"weak_phrasing", "low_quantification"})
+
+# Bare numeric metric patterns that were not bracketed by the model
+_BARE_METRIC_RE = re.compile(
+    r"(?<!\[)"           # not preceded by [
+    r"(?:"
+    r"\$\d[\d,.]*"       # $150,000
+    r"|\d+(?:\.\d+)?%"  # 35%, 3.5%
+    r"|\d+\s*ms\b"       # 200ms, 200 ms
+    r"|\d+[kKmMxX]\b"   # 50k, 3M, 4x
+    r")"
+    r"(?!\])",           # not followed by ]
+)
 
 
 def is_llm_configured() -> bool:
     return bool(_ENDPOINT)
+
+
+async def check_llm_health() -> bool | None:
+    """
+    Returns True if endpoint responds, False if configured but unreachable,
+    None if not configured. Uses a 3-second timeout so status loads fast.
+    """
+    if not is_llm_configured():
+        return None
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=_HEALTH_TIMEOUT) as client:
+            resp = await client.get(f"{_ENDPOINT}/v1/models")
+            return resp.status_code < 500
+    except Exception:
+        return False
+
+
+def _sanitize_variant(text: str) -> str:
+    """Wrap bare numeric metrics in [brackets] — catches model fabrications the prompt missed."""
+    return _BARE_METRIC_RE.sub(lambda m: f"[{m.group(0)}]", text)
 
 
 def build_rewrite_prompt(
@@ -48,13 +82,13 @@ def build_rewrite_prompt(
 
 
 def parse_variants(content: str, count: int) -> list[str]:
-    """Extract numbered rewrites from raw model output."""
+    """Extract numbered rewrites from raw model output, sanitizing bare metrics."""
     lines = [l.strip() for l in content.splitlines() if l.strip()]
     variants: list[str] = []
     for line in lines:
         cleaned = re.sub(r"^(\d+[.)]\s*|[-•*]\s*)", "", line).strip()
         if cleaned and len(cleaned) > 10:
-            variants.append(cleaned)
+            variants.append(_sanitize_variant(cleaned))
         if len(variants) >= count:
             break
     return variants[:count]
@@ -79,7 +113,6 @@ async def generate_rewrite_variants(
     if issue_type not in _SUPPORTED_TYPES:
         return [], True, f"Rewrite generation not supported for issue type: {issue_type}"
 
-    # Lazy import so asyncpg/httpx errors don't break startup when not installed
     try:
         import httpx
     except ImportError:

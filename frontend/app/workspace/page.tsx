@@ -49,6 +49,12 @@ interface RewriteResponse {
   error: string
 }
 
+interface LLMStatus {
+  available: boolean
+  model: string
+  healthy: boolean | null
+}
+
 const MOCK_ATS = [
   "Jane Smith",
   "jane@email.com | linkedin.com/in/janesmith",
@@ -161,6 +167,7 @@ export default function WorkspacePage() {
   const [history, setHistory] = useState<ScanSummary[]>([])
   const [rewriteVariants, setRewriteVariants] = useState<Record<number, string[]>>({})
   const [rewriteLoading, setRewriteLoading] = useState<Record<number, boolean>>({})
+  const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const display = result ?? MOCK
@@ -171,6 +178,10 @@ export default function WorkspacePage() {
       .then((r) => r.json())
       .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
       .catch(() => {})
+    fetch("http://localhost:8001/api/rewrite/status")
+      .then((r) => r.json())
+      .then((s: LLMStatus) => setLlmStatus(s))
+      .catch(() => setLlmStatus({ available: false, model: "", healthy: null }))
   }, [])
 
   async function handleScan() {
@@ -451,7 +462,7 @@ export default function WorkspacePage() {
                         )}
                         {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
                           <div style={{ marginTop: "0.6rem" }}>
-                            {!rewriteVariants[i] && (
+                            {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy !== false && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); void handleGenerateRewrites(i, issue) }}
                                 disabled={rewriteLoading[i]}
@@ -459,6 +470,11 @@ export default function WorkspacePage() {
                               >
                                 {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
                               </button>
+                            )}
+                            {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy === false && (
+                              <div style={{ fontSize: "0.65rem", color: "#9a4d22", marginTop: "0.2rem" }}>
+                                LLM endpoint unreachable — check {llmStatus.model || "LLM_ENDPOINT"} is running
+                              </div>
                             )}
                             {rewriteVariants[i] && rewriteVariants[i].length > 0 && (
                               <div style={{ marginTop: "0.4rem" }}>

@@ -1,9 +1,25 @@
 import os
 from fastapi import APIRouter
-from app.schemas import RewriteRequest, RewriteResponse
-from app.services.llm_rewrite import generate_rewrite_variants, is_llm_configured
+from app.schemas import LLMStatusResponse, RewriteRequest, RewriteResponse
+from app.services.llm_rewrite import (
+    check_llm_health,
+    generate_rewrite_variants,
+    is_llm_configured,
+)
 
 router = APIRouter()
+
+
+@router.get("/rewrite/status", response_model=LLMStatusResponse)
+async def rewrite_status():
+    if not is_llm_configured():
+        return LLMStatusResponse(available=False)
+    healthy = await check_llm_health()
+    return LLMStatusResponse(
+        available=True,
+        model=os.getenv("LLM_MODEL", "llama3"),
+        healthy=healthy,
+    )
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
