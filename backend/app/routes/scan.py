@@ -1,6 +1,7 @@
 import logging
 import traceback
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
@@ -31,6 +32,9 @@ async def scan_resume(
         if not (filename.endswith(".pdf") or filename.endswith(".docx")):
             raise HTTPException(400, "Only PDF and DOCX files are supported")
 
+        scan_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+
         file_bytes = await file.read()
         extracted = extract_resume_text(file_bytes, file.filename)
         sections = parse_resume_sections(extracted["text"])
@@ -47,22 +51,33 @@ async def scan_resume(
         sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
         top_fixes = rank_fixes(sorted_issues, raw)
 
+        matched_kw = [k for k in jd_reqs.get("keywords", []) if k.lower() in extracted["text"].lower()]
+        missing_kw = [k for k in jd_reqs.get("keywords", []) if k.lower() not in extracted["text"].lower()]
+
+        summary = ScanSummary(
+            scan_id=scan_id,
+            source_id=file.filename,
+            scanned_at=now,
+            overall_score=scores.overall,
+            total_issues=len(sorted_issues),
+            critical_count=sum(1 for i in sorted_issues if i.severity == "critical"),
+            high_count=sum(1 for i in sorted_issues if i.severity == "high"),
+            medium_count=sum(1 for i in sorted_issues if i.severity == "medium"),
+            low_count=sum(1 for i in sorted_issues if i.severity == "low"),
+        )
+
         result = ScanResult(
-            scan_id=str(uuid.uuid4()),
+            scan_id=scan_id,
+            source_id=file.filename,
+            ats_text_preview=extracted.get("ats_preview", ""),
+            resume_sections=sections if isinstance(sections, dict) else {},
+            jd_requirements=jd_reqs if isinstance(jd_reqs, dict) else {},
             scores=scores,
             issues=sorted_issues,
+            missing_keywords=missing_kw,
+            matched_keywords=matched_kw,
             top_fixes=top_fixes,
-            ats_preview=extracted.get("ats_preview", ""),
-            parse_integrity=extracted["parse_integrity"],
-            parse_warnings=extracted.get("warnings", []),
             simulation=simulation,
-            summary=ScanSummary(
-                total_issues=len(sorted_issues),
-                critical_count=sum(1 for i in sorted_issues if i.severity == "critical"),
-                high_count=sum(1 for i in sorted_issues if i.severity == "high"),
-                medium_count=sum(1 for i in sorted_issues if i.severity == "medium"),
-                low_count=sum(1 for i in sorted_issues if i.severity == "low"),
-            ),
         )
 
         pool = get_pool()
