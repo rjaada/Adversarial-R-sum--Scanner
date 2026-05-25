@@ -345,6 +345,7 @@ export default function WorkspacePage() {
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null)
   const [simExpanded, setSimExpanded] = useState(false)
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const lastStatusCheckRef = useRef<number>(0)
   const STATUS_TTL_MS = 30_000
 
@@ -446,6 +447,31 @@ export default function WorkspacePage() {
     }
   }
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      if (result) {
+        // Real scan — GET by scan_id opens directly
+        window.open("http://localhost:8001/api/scans/" + result.scan_id + "/report", "_blank")
+      } else {
+        // Mock / unsaved — POST body
+        const res = await fetch("http://localhost:8001/api/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(display),
+        })
+        if (!res.ok) throw new Error("Export failed")
+        const htmlBlob = await res.blob()
+        const url = URL.createObjectURL(htmlBlob)
+        window.open(url, "_blank")
+      }
+    } catch {
+      // silent — export is best-effort
+    } finally {
+      setExporting(false)
+    }
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     const f = e.dataTransfer.files[0]
@@ -459,9 +485,18 @@ export default function WorkspacePage() {
         <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", textDecoration: "none" }}>
           TraceRank
         </Link>
-        <span style={{ fontSize: "0.75rem", color: "#6f6b64" }}>
-          {isMock ? "Showing sample scan" : "Scanned: " + display.source_id}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "#6f6b64" }}>
+            {isMock ? "Showing sample scan" : "Scanned: " + display.source_id}
+          </span>
+          <button
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            style={{ fontSize: "0.7rem", padding: "0.25rem 0.65rem", background: "transparent", border: "1px solid #d9d3ca", color: "#6f6b64", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1, letterSpacing: "0.03em" }}
+          >
+            {exporting ? "Exporting…" : "Export report"}
+          </button>
+        </div>
       </nav>
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>

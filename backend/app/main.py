@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_pool, close_pool
-from app.routes import scan, rewrite
+from app.routes import scan, rewrite, report
 
 logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
 
@@ -28,3 +28,4 @@ app.add_middleware(
 
 app.include_router(scan.router, prefix="/api")
 app.include_router(rewrite.router, prefix="/api")
+app.include_router(report.router, prefix="/api")
