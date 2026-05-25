@@ -148,9 +148,9 @@ class RankedFix(BaseModel):
 class ScanResult(BaseModel):
     scan_id: str
     source_id: str
-    ats_text_preview: str
-    resume_sections: dict
-    jd_requirements: dict
+    ats_text_preview: str = ""
+    resume_sections: dict = {}
+    jd_requirements: dict = {}
     scores: Scores
     issues: list[Issue]
     missing_keywords: list[str]

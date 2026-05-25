@@ -70,6 +70,8 @@ interface ScanResult {
   scan_id: string
   source_id: string
   ats_text_preview: string
+  resume_sections?: Record<string, string>
+  jd_requirements?: Record<string, unknown>
   scores: Scores
   issues: Issue[]
   missing_keywords: string[]

@@ -297,12 +297,11 @@ def simulate_profiles(
     Run all profile simulations against pre-extracted signals.
     Returns ProfileSimulationResult with per-profile breakdowns and universal fixes.
     jd_requirements must already contain matched_keywords / missing_from_resume
-    (populated by compute_scores / extract_raw_signals beforehand).
+    (populated by extract_raw_signals beforehand).
     """
     from app.services.scoring import extract_raw_signals
 
-    # extract_raw_signals mutates jd_requirements; call after compute_scores
-    # so we don't double-mutate — pass a copy for signal reading only
+    # Pass a copy so we don't double-mutate jd_requirements already processed by scan.py
     sig = extract_raw_signals(resume_sections, dict(jd_requirements), parse_integrity)
 
     profile_results: list[ProfileResult] = []

@@ -46,7 +46,6 @@ _ADJACENT: dict[str, set[str]] = {
     "pytorch":    {"python", "tensorflow", "machine learning", "deep learning", "numpy"},
     "tensorflow": {"python", "pytorch", "machine learning", "deep learning", "keras"},
     "elasticsearch": {"search", "kibana", "logging", "observability", "opensearch"},
-    "kubernetes": {"docker", "helm", "k8s", "container", "devops", "cloud"},
     "ci/cd":      {"github", "gitlab", "jenkins", "pipeline", "deploy", "automation"},
     "machine learning": {"python", "pytorch", "tensorflow", "sklearn", "data science"},
     "graphql":    {"api", "rest", "apollo", "typescript", "javascript"},
