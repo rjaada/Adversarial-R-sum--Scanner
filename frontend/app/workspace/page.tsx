@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 
 interface Issue {
@@ -168,6 +168,21 @@ export default function WorkspacePage() {
   const [rewriteVariants, setRewriteVariants] = useState<Record<number, string[]>>({})
   const [rewriteLoading, setRewriteLoading] = useState<Record<number, boolean>>({})
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null)
+  const lastStatusCheckRef = useRef<number>(0)
+  const STATUS_TTL_MS = 30_000
+
+  const refreshLlmStatus = useCallback(async (force = false) => {
+    const now = Date.now()
+    if (!force && now - lastStatusCheckRef.current < STATUS_TTL_MS) return
+    lastStatusCheckRef.current = now
+    try {
+      const r = await fetch("http://localhost:8001/api/rewrite/status")
+      const s = await r.json() as LLMStatus
+      setLlmStatus(s)
+    } catch {
+      setLlmStatus({ available: false, model: "", healthy: null })
+    }
+  }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const display = result ?? MOCK
@@ -178,11 +193,11 @@ export default function WorkspacePage() {
       .then((r) => r.json())
       .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
       .catch(() => {})
-    fetch("http://localhost:8001/api/rewrite/status")
-      .then((r) => r.json())
-      .then((s: LLMStatus) => setLlmStatus(s))
-      .catch(() => setLlmStatus({ available: false, model: "", healthy: null }))
-  }, [])
+    void refreshLlmStatus(true)
+    const onFocus = () => { void refreshLlmStatus() }
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [refreshLlmStatus])
 
   async function handleScan() {
     if (!file) { setError("Upload a resume first."); return }
@@ -223,6 +238,7 @@ export default function WorkspacePage() {
   }
 
   async function handleGenerateRewrites(issueIndex: number, issue: Issue) {
+    await refreshLlmStatus()
     setRewriteLoading((prev) => ({ ...prev, [issueIndex]: true }))
     try {
       const res = await fetch("http://localhost:8001/api/rewrite", {
@@ -428,7 +444,7 @@ export default function WorkspacePage() {
             {display.issues.map((issue, i) => (
               <div
                 key={i}
-                onClick={() => setSelectedIssue(selectedIssue === i ? null : i)}
+                onClick={() => { setSelectedIssue(selectedIssue === i ? null : i); if (selectedIssue !== i) void refreshLlmStatus() }}
                 style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid #d9d3ca", cursor: "pointer", background: selectedIssue === i ? "#f0f7f5" : undefined }}
               >
                 <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
