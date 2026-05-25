@@ -393,7 +393,7 @@ const MOCK: ScanResult = {
   simulation: MOCK_SIMULATION,
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001"
+const API_BASE = ""
 
 // Fire-and-forget analytics. Silently discards all errors.
 // Property keys that look like PII are blocked server-side; do not send them here.
