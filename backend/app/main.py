@@ -20,10 +20,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="TraceRank API", version="0.1.0", lifespan=lifespan)
 
-_origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
