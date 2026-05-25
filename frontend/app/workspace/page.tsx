@@ -98,6 +98,82 @@ interface LLMStatus {
   healthy: boolean | null
 }
 
+interface SubDeltas {
+  keyword_match: number
+  experience_alignment: number
+  parse_integrity: number
+  structure: number
+  quantified_impact: number
+}
+
+interface CompareResult {
+  verdict: "improved" | "neutral" | "regressed"
+  scoreBefore: number
+  scoreAfter: number
+  scoreDelta: number           // integer pts (already *100)
+  subDeltas: SubDeltas
+  keywordsGained: string[]
+  keywordsStillMissing: string[]
+  issuesResolved: Issue[]
+  issuesRemaining: Issue[]
+  newRegressions: Issue[]
+  volatilityBefore: number | null
+  volatilityAfter: number | null
+  volatilityDelta: number | null  // negative = less volatile = good
+}
+
+// Pure deterministic compare — no fuzzy matching.
+// Issue identity = title string equality.
+// Verdict threshold: ±2 pts (i.e. 0.02 on 0–1 scale).
+function compareScans(before: ScanResult, after: ScanResult): CompareResult {
+  const rawDelta = after.scores.overall - before.scores.overall
+  const scoreDelta = Math.round(rawDelta * 100)
+
+  const subDeltas: SubDeltas = {
+    keyword_match:        Math.round((after.scores.keyword_match        - before.scores.keyword_match)        * 100),
+    experience_alignment: Math.round((after.scores.experience_alignment - before.scores.experience_alignment) * 100),
+    parse_integrity:      Math.round((after.scores.parse_integrity      - before.scores.parse_integrity)      * 100),
+    structure:            Math.round((after.scores.structure            - before.scores.structure)            * 100),
+    quantified_impact:    Math.round((after.scores.quantified_impact    - before.scores.quantified_impact)    * 100),
+  }
+
+  const beforeMatchedSet = new Set(before.matched_keywords)
+  const keywordsGained = after.matched_keywords.filter(k => !beforeMatchedSet.has(k))
+  const keywordsStillMissing = after.missing_keywords
+
+  const afterTitleSet  = new Set(after.issues.map(i => i.title))
+  const beforeTitleSet = new Set(before.issues.map(i => i.title))
+  const issuesResolved   = before.issues.filter(i => !afterTitleSet.has(i.title))
+  const issuesRemaining  = after.issues.filter(i =>  beforeTitleSet.has(i.title))
+  const newRegressions   = after.issues.filter(i => !beforeTitleSet.has(i.title))
+
+  const verdict: "improved" | "neutral" | "regressed" =
+    scoreDelta > 2 ? "improved" : scoreDelta < -2 ? "regressed" : "neutral"
+
+  const volatilityBefore = before.simulation?.score_spread.delta ?? null
+  const volatilityAfter  = after.simulation?.score_spread.delta ?? null
+  const volatilityDelta  =
+    volatilityBefore !== null && volatilityAfter !== null
+      ? volatilityAfter - volatilityBefore
+      : null
+
+  return {
+    verdict,
+    scoreBefore: pct(before.scores.overall),
+    scoreAfter:  pct(after.scores.overall),
+    scoreDelta,
+    subDeltas,
+    keywordsGained,
+    keywordsStillMissing,
+    issuesResolved,
+    issuesRemaining,
+    newRegressions,
+    volatilityBefore,
+    volatilityAfter,
+    volatilityDelta,
+  }
+}
+
 const MOCK_SIMULATION: ProfileSimulation = {
   profiles: [
     {
@@ -346,6 +422,7 @@ export default function WorkspacePage() {
   const [simExpanded, setSimExpanded] = useState(false)
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [compareBase, setCompareBase] = useState<ScanResult | null>(null)
   const lastStatusCheckRef = useRef<number>(0)
   const STATUS_TTL_MS = 30_000
 
@@ -411,7 +488,15 @@ export default function WorkspacePage() {
       if (res.ok) {
         setResult(await res.json() as ScanResult)
         setSelectedIssue(null)
+        setCompareBase(null)
       }
+    } catch (_) {}
+  }
+
+  async function loadScanForCompare(scanId: string) {
+    try {
+      const res = await fetch("http://localhost:8001/api/scans/" + scanId)
+      if (res.ok) setCompareBase(await res.json() as ScanResult)
     } catch (_) {}
   }
 
@@ -560,23 +645,39 @@ export default function WorkspacePage() {
             ) : (
               history.map((h) => {
                 const p = pct(h.overall_score)
+                const isCompareBase = compareBase?.scan_id === h.scan_id
                 return (
                   <div
                     key={h.scan_id}
-                    onClick={() => loadScan(h.scan_id)}
-                    style={{ padding: "0.5rem 0", borderBottom: "1px solid #d9d3ca", cursor: "pointer" }}
+                    style={{ padding: "0.5rem 0", borderBottom: "1px solid #d9d3ca" }}
                   >
-                    <div style={{ fontSize: "0.78rem", color: "#1f1d1a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {h.source_id}
+                    <div
+                      onClick={() => void loadScan(h.scan_id)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div style={{ fontSize: "0.78rem", color: "#1f1d1a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {h.source_id}
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.2rem" }}>
+                        <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>
+                          {new Date(h.scanned_at).toLocaleDateString()}
+                        </span>
+                        <span style={{ fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600, color: scoreColor(p) }}>
+                          {p}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.2rem" }}>
-                      <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>
-                        {new Date(h.scanned_at).toLocaleDateString()}
-                      </span>
-                      <span style={{ fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600, color: scoreColor(p) }}>
-                        {p}
-                      </span>
-                    </div>
+                    {result !== null && (
+                      <button
+                        onClick={() => {
+                          if (isCompareBase) setCompareBase(null)
+                          else void loadScanForCompare(h.scan_id)
+                        }}
+                        style={{ marginTop: "0.25rem", fontSize: "0.65rem", padding: "0.1rem 0.4rem", background: isCompareBase ? "#0f5c52" : "transparent", color: isCompareBase ? "#fff" : "#6f6b64", border: "1px solid " + (isCompareBase ? "#0f5c52" : "#d9d3ca"), borderRadius: "2px", cursor: "pointer", letterSpacing: "0.03em" }}
+                      >
+                        {isCompareBase ? "comparing" : "↔ compare"}
+                      </button>
+                    )}
                   </div>
                 )
               })
@@ -603,6 +704,151 @@ export default function WorkspacePage() {
         </div>
 
         <div style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+
+          {/* Compare panel — replaces normal right pane when compareBase is set */}
+          {compareBase !== null && result !== null && (() => {
+            const cmp = compareScans(compareBase, result)
+            const VERDICT_STYLE: Record<string, { color: string; bg: string; label: string }> = {
+              improved:  { color: "#0f5c52", bg: "rgba(15,92,82,0.07)",  label: "Improved" },
+              neutral:   { color: "#6f6b64", bg: "rgba(0,0,0,0.04)",     label: "Neutral"  },
+              regressed: { color: "#8c2f4e", bg: "rgba(140,47,78,0.07)", label: "Regressed" },
+            }
+            const vs = VERDICT_STYLE[cmp.verdict]
+
+            function deltaLabel(n: number): JSX.Element {
+              if (n > 0)  return <span style={{ color: "#0f5c52", fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600 }}>+{n}</span>
+              if (n < 0)  return <span style={{ color: "#8c2f4e", fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600 }}>−{Math.abs(n)}</span>
+              return <span style={{ color: "#a0998e", fontFamily: "monospace", fontSize: "0.7rem" }}>±0</span>
+            }
+
+            const SUB_LABELS: [keyof SubDeltas, string][] = [
+              ["keyword_match",        "Keywords"],
+              ["experience_alignment", "Experience"],
+              ["parse_integrity",      "Parse"],
+              ["structure",            "Structure"],
+              ["quantified_impact",    "Impact"],
+            ]
+
+            return (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+                {/* Compare header */}
+                <div style={{ padding: "0.75rem 1.25rem", borderBottom: "1px solid #d9d3ca", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
+                    Compare
+                  </span>
+                  <button
+                    onClick={() => setCompareBase(null)}
+                    style={{ fontSize: "0.65rem", padding: "0.15rem 0.5rem", background: "transparent", border: "1px solid #d9d3ca", color: "#6f6b64", borderRadius: "2px", cursor: "pointer" }}
+                  >
+                    Exit compare
+                  </button>
+                </div>
+
+                <div style={{ padding: "1rem 1.25rem", overflowY: "auto", flex: 1 }}>
+
+                  {/* File labels */}
+                  <div style={{ marginBottom: "0.75rem", fontSize: "0.72rem", color: "#6f6b64", lineHeight: 1.6 }}>
+                    <div><span style={{ color: "#a0998e", marginRight: "0.4rem" }}>Before</span>{compareBase.source_id}</div>
+                    <div><span style={{ color: "#a0998e", marginRight: "0.5rem" }}>After</span>{result.source_id}</div>
+                  </div>
+
+                  {/* Verdict */}
+                  <div style={{ padding: "0.5rem 0.75rem", background: vs.bg, borderRadius: "2px", marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: vs.color, letterSpacing: "0.06em", textTransform: "uppercase" }}>{vs.label}</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "#6f6b64" }}>
+                      {cmp.scoreBefore} → {cmp.scoreAfter} &nbsp;({deltaLabel(cmp.scoreDelta)})
+                    </span>
+                  </div>
+
+                  {/* Sub-score deltas */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Score breakdown</div>
+                    {SUB_LABELS.map(([key, label]) => (
+                      <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.2rem 0", borderBottom: "1px solid #ece7e0" }}>
+                        <span style={{ fontSize: "0.72rem", color: "#6f6b64" }}>{label}</span>
+                        {deltaLabel(cmp.subDeltas[key])}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ATS volatility */}
+                  {cmp.volatilityDelta !== null && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>ATS profile spread</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#1f1d1a" }}>
+                        <span>{cmp.volatilityBefore} → {cmp.volatilityAfter} pts</span>
+                        <span style={{ fontFamily: "monospace", fontSize: "0.7rem", color: (cmp.volatilityDelta ?? 0) < 0 ? "#0f5c52" : (cmp.volatilityDelta ?? 0) > 0 ? "#8c2f4e" : "#a0998e" }}>
+                          {(cmp.volatilityDelta ?? 0) < 0 ? "↓ less volatile" : (cmp.volatilityDelta ?? 0) > 0 ? "↑ more volatile" : "unchanged"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Keywords gained */}
+                  {cmp.keywordsGained.length > 0 && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Keywords gained ({cmp.keywordsGained.length})</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                        {cmp.keywordsGained.map(k => (
+                          <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.1rem 0.4rem", borderRadius: "1px" }}>{k}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Still missing */}
+                  {cmp.keywordsStillMissing.length > 0 && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Still missing ({cmp.keywordsStillMissing.length})</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                        {cmp.keywordsStillMissing.map(k => (
+                          <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.1rem 0.4rem", borderRadius: "1px" }}>–{k}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Issues resolved */}
+                  {cmp.issuesResolved.length > 0 && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#0f5c52", marginBottom: "0.4rem" }}>Resolved ({cmp.issuesResolved.length})</div>
+                      {cmp.issuesResolved.map((iss, i) => (
+                        <div key={i} style={{ fontSize: "0.72rem", color: "#0f5c52", marginBottom: "0.2rem" }}>✓ {iss.title}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Issues remaining */}
+                  {cmp.issuesRemaining.length > 0 && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Still present ({cmp.issuesRemaining.length})</div>
+                      {cmp.issuesRemaining.map((iss, i) => (
+                        <div key={i} style={{ fontSize: "0.72rem", color: "#6f6b64", marginBottom: "0.2rem" }}>· {iss.title}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Regressions */}
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: cmp.newRegressions.length > 0 ? "#8c2f4e" : "#6f6b64", marginBottom: "0.4rem" }}>
+                      New issues ({cmp.newRegressions.length})
+                    </div>
+                    {cmp.newRegressions.length === 0
+                      ? <div style={{ fontSize: "0.72rem", color: "#a0998e" }}>None</div>
+                      : cmp.newRegressions.map((iss, i) => (
+                          <div key={i} style={{ fontSize: "0.72rem", color: "#8c2f4e", marginBottom: "0.2rem" }}>✗ {iss.title}</div>
+                        ))
+                    }
+                  </div>
+
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Normal right pane — hidden when compare is active */}
+          {compareBase === null && <>
 
           <div style={{ padding: "1.25rem", borderBottom: "1px solid #d9d3ca" }}>
             <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
@@ -929,6 +1175,8 @@ export default function WorkspacePage() {
               </div>
             ))}
           </div>
+
+          </>}
 
         </div>
       </div>
