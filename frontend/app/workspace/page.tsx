@@ -593,7 +593,7 @@ export default function WorkspacePage() {
   return (
     <div style={{ background: "#f6f3ee", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
-      <nav style={{ borderBottom: "1px solid #d9d3ca", padding: "0 1.5rem", height: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fbfaf7", flexShrink: 0 }}>
+      <nav className="ws-nav" style={{ borderBottom: "1px solid #d9d3ca", padding: "0 1.5rem", height: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fbfaf7", flexShrink: 0 }}>
         <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", textDecoration: "none" }}>
           TraceRank
         </Link>
@@ -611,9 +611,9 @@ export default function WorkspacePage() {
         </div>
       </nav>
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="ws-main" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
-        <div style={{ width: "280px", flexShrink: 0, borderRight: "1px solid #d9d3ca", background: "#fbfaf7", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem", overflowY: "auto" }}>
+        <div className="ws-sidebar" style={{ width: "280px", flexShrink: 0, borderRight: "1px solid #d9d3ca", background: "#fbfaf7", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem", overflowY: "auto" }}>
           <div>
             <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", display: "block", marginBottom: "0.5rem" }}>
               Resume
@@ -733,7 +733,7 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: "1.5rem", overflowY: "auto", borderRight: "1px solid #d9d3ca" }}>
+        <div className="ws-middle" style={{ flex: 1, padding: "1.5rem", overflowY: "auto", borderRight: "1px solid #d9d3ca" }}>
           <div style={{ maxWidth: "640px" }}>
             <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
@@ -751,7 +751,7 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        <div style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div className="ws-right" style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
           {/* Compare panel — replaces normal right pane when compareBase is set */}
           {compareBase !== null && result !== null && (() => {
