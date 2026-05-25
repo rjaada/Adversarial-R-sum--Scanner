@@ -6,11 +6,12 @@ from app.config import settings
 from app.db import get_pool
 from app.schemas import ScanResult, ScanSummary
 from app.services.extract_resume import extract_resume_text
+from app.services.fix_ranker import rank_fixes
 from app.services.jd_requirements import extract_jd_requirements
 from app.services.parse_sections import parse_resume_sections
 from app.services.persistence import get_recent_scans, get_scan_by_id, save_scan
 from app.services.rewrite_suggestions import generate_fix_suggestions
-from app.services.scoring import compute_scores
+from app.services.scoring import extract_raw_signals, scores_from_raw
 
 router = APIRouter()
 
@@ -30,13 +31,18 @@ async def scan_resume(
     extracted = extract_resume_text(file_bytes, file.filename)
     sections = parse_resume_sections(extracted["text"])
     jd_reqs = extract_jd_requirements(jd_text)
-    scores = compute_scores(sections, jd_reqs, extracted["parse_integrity"])
+    # Single signal pass — mutates jd_reqs with matched/missing keywords
+    raw = extract_raw_signals(sections, jd_reqs, extracted["parse_integrity"])
+    scores = scores_from_raw(raw)
     issues = generate_fix_suggestions(sections, jd_reqs)
 
     simulation = None
     if settings.ats_simulation_enabled:
         from app.services.ats_profiles import simulate_profiles
         simulation = simulate_profiles(sections, jd_reqs, extracted["parse_integrity"], issues)
+
+    sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
+    top_fixes = rank_fixes(sorted_issues, raw)
 
     result = ScanResult(
         scan_id=str(uuid.uuid4()),
@@ -45,9 +51,10 @@ async def scan_resume(
         resume_sections=sections,
         jd_requirements=jd_reqs,
         scores=scores,
-        issues=sorted(issues, key=lambda x: x.impact_score, reverse=True),
+        issues=sorted_issues,
         missing_keywords=jd_reqs.get("missing_from_resume", []),
         matched_keywords=jd_reqs.get("matched_keywords", []),
+        top_fixes=top_fixes,
         simulation=simulation,
     )
 

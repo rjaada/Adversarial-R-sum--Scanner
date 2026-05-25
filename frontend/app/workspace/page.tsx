@@ -55,6 +55,17 @@ interface ProfileSimulation {
   cross_profile_summary: string
 }
 
+interface RankedFix {
+  issue_index: number
+  issue_type: string
+  title: string
+  suggested_fix: string
+  fix_pattern: string
+  labels: string[]
+  affects_profiles: string[]
+  rank_score: number
+}
+
 interface ScanResult {
   scan_id: string
   source_id: string
@@ -63,6 +74,7 @@ interface ScanResult {
   issues: Issue[]
   missing_keywords: string[]
   matched_keywords: string[]
+  top_fixes: RankedFix[]
   simulation?: ProfileSimulation
 }
 
@@ -258,6 +270,48 @@ const MOCK: ScanResult = {
   ],
   missing_keywords: ["kubernetes", "aws", "terraform", "go"],
   matched_keywords: ["python", "docker", "postgresql"],
+  top_fixes: [
+    {
+      issue_index: 0,
+      issue_type: "keyword_gap",
+      title: "Missing keyword: kubernetes",
+      suggested_fix: "Add kubernetes in your Skills section.",
+      fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
+      labels: ["Must-have gap", "Broad impact"],
+      affects_profiles: ["exact_match", "structure_sensitive", "semantic_fit"],
+      rank_score: 8.7,
+    },
+    {
+      issue_index: 1,
+      issue_type: "low_quantification",
+      title: "Most bullets lack measurable impact",
+      suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
+      fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
+      labels: ["Fast win", "Quantify"],
+      affects_profiles: ["exact_match", "semantic_fit"],
+      rank_score: 6.2,
+    },
+    {
+      issue_index: 3,
+      issue_type: "keyword_gap",
+      title: "Missing keyword: aws",
+      suggested_fix: "Add aws to your Skills section if applicable.",
+      fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
+      labels: ["Broad impact"],
+      affects_profiles: ["exact_match", "structure_sensitive", "semantic_fit"],
+      rank_score: 6.7,
+    },
+    {
+      issue_index: 2,
+      issue_type: "weak_phrasing",
+      title: 'Weak verb: "responsible for"',
+      suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
+      fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
+      labels: ["Fast win"],
+      affects_profiles: ["exact_match", "semantic_fit"],
+      rank_score: 3.6,
+    },
+  ],
   simulation: MOCK_SIMULATION,
 }
 
@@ -545,6 +599,61 @@ export default function WorkspacePage() {
               })}
             </div>
           </div>
+
+          {display.top_fixes.length > 0 && (() => {
+            const LABEL_COLOR: Record<string, { bg: string; color: string }> = {
+              "Must-have gap": { bg: "rgba(140,47,78,0.07)", color: "#8c2f4e" },
+              "Critical section": { bg: "rgba(140,47,78,0.07)", color: "#8c2f4e" },
+              "Broad impact": { bg: "rgba(15,92,82,0.07)", color: "#0f5c52" },
+              "Fast win": { bg: "rgba(15,92,82,0.07)", color: "#0f5c52" },
+              "Quantify": { bg: "rgba(154,77,34,0.07)", color: "#9a4d22" },
+            }
+            const PROFILE_SHORT: Record<string, string> = {
+              exact_match: "Exact",
+              structure_sensitive: "Structure",
+              semantic_fit: "Semantic",
+            }
+            return (
+              <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
+                <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.65rem" }}>
+                  Fix this first
+                </div>
+                {display.top_fixes.map((fix, i) => (
+                  <div
+                    key={fix.issue_index}
+                    style={{ marginBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, paddingBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, borderBottom: i < display.top_fixes.length - 1 ? "1px solid #ece7e0" : "none" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                      <span style={{ fontFamily: "monospace", fontSize: "0.6rem", color: "#a0998e", paddingTop: "1px", flexShrink: 0 }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#1f1d1a", lineHeight: 1.4 }}>
+                        {fix.title}
+                      </span>
+                    </div>
+                    <div style={{ marginLeft: "1.25rem" }}>
+                      <div style={{ fontSize: "0.72rem", color: "#6f6b64", marginBottom: "0.3rem", lineHeight: 1.4 }}>
+                        {fix.suggested_fix}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", alignItems: "center" }}>
+                        {fix.labels.map((label) => {
+                          const style = LABEL_COLOR[label] ?? { bg: "rgba(0,0,0,0.04)", color: "#6f6b64" }
+                          return (
+                            <span key={label} style={{ fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "1px", background: style.bg, color: style.color, fontWeight: 500, letterSpacing: "0.04em" }}>
+                              {label}
+                            </span>
+                          )
+                        })}
+                        <span style={{ marginLeft: "auto", fontSize: "0.6rem", color: "#a0998e", fontFamily: "monospace" }}>
+                          {fix.affects_profiles.map(p => PROFILE_SHORT[p] ?? p).join(" · ")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {display.simulation && (() => {
             const sim = display.simulation!

@@ -95,6 +95,17 @@ class ProfileSimulationResult(BaseModel):
     cross_profile_summary: str
 
 
+class RankedFix(BaseModel):
+    issue_index: int          # 0-based index into ScanResult.issues
+    issue_type: str
+    title: str
+    suggested_fix: str
+    fix_pattern: str = ""
+    labels: list[str]         # e.g. ["Must-have gap", "Broad impact", "Fast win"]
+    affects_profiles: list[str]
+    rank_score: float         # internal ranking value, exposed for transparency
+
+
 class ScanResult(BaseModel):
     scan_id: str
     source_id: str
@@ -105,4 +116,5 @@ class ScanResult(BaseModel):
     issues: list[Issue]
     missing_keywords: list[str]
     matched_keywords: list[str]
+    top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None

@@ -205,22 +205,15 @@ def extract_raw_signals(
     )
 
 
-def compute_scores(
-    resume_sections: dict,
-    jd_requirements: dict,
-    parse_integrity: float,
-) -> Scores:
-    """Compute global scores using default weights. Wrapper around extract_raw_signals."""
-    sig = extract_raw_signals(resume_sections, jd_requirements, parse_integrity)
-
+def scores_from_raw(sig: RawSignals) -> Scores:
+    """Build Scores from pre-computed RawSignals."""
     overall = (
-        sig.kw_exact      * WEIGHT_KEYWORD
-        + sig.experience  * WEIGHT_EXPERIENCE
+        sig.kw_exact          * WEIGHT_KEYWORD
+        + sig.experience      * WEIGHT_EXPERIENCE
         + sig.parse_integrity * WEIGHT_PARSE
-        + sig.structure   * WEIGHT_STRUCTURE
-        + sig.impact      * WEIGHT_IMPACT
+        + sig.structure       * WEIGHT_STRUCTURE
+        + sig.impact          * WEIGHT_IMPACT
     )
-
     return Scores(
         overall=round(overall, 3),
         keyword_match=round(sig.kw_exact, 3),
@@ -229,3 +222,13 @@ def compute_scores(
         structure=round(sig.structure, 3),
         quantified_impact=round(sig.impact, 3),
     )
+
+
+def compute_scores(
+    resume_sections: dict,
+    jd_requirements: dict,
+    parse_integrity: float,
+) -> Scores:
+    """Compute global scores using default weights. Wrapper around extract_raw_signals."""
+    sig = extract_raw_signals(resume_sections, jd_requirements, parse_integrity)
+    return scores_from_raw(sig)
