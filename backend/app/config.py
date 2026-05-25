@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     analytics_enabled: bool = False
     # Comma-separated list of allowed CORS origins.
     # Local default covers both Next.js dev ports.
-    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
+    # Comma-separated origins, or "*" to allow all (default for easy deployment).
+    # Override in production by setting ALLOWED_ORIGINS env var explicitly.
+    allowed_origins: str = "*"
 
     model_config = SettingsConfigDict(
         env_file=".env",
