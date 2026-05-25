@@ -15,26 +15,23 @@ from app.services.llm_rewrite import (
 # --- Configuration ---
 
 def test_llm_not_configured_when_env_unset(monkeypatch):
-    monkeypatch.delenv("LLM_ENDPOINT", raising=False)
-    # Force module to re-read env by calling with fresh import
-    import importlib
-    import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "")
-    assert not mod.is_llm_configured()
+    from app.config import settings
+    monkeypatch.setattr(settings, "llm_endpoint", "")
+    assert not is_llm_configured()
 
 
 def test_llm_configured_when_endpoint_set(monkeypatch):
-    import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "http://localhost:11434")
-    assert mod.is_llm_configured()
+    from app.config import settings
+    monkeypatch.setattr(settings, "llm_endpoint", "http://localhost:11434")
+    assert is_llm_configured()
 
 
 # --- Graceful degradation ---
 
 @pytest.mark.anyio(backends=["asyncio"])
 async def test_generate_returns_not_available_when_unconfigured(monkeypatch):
-    import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "")
+    from app.config import settings
+    monkeypatch.setattr(settings, "llm_endpoint", "")
     variants, available, error = await generate_rewrite_variants(
         issue_type="weak_phrasing",
         original_text="Responsible for backend services",
@@ -50,8 +47,8 @@ async def test_generate_returns_not_available_when_unconfigured(monkeypatch):
 
 @pytest.mark.anyio(backends=["asyncio"])
 async def test_generate_returns_available_true_for_unsupported_type(monkeypatch):
-    import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "http://localhost:11434")
+    from app.config import settings
+    monkeypatch.setattr(settings, "llm_endpoint", "http://localhost:11434")
     variants, available, error = await generate_rewrite_variants(
         issue_type="missing_section",
         original_text="",
@@ -218,15 +215,17 @@ def test_parse_variants_sanitizes_bare_metrics():
 
 @pytest.mark.anyio(backends=["asyncio"])
 async def test_check_llm_health_returns_none_when_unconfigured(monkeypatch):
+    from app.config import settings
     import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "")
+    monkeypatch.setattr(settings, "llm_endpoint", "")
     result = await mod.check_llm_health()
     assert result is None
 
 
 @pytest.mark.anyio(backends=["asyncio"])
 async def test_check_llm_health_returns_false_on_connection_error(monkeypatch):
+    from app.config import settings
     import app.services.llm_rewrite as mod
-    monkeypatch.setattr(mod, "_ENDPOINT", "http://localhost:19999")
+    monkeypatch.setattr(settings, "llm_endpoint", "http://localhost:19999")
     result = await mod.check_llm_health()
     assert result is False

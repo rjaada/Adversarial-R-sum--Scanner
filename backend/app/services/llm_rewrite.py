@@ -4,13 +4,9 @@ Calls any OpenAI-compatible endpoint (Ollama, llama.cpp, LM Studio, etc.).
 All functions degrade gracefully when LLM_ENDPOINT is not configured.
 """
 from __future__ import annotations
-import os
 import re
 
-_ENDPOINT = os.getenv("LLM_ENDPOINT", "").rstrip("/")
-_MODEL = os.getenv("LLM_MODEL", "llama3")
-_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
-_HEALTH_TIMEOUT = 3.0
+from app.config import settings
 
 _SUPPORTED_TYPES = frozenset({"weak_phrasing", "low_quantification"})
 
@@ -28,7 +24,7 @@ _BARE_METRIC_RE = re.compile(
 
 
 def is_llm_configured() -> bool:
-    return bool(_ENDPOINT)
+    return bool(settings.llm_endpoint)
 
 
 async def check_llm_health() -> bool | None:
@@ -40,8 +36,8 @@ async def check_llm_health() -> bool | None:
         return None
     try:
         import httpx
-        async with httpx.AsyncClient(timeout=_HEALTH_TIMEOUT) as client:
-            resp = await client.get(f"{_ENDPOINT}/v1/models")
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{settings.llm_endpoint.rstrip('/')}/v1/models")
             return resp.status_code < 500
     except Exception:
         return False
@@ -81,16 +77,48 @@ def build_rewrite_prompt(
     )
 
 
+_PREAMBLE_RE = re.compile(
+    r"^(here\b|sure\b|certainly\b|below\b|rewrites?\b|rewritten\b|version\b|"
+    r"i'?ve|here's|here are|the following|as requested|these are)",
+    re.IGNORECASE,
+)
+
 def parse_variants(content: str, count: int) -> list[str]:
     """Extract numbered rewrites from raw model output, sanitizing bare metrics."""
+    import logging
+    log = logging.getLogger(__name__)
+    log.debug("parse_variants raw content (%d chars): %r", len(content), content[:400])
+
     lines = [l.strip() for l in content.splitlines() if l.strip()]
     variants: list[str] = []
     for line in lines:
-        cleaned = re.sub(r"^(\d+[.)]\s*|[-•*]\s*)", "", line).strip()
-        if cleaned and len(cleaned) > 10:
+        # strip numbered prefix, bullets including + used by llama3 tab-sub-bullets
+        cleaned = re.sub(r"^(\d+[.)]\s*|[-•*+]\s*)", "", line).strip()
+        # skip preamble/intro sentences
+        if _PREAMBLE_RE.match(cleaned):
+            log.debug("parse_variants skipping preamble: %r", cleaned)
+            continue
+        # skip lines that end with colon — they're headers ("Rewrites:", "Result:")
+        if cleaned.endswith(":") and len(cleaned) < 60:
+            log.debug("parse_variants skipping header: %r", cleaned)
+            continue
+        if cleaned and len(cleaned) > 8:
             variants.append(_sanitize_variant(cleaned))
         if len(variants) >= count:
             break
+
+    if not variants and content.strip():
+        # fallback: model returned something but nothing passed filters
+        # return first non-empty line so frontend shows content instead of silence
+        log.warning("parse_variants produced empty output; falling back to raw lines")
+        for line in lines[:count]:
+            cleaned = re.sub(r"^(\d+[.)]\s*|[-•*+]\s*)", "", line).strip()
+            if len(cleaned) > 4:
+                variants.append(_sanitize_variant(cleaned))
+                if len(variants) >= count:
+                    break
+
+    log.debug("parse_variants result: %r", variants)
     return variants[:count]
 
 
@@ -108,6 +136,9 @@ async def generate_rewrite_variants(
     available=False when no LLM is configured — callers should surface setup guidance.
     available=True with empty variants means LLM is configured but call failed.
     """
+    import logging
+    log = logging.getLogger(__name__)
+
     if not is_llm_configured():
         return [], False, ""
     if issue_type not in _SUPPORTED_TYPES:
@@ -118,23 +149,38 @@ async def generate_rewrite_variants(
     except ImportError:
         return [], True, "httpx not installed — run: pip install httpx"
 
+    endpoint = settings.llm_endpoint.rstrip("/")
+    model = settings.llm_model
+    timeout = float(settings.llm_timeout)
+
     prompt = build_rewrite_prompt(
         issue_type, original_text, evidence, fix_pattern, rewrite_starter, jd_keywords, count
     )
     payload = {
-        "model": _MODEL,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.4,
-        "max_tokens": 320,
+        "max_tokens": 400,
     }
 
+    log.debug("rewrite request | issue_type=%s original_text=%r", issue_type, original_text[:80])
+    log.debug("rewrite prompt:\n%s", prompt)
+
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.post(f"{_ENDPOINT}/v1/chat/completions", json=payload)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(f"{endpoint}/v1/chat/completions", json=payload)
+            log.debug("provider HTTP status: %d", resp.status_code)
             resp.raise_for_status()
             data = resp.json()
+            log.debug("provider raw JSON: %r", str(data)[:600])
             content = data["choices"][0]["message"]["content"].strip()
+            log.debug("extracted content (%d chars): %r", len(content), content[:400])
             variants = parse_variants(content, count)
+            log.debug("final variants (%d): %r", len(variants), variants)
+            if not variants:
+                preview = content[:120].replace("\n", " ")
+                return [], True, f"Parser produced no output. Raw preview: {preview}"
             return variants, True, ""
     except Exception as exc:
+        log.error("rewrite generation failed: %s", exc)
         return [], True, str(exc)

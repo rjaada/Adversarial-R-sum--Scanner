@@ -1,5 +1,5 @@
-import os
 from fastapi import APIRouter
+from app.config import settings
 from app.schemas import LLMStatusResponse, RewriteRequest, RewriteResponse
 from app.services.llm_rewrite import (
     check_llm_health,
@@ -17,7 +17,7 @@ async def rewrite_status():
     healthy = await check_llm_health()
     return LLMStatusResponse(
         available=True,
-        model=os.getenv("LLM_MODEL", "llama3"),
+        model=settings.llm_model,
         healthy=healthy,
     )
 
@@ -39,6 +39,6 @@ async def rewrite_issue(req: RewriteRequest):
     return RewriteResponse(
         variants=variants,
         available=available,
-        model=os.getenv("LLM_MODEL", "llama3") if available else "",
+        model=settings.llm_model if available else "",
         error=error,
     )

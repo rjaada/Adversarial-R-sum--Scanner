@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -5,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_pool, close_pool
 from app.routes import scan, rewrite
+
+logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
 
 
 @asynccontextmanager

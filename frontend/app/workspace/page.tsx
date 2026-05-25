@@ -25,6 +25,36 @@ interface Scores {
   quantified_impact: number
 }
 
+interface ProfileResult {
+  id: string
+  label: string
+  description: string
+  score: number
+  parse_quality: number
+  keyword_match: number
+  semantic_fit: number
+  structure_confidence: number
+  risk_level: "LOW" | "MEDIUM" | "HIGH"
+  top_strengths: string[]
+  top_failures: string[]
+  lost_signals: string[]
+  recommended_fixes: string[]
+}
+
+interface ScoreSpread {
+  min: number
+  max: number
+  delta: number
+  volatility: "LOW" | "MEDIUM" | "HIGH"
+}
+
+interface ProfileSimulation {
+  profiles: ProfileResult[]
+  universal_fixes: string[]
+  score_spread: ScoreSpread
+  cross_profile_summary: string
+}
+
 interface ScanResult {
   scan_id: string
   source_id: string
@@ -33,6 +63,7 @@ interface ScanResult {
   issues: Issue[]
   missing_keywords: string[]
   matched_keywords: string[]
+  simulation?: ProfileSimulation
 }
 
 interface ScanSummary {
@@ -53,6 +84,95 @@ interface LLMStatus {
   available: boolean
   model: string
   healthy: boolean | null
+}
+
+const MOCK_SIMULATION: ProfileSimulation = {
+  profiles: [
+    {
+      id: "exact_match",
+      label: "Exact Match",
+      description: "Rewards exact keyword overlap; heavily penalises missing must-have terms. Simulates keyword-first screening.",
+      score: 52,
+      parse_quality: 85,
+      keyword_match: 38,
+      semantic_fit: 42,
+      structure_confidence: 75,
+      risk_level: "MEDIUM",
+      top_strengths: [
+        "Clean parse: résumé structure extracted with high confidence",
+        "3 of 8 required terms present",
+      ],
+      top_failures: [
+        "Missing must-have term(s): kubernetes, aws, terraform",
+        "Keyword gap: 62% of required terms absent (kubernetes, aws, terraform...)",
+      ],
+      lost_signals: [
+        "'python' detected in experience body only — may be skipped without a skills block",
+      ],
+      recommended_fixes: [
+        "Add must-have keywords to résumé: kubernetes, aws, terraform",
+        "Add a dedicated skills section with your full tech stack",
+      ],
+    },
+    {
+      id: "structure_sensitive",
+      label: "Structure Sensitive",
+      description: "Penalises ambiguous or fragmented formatting; rewards clearly parsed sections and dedicated skills blocks.",
+      score: 61,
+      parse_quality: 85,
+      keyword_match: 38,
+      semantic_fit: 42,
+      structure_confidence: 75,
+      risk_level: "MEDIUM",
+      top_strengths: [
+        "All expected sections found: education, experience, skills, summary",
+        "High parse confidence across all extracted sections",
+      ],
+      top_failures: [
+        "Missing must-have term(s): kubernetes, aws, terraform",
+        "2 skills only found in prose — may not register in this profile",
+      ],
+      lost_signals: [
+        "'python' detected in experience body only — not in skills block",
+        "'docker' detected in experience body only — not in skills block",
+      ],
+      recommended_fixes: [
+        "Move 'python', 'docker' into a dedicated skills block",
+        "Add must-have keywords to résumé: kubernetes, aws, terraform",
+      ],
+    },
+    {
+      id: "semantic_fit",
+      label: "Semantic Fit",
+      description: "Broader matching using adjacent skill inference (heuristic). Rewards transferable and contextually relevant experience.",
+      score: 67,
+      parse_quality: 85,
+      keyword_match: 38,
+      semantic_fit: 65,
+      structure_confidence: 75,
+      risk_level: "LOW",
+      top_strengths: [
+        "Adjacent skill signals cover most missing required terms",
+        "Strong evidence density: quantified impact language present",
+      ],
+      top_failures: [
+        "Partial keyword coverage: 38%",
+      ],
+      lost_signals: [],
+      recommended_fixes: [
+        "Add explicit kubernetes and aws to skills section",
+        "Add 2–3 bullets with quantified impact (%, $, scale, or time saved)",
+      ],
+    },
+  ],
+  universal_fixes: [
+    "Add must-have keywords to résumé: kubernetes, aws, terraform",
+    "Move 'python', 'docker' from prose into a dedicated skills section",
+    "Add quantified impact to 2–3 bullets (%, $, scale, or time saved)",
+    "Add missing sections: summary",
+  ],
+  score_spread: { min: 52, max: 67, delta: 15, volatility: "MEDIUM" },
+  cross_profile_summary: "Best in Semantic Fit (67), weakest in Exact Match (52). 15-pt spread. Exact-Match score lower due to keyword gap.",
 }
 
 const MOCK_ATS = [
@@ -138,6 +258,7 @@ const MOCK: ScanResult = {
   ],
   missing_keywords: ["kubernetes", "aws", "terraform", "go"],
   matched_keywords: ["python", "docker", "postgresql"],
+  simulation: MOCK_SIMULATION,
 }
 
 const SEV_COLOR: Record<string, string> = {
@@ -168,6 +289,8 @@ export default function WorkspacePage() {
   const [rewriteVariants, setRewriteVariants] = useState<Record<number, string[]>>({})
   const [rewriteLoading, setRewriteLoading] = useState<Record<number, boolean>>({})
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null)
+  const [simExpanded, setSimExpanded] = useState(false)
+  const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
   const lastStatusCheckRef = useRef<number>(0)
   const STATUS_TTL_MS = 30_000
 
@@ -422,6 +545,149 @@ export default function WorkspacePage() {
               })}
             </div>
           </div>
+
+          {display.simulation && (() => {
+            const sim = display.simulation!
+            const VOL_COLOR: Record<string, string> = { LOW: "#0f5c52", MEDIUM: "#9a4d22", HIGH: "#8c2f4e" }
+            const volColor = VOL_COLOR[sim.score_spread.volatility]
+            return (
+              <div style={{ borderBottom: "1px solid #d9d3ca" }}>
+                {/* Header strip — always visible */}
+                <div
+                  onClick={() => setSimExpanded(v => !v)}
+                  style={{ padding: "0.75rem 1.25rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
+                >
+                  <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
+                    ATS Profile Simulation
+                  </span>
+                  <span style={{ fontSize: "0.65rem", color: volColor, fontFamily: "monospace", fontWeight: 600 }}>
+                    {simExpanded ? "▴" : "▾"}
+                  </span>
+                </div>
+
+                {/* Score chips — always visible */}
+                <div style={{ padding: "0 1.25rem 0.75rem", display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
+                  {sim.profiles.map(p => {
+                    const c = scoreColor(p.score)
+                    return (
+                      <span key={p.id} style={{ fontFamily: "monospace", fontSize: "0.68rem", fontWeight: 600, color: c, padding: "0.15rem 0.45rem", border: `1px solid ${c}`, borderRadius: "1px", opacity: 0.9 }}>
+                        {p.label.split(" ")[0]} {p.score}
+                      </span>
+                    )
+                  })}
+                  <span style={{ fontSize: "0.65rem", color: volColor, fontFamily: "monospace", marginLeft: "auto" }}>
+                    Δ{sim.score_spread.delta} {sim.score_spread.volatility}
+                  </span>
+                </div>
+
+                {/* Expanded content */}
+                {simExpanded && (
+                  <div style={{ padding: "0 1.25rem 1rem" }}>
+                    {/* Cross-profile summary */}
+                    <div style={{ fontSize: "0.72rem", color: "#6f6b64", fontStyle: "italic", marginBottom: "0.75rem", lineHeight: 1.5 }}>
+                      {sim.cross_profile_summary}
+                    </div>
+
+                    {/* Profile cards */}
+                    {sim.profiles.map(p => {
+                      const open = expandedProfile === p.id
+                      const c = scoreColor(p.score)
+                      const riskColor = VOL_COLOR[p.risk_level]
+                      return (
+                        <div
+                          key={p.id}
+                          style={{ border: "1px solid #d9d3ca", borderRadius: "2px", marginBottom: "0.5rem", background: open ? "#fbfaf7" : undefined }}
+                        >
+                          {/* Card header */}
+                          <div
+                            onClick={() => setExpandedProfile(open ? null : p.id)}
+                            style={{ padding: "0.55rem 0.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <span style={{ fontFamily: "monospace", fontSize: "1rem", fontWeight: 700, color: c }}>{p.score}</span>
+                              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#1f1d1a" }}>{p.label}</span>
+                            </div>
+                            <span style={{ fontSize: "0.6rem", fontFamily: "monospace", color: riskColor, fontWeight: 600 }}>{p.risk_level}</span>
+                          </div>
+
+                          {/* Sub-score bar */}
+                          {open && (
+                            <div style={{ padding: "0 0.75rem 0.75rem" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.3rem 0.75rem", marginBottom: "0.6rem" }}>
+                                {[
+                                  { label: "Keywords", v: p.keyword_match },
+                                  { label: "Structure", v: p.structure_confidence },
+                                  { label: "Parse", v: p.parse_quality },
+                                  { label: "Adj. Skills†", v: p.semantic_fit },
+                                ].map(s => (
+                                  <div key={s.label}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.62rem", color: "#6f6b64" }}>
+                                      <span>{s.label}</span>
+                                      <span style={{ fontFamily: "monospace" }}>{s.v}</span>
+                                    </div>
+                                    <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px" }}>
+                                      <div style={{ height: "2px", width: s.v + "%", background: scoreColor(s.v), borderRadius: "1px" }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {p.top_strengths.length > 0 && (
+                                <div style={{ marginBottom: "0.4rem" }}>
+                                  {p.top_strengths.map((s, i) => (
+                                    <div key={i} style={{ fontSize: "0.7rem", color: "#0f5c52", marginBottom: "0.15rem" }}>✓ {s}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {p.top_failures.length > 0 && (
+                                <div style={{ marginBottom: "0.4rem" }}>
+                                  {p.top_failures.map((s, i) => (
+                                    <div key={i} style={{ fontSize: "0.7rem", color: "#8c2f4e", marginBottom: "0.15rem" }}>✗ {s}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {p.lost_signals.length > 0 && (
+                                <div style={{ marginBottom: "0.4rem" }}>
+                                  <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#9a4d22", fontWeight: 600, marginBottom: "0.2rem" }}>Lost signals</div>
+                                  {p.lost_signals.map((s, i) => (
+                                    <div key={i} style={{ fontSize: "0.69rem", color: "#9a4d22", marginBottom: "0.15rem", fontFamily: "monospace" }}>{s}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {p.recommended_fixes.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6f6b64", fontWeight: 600, marginBottom: "0.2rem" }}>Fixes</div>
+                                  {p.recommended_fixes.map((s, i) => (
+                                    <div key={i} style={{ fontSize: "0.69rem", color: "#1f1d1a", marginBottom: "0.15rem" }}>→ {s}</div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div style={{ marginTop: "0.5rem", fontSize: "0.6rem", color: "#a0998e", fontStyle: "italic" }}>
+                                † Adj. Skills = adjacent skill inference (heuristic). Not exact ATS behavior.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Universal fixes */}
+                    {sim.universal_fixes.length > 0 && (
+                      <div style={{ marginTop: "0.5rem", padding: "0.65rem 0.75rem", background: "rgba(15,92,82,0.04)", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
+                        <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.4rem" }}>
+                          Universal-safe edits
+                        </div>
+                        {sim.universal_fixes.map((f, i) => (
+                          <div key={i} style={{ fontSize: "0.7rem", color: "#1f1d1a", marginBottom: "0.25rem" }}>• {f}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
             <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>

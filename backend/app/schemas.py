@@ -59,6 +59,42 @@ class RewriteResponse(BaseModel):
     error: str = ""
 
 
+# ---------------------------------------------------------------------------
+# ATS Profile Simulation schemas
+# Labeled as profile simulations inspired by common ATS behavior patterns.
+# Sub-scores and semantic inference are heuristics, not exact ATS replicas.
+# ---------------------------------------------------------------------------
+
+class ProfileResult(BaseModel):
+    id: str
+    label: str
+    description: str
+    score: int                                           # 0–100
+    parse_quality: int                                   # 0–100
+    keyword_match: int                                   # 0–100
+    semantic_fit: int                                    # 0–100 (adjacent skill inference)
+    structure_confidence: int                            # 0–100
+    risk_level: Literal["LOW", "MEDIUM", "HIGH"]
+    top_strengths: list[str]
+    top_failures: list[str]
+    lost_signals: list[str]
+    recommended_fixes: list[str]
+
+
+class ScoreSpread(BaseModel):
+    min: int
+    max: int
+    delta: int
+    volatility: Literal["LOW", "MEDIUM", "HIGH"]
+
+
+class ProfileSimulationResult(BaseModel):
+    profiles: list[ProfileResult]
+    universal_fixes: list[str]
+    score_spread: ScoreSpread
+    cross_profile_summary: str
+
+
 class ScanResult(BaseModel):
     scan_id: str
     source_id: str
@@ -69,3 +105,4 @@ class ScanResult(BaseModel):
     issues: list[Issue]
     missing_keywords: list[str]
     matched_keywords: list[str]
+    simulation: ProfileSimulationResult | None = None

@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.config import settings
 from app.db import get_pool
 from app.schemas import ScanResult, ScanSummary
 from app.services.extract_resume import extract_resume_text
@@ -32,6 +33,11 @@ async def scan_resume(
     scores = compute_scores(sections, jd_reqs, extracted["parse_integrity"])
     issues = generate_fix_suggestions(sections, jd_reqs)
 
+    simulation = None
+    if settings.ats_simulation_enabled:
+        from app.services.ats_profiles import simulate_profiles
+        simulation = simulate_profiles(sections, jd_reqs, extracted["parse_integrity"], issues)
+
     result = ScanResult(
         scan_id=str(uuid.uuid4()),
         source_id=file.filename,
@@ -42,6 +48,7 @@ async def scan_resume(
         issues=sorted(issues, key=lambda x: x.impact_score, reverse=True),
         missing_keywords=jd_reqs.get("missing_from_resume", []),
         matched_keywords=jd_reqs.get("matched_keywords", []),
+        simulation=simulation,
     )
 
     pool = get_pool()
