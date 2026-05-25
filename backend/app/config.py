@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     llm_model: str = "llama3"
     llm_timeout: int = 30
     ats_simulation_enabled: bool = False
+    analytics_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,6 +1,45 @@
 from __future__ import annotations
-from pydantic import BaseModel
-from typing import Literal
+from pydantic import BaseModel, field_validator
+from typing import Literal, Union
+
+EventPropertyValue = Union[str, int, float, bool, None]
+
+_ALLOWED_EVENTS = {
+    "scan_completed",
+    "rewrite_requested",
+    "export_triggered",
+    "compare_started",
+    "fix_clicked",
+}
+
+# Keys whose presence likely signals PII or sensitive content
+_BLOCKED_KEY_FRAGMENTS = {"resume", "jd_text", "jd", "email", "name", "phone", "text", "filename", "excerpt"}
+
+
+class AnalyticsEvent(BaseModel):
+    event: str
+    properties: dict[str, EventPropertyValue] = {}
+
+    @field_validator("event")
+    @classmethod
+    def _valid_event(cls, v: str) -> str:
+        if v not in _ALLOWED_EVENTS:
+            raise ValueError(f"Unknown event '{v}'")
+        return v
+
+    @field_validator("properties")
+    @classmethod
+    def _safe_properties(cls, v: dict[str, EventPropertyValue]) -> dict[str, EventPropertyValue]:
+        for key in v:
+            key_lower = key.lower()
+            for fragment in _BLOCKED_KEY_FRAGMENTS:
+                if fragment in key_lower:
+                    raise ValueError(f"Property key '{key}' rejected — may contain sensitive content")
+            if isinstance(v[key], str) and len(v[key]) > 200:  # type: ignore[arg-type]
+                raise ValueError(f"Property '{key}' string value exceeds 200 chars")
+        if len(v) > 20:
+            raise ValueError("Too many properties")
+        return v
 
 
 class ScanRequest(BaseModel):

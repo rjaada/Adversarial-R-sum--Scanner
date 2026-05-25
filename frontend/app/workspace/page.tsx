@@ -391,6 +391,16 @@ const MOCK: ScanResult = {
   simulation: MOCK_SIMULATION,
 }
 
+// Fire-and-forget analytics. Silently discards all errors.
+// Property keys that look like PII are blocked server-side; do not send them here.
+function track(event: string, properties: Record<string, string | number | boolean | null> = {}): void {
+  void fetch("http://localhost:8001/api/analytics/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, properties }),
+  }).catch(() => {})
+}
+
 const SEV_COLOR: Record<string, string> = {
   critical: "#8c2f4e",
   high: "#9a4d22",
@@ -471,6 +481,12 @@ export default function WorkspacePage() {
       const data = await res.json() as ScanResult
       setResult(data)
       setSelectedIssue(null)
+      track("scan_completed", {
+        overall_score: pct(data.scores.overall),
+        issue_count: data.issues.length,
+        has_simulation: data.simulation != null,
+        keyword_match_count: data.matched_keywords.length,
+      })
       setHistory((prev) => [
         { scan_id: data.scan_id, source_id: data.source_id, scanned_at: new Date().toISOString(), overall_score: data.scores.overall },
         ...prev.filter((h) => h.scan_id !== data.scan_id),
@@ -496,12 +512,16 @@ export default function WorkspacePage() {
   async function loadScanForCompare(scanId: string) {
     try {
       const res = await fetch("http://localhost:8001/api/scans/" + scanId)
-      if (res.ok) setCompareBase(await res.json() as ScanResult)
+      if (res.ok) {
+        setCompareBase(await res.json() as ScanResult)
+        track("compare_started", {})
+      }
     } catch (_) {}
   }
 
   async function handleGenerateRewrites(issueIndex: number, issue: Issue) {
     await refreshLlmStatus()
+    track("rewrite_requested", { issue_type: issue.issue_type })
     setRewriteLoading((prev) => ({ ...prev, [issueIndex]: true }))
     try {
       const res = await fetch("http://localhost:8001/api/rewrite", {
@@ -534,6 +554,7 @@ export default function WorkspacePage() {
 
   async function handleExport() {
     setExporting(true)
+    track("export_triggered", { has_real_scan: result !== null })
     try {
       if (result) {
         // Real scan — GET by scan_id opens directly
@@ -902,7 +923,11 @@ export default function WorkspacePage() {
                 {display.top_fixes.map((fix, i) => (
                   <div
                     key={fix.issue_index}
-                    style={{ marginBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, paddingBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, borderBottom: i < display.top_fixes.length - 1 ? "1px solid #ece7e0" : "none" }}
+                    onClick={() => {
+                      setSelectedIssue(fix.issue_index)
+                      track("fix_clicked", { issue_type: fix.issue_type, label: fix.labels[0] ?? "" })
+                    }}
+                    style={{ marginBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, paddingBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, borderBottom: i < display.top_fixes.length - 1 ? "1px solid #ece7e0" : "none", cursor: "pointer" }}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.25rem" }}>
                       <span style={{ fontFamily: "monospace", fontSize: "0.6rem", color: "#a0998e", paddingTop: "1px", flexShrink: 0 }}>
