@@ -112,6 +112,101 @@ cd backend && python3 -m pytest tests/ -v
 ## Design
 Off-white paper surface, graphite text, one deep accent (#0f5c52). No gradient blobs. No glassmorphism.
 
+## Deploying to Production
+
+Stack: **Vercel** (frontend) + **Railway** (backend + Postgres)
+
+### Step-by-step
+
+**1. Push to GitHub** (if not already)
+```bash
+git push origin main
+```
+
+**2. Deploy backend on Railway**
+1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
+2. Select this repo → set **Root Directory** to `backend/`
+3. Railway reads `backend/railway.toml` automatically — no manual start command needed
+4. Add a **PostgreSQL** database plugin to the same project (Railway injects `DATABASE_URL` automatically)
+5. Set these environment variables in Railway:
+   ```
+   ALLOWED_ORIGINS=https://your-app.vercel.app
+   ATS_SIMULATION_ENABLED=true
+   ```
+   Optional (AI rewrites):
+   ```
+   LLM_ENDPOINT=https://api.groq.com/openai
+   LLM_MODEL=llama3-8b-8192
+   LLM_API_KEY=gsk_your_key_here
+   ```
+6. Copy your Railway backend URL: `https://your-backend.up.railway.app`
+
+**3. Run the database schema**
+
+Railway shell (one-time):
+```bash
+psql $DATABASE_URL -f schema.sql
+```
+Or via Railway CLI:
+```bash
+railway run psql $DATABASE_URL -f schema.sql
+```
+
+**4. Deploy frontend on Vercel**
+1. Go to [vercel.com](https://vercel.com) → New Project → import this repo
+2. Set **Root Directory** to `frontend/`
+3. Set environment variable:
+   ```
+   NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
+   ```
+4. Deploy. Copy your Vercel URL.
+
+**5. Update CORS on Railway**
+
+Go back to Railway → update `ALLOWED_ORIGINS` to your actual Vercel URL → redeploy.
+
+**6. Verify**
+- `GET https://your-backend.up.railway.app/health` → `{"status":"ok","db":"connected"}`
+- Upload a PDF résumé on the frontend → scan completes
+
+### Environment variables reference
+
+| Variable | Service | Required | Example |
+|----------|---------|----------|---------|
+| `NEXT_PUBLIC_API_URL` | Vercel | Yes | `https://your-backend.up.railway.app` |
+| `DATABASE_URL` | Railway | Auto-set by Postgres plugin | `postgresql://...` |
+| `ALLOWED_ORIGINS` | Railway | Yes | `https://your-app.vercel.app` |
+| `ATS_SIMULATION_ENABLED` | Railway | No | `true` |
+| `ANALYTICS_ENABLED` | Railway | No | `false` |
+| `LLM_ENDPOINT` | Railway | No | `https://api.groq.com/openai` |
+| `LLM_MODEL` | Railway | No | `llama3-8b-8192` |
+| `LLM_API_KEY` | Railway | No | `gsk_...` |
+
+### What works without optional services
+
+| Feature | No DB | No LLM |
+|---------|-------|--------|
+| Upload + scan | ✓ | ✓ |
+| Scored report | ✓ | ✓ |
+| Export HTML | ✓ | ✓ |
+| ATS simulation | ✓ | ✓ |
+| Scan history | ✗ | ✓ |
+| Compare scans (in-session) | ✓ | ✓ |
+| AI rewrite suggestions | ✓ | ✗ |
+
+### Local LLM (optional)
+
+Works with Ollama or any OpenAI-compatible server. Never deploy Ollama to Railway — it's a local-only dependency.
+
+```bash
+ollama pull llama3
+ollama serve   # http://localhost:11434
+export LLM_ENDPOINT=http://localhost:11434
+export LLM_MODEL=llama3
+```
+
+---
+
 ## Current limitations
 - Keyword matching is lexical — multi-word phrases ("machine learning") match only if they appear verbatim in the JD token set
 - Section parser uses exact header matching; headers embedded mid-paragraph or in all-caps are not detected
