@@ -72,8 +72,9 @@ async def check_llm_health() -> bool | None:
         return None
     try:
         import httpx
+        headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
         async with httpx.AsyncClient(timeout=3.0) as client:
-            resp = await client.get(f"{settings.llm_endpoint.rstrip('/')}/v1/models")
+            resp = await client.get(f"{settings.llm_endpoint.rstrip('/')}/v1/models", headers=headers)
             return resp.status_code < 500
     except Exception:
         return False
@@ -300,9 +301,11 @@ async def generate_rewrite_variants(
 
     log.debug("rewrite request | issue_type=%s original=%r", issue_type, original_text[:80])
 
+    headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
+
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.post(f"{endpoint}/v1/chat/completions", json=payload)
+            resp = await client.post(f"{endpoint}/v1/chat/completions", json=payload, headers=headers)
             log.debug("provider HTTP status: %d", resp.status_code)
             resp.raise_for_status()
             data = resp.json()

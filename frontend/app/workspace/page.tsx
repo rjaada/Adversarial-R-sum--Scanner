@@ -393,10 +393,12 @@ const MOCK: ScanResult = {
   simulation: MOCK_SIMULATION,
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001"
+
 // Fire-and-forget analytics. Silently discards all errors.
 // Property keys that look like PII are blocked server-side; do not send them here.
 function track(event: string, properties: Record<string, string | number | boolean | null> = {}): void {
-  void fetch("http://localhost:8001/api/analytics/event", {
+  void fetch(`${API_BASE}/api/analytics/event`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ event, properties }),
@@ -435,7 +437,9 @@ export default function WorkspacePage() {
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [compareBase, setCompareBase] = useState<ScanResult | null>(null)
+  const [previousResult, setPreviousResult] = useState<ScanResult | null>(null)
   const lastStatusCheckRef = useRef<number>(0)
+  const issuesSectionRef = useRef<HTMLDivElement>(null)
   const STATUS_TTL_MS = 30_000
 
   const refreshLlmStatus = useCallback(async (force = false) => {
@@ -443,7 +447,7 @@ export default function WorkspacePage() {
     if (!force && now - lastStatusCheckRef.current < STATUS_TTL_MS) return
     lastStatusCheckRef.current = now
     try {
-      const r = await fetch("http://localhost:8001/api/rewrite/status")
+      const r = await fetch(`${API_BASE}/api/rewrite/status`)
       const s = await r.json() as LLMStatus
       setLlmStatus(s)
     } catch {
@@ -456,7 +460,7 @@ export default function WorkspacePage() {
   const isMock = result === null
 
   useEffect(() => {
-    fetch("http://localhost:8001/api/scans")
+    fetch(`${API_BASE}/api/scans`)
       .then((r) => r.json())
       .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
       .catch(() => {})
@@ -465,6 +469,12 @@ export default function WorkspacePage() {
     window.addEventListener("focus", onFocus)
     return () => window.removeEventListener("focus", onFocus)
   }, [refreshLlmStatus])
+
+  useEffect(() => {
+    if (selectedIssue !== null) {
+      issuesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [selectedIssue])
 
   async function handleScan() {
     if (!file) { setError("Upload a resume first."); return }
@@ -475,13 +485,13 @@ export default function WorkspacePage() {
       const form = new FormData()
       form.append("file", file)
       form.append("jd_text", jdText)
-      const res = await fetch("http://localhost:8001/api/scan", { method: "POST", body: form })
+      const res = await fetch(`${API_BASE}/api/scan`, { method: "POST", body: form })
       if (!res.ok) {
         const msg = await res.text()
         throw new Error(msg || "HTTP " + String(res.status))
       }
       const data = await res.json() as ScanResult
-      setResult(data)
+      setResult((prev) => { setPreviousResult(prev); return data })
       setSelectedIssue(null)
       track("scan_completed", {
         overall_score: pct(data.scores.overall),
@@ -502,7 +512,7 @@ export default function WorkspacePage() {
 
   async function loadScan(scanId: string) {
     try {
-      const res = await fetch("http://localhost:8001/api/scans/" + scanId)
+      const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
       if (res.ok) {
         setResult(await res.json() as ScanResult)
         setSelectedIssue(null)
@@ -513,7 +523,7 @@ export default function WorkspacePage() {
 
   async function loadScanForCompare(scanId: string) {
     try {
-      const res = await fetch("http://localhost:8001/api/scans/" + scanId)
+      const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
       if (res.ok) {
         setCompareBase(await res.json() as ScanResult)
         track("compare_started", {})
@@ -526,7 +536,7 @@ export default function WorkspacePage() {
     track("rewrite_requested", { issue_type: issue.issue_type })
     setRewriteLoading((prev) => ({ ...prev, [issueIndex]: true }))
     try {
-      const res = await fetch("http://localhost:8001/api/rewrite", {
+      const res = await fetch(`${API_BASE}/api/rewrite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -558,21 +568,15 @@ export default function WorkspacePage() {
     setExporting(true)
     track("export_triggered", { has_real_scan: result !== null })
     try {
-      if (result) {
-        // Real scan — GET by scan_id opens directly
-        window.open("http://localhost:8001/api/scans/" + result.scan_id + "/report", "_blank")
-      } else {
-        // Mock / unsaved — POST body
-        const res = await fetch("http://localhost:8001/api/export", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(display),
-        })
-        if (!res.ok) throw new Error("Export failed")
-        const htmlBlob = await res.blob()
-        const url = URL.createObjectURL(htmlBlob)
-        window.open(url, "_blank")
-      }
+      const res = await fetch(`${API_BASE}/api/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(display),
+      })
+      if (!res.ok) throw new Error("Export failed")
+      const htmlBlob = await res.blob()
+      const url = URL.createObjectURL(htmlBlob)
+      window.open(url, "_blank")
     } catch {
       // silent — export is best-effort
     } finally {
@@ -658,6 +662,27 @@ export default function WorkspacePage() {
           >
             {scanning ? "Scanning..." : "Run Scan"}
           </button>
+
+          {previousResult !== null && result !== null && (
+            <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "0.75rem" }}>
+              <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>
+                In-session
+              </div>
+              <button
+                onClick={() => {
+                  if (compareBase?.scan_id === previousResult.scan_id) {
+                    setCompareBase(null)
+                  } else {
+                    setCompareBase(previousResult)
+                    track("compare_started", {})
+                  }
+                }}
+                style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem", background: compareBase?.scan_id === previousResult.scan_id ? "#0f5c52" : "transparent", color: compareBase?.scan_id === previousResult.scan_id ? "#fff" : "#6f6b64", border: "1px solid " + (compareBase?.scan_id === previousResult.scan_id ? "#0f5c52" : "#d9d3ca"), borderRadius: "2px", cursor: "pointer", width: "100%" }}
+              >
+                ↔ compare with previous scan
+              </button>
+            </div>
+          )}
 
           <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "1rem" }}>
             <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
@@ -1120,7 +1145,7 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div ref={issuesSectionRef} style={{ flex: 1, overflowY: "auto" }}>
             <div style={{ padding: "0.75rem 1.25rem", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", borderBottom: "1px solid #d9d3ca" }}>
               Issues — {display.issues.length} found
             </div>
