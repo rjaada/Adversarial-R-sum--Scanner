@@ -32,7 +32,7 @@ interface ProfileResult {
   score: number
   parse_quality: number
   keyword_match: number
-  semantic_fit: number
+  adjacent_skills: number
   structure_confidence: number
   risk_level: "LOW" | "MEDIUM" | "HIGH"
   top_strengths: string[]
@@ -185,7 +185,7 @@ const MOCK_SIMULATION: ProfileSimulation = {
       score: 52,
       parse_quality: 85,
       keyword_match: 38,
-      semantic_fit: 42,
+      adjacent_skills: 42,
       structure_confidence: 75,
       risk_level: "MEDIUM",
       top_strengths: [
@@ -211,7 +211,7 @@ const MOCK_SIMULATION: ProfileSimulation = {
       score: 61,
       parse_quality: 85,
       keyword_match: 38,
-      semantic_fit: 42,
+      adjacent_skills: 42,
       structure_confidence: 75,
       risk_level: "MEDIUM",
       top_strengths: [
@@ -232,13 +232,13 @@ const MOCK_SIMULATION: ProfileSimulation = {
       ],
     },
     {
-      id: "semantic_fit",
-      label: "Semantic Fit",
+      id: "adjacent_coverage",
+      label: "Transferable Skills",
       description: "Broader matching using adjacent skill inference (heuristic). Rewards transferable and contextually relevant experience.",
       score: 67,
       parse_quality: 85,
       keyword_match: 38,
-      semantic_fit: 65,
+      adjacent_skills: 65,
       structure_confidence: 75,
       risk_level: "LOW",
       top_strengths: [
@@ -262,7 +262,7 @@ const MOCK_SIMULATION: ProfileSimulation = {
     "Add missing sections: summary",
   ],
   score_spread: { min: 52, max: 67, delta: 15, volatility: "MEDIUM" },
-  cross_profile_summary: "Best in Semantic Fit (67), weakest in Exact Match (52). 15-pt spread. Exact-Match score lower due to keyword gap.",
+  cross_profile_summary: "Best in Transferable Skills (67), weakest in Exact Match (52). 15-pt spread. Exact-Match score lower due to keyword gap.",
 }
 
 const MOCK_ATS = [
@@ -356,7 +356,7 @@ const MOCK: ScanResult = {
       suggested_fix: "Add kubernetes in your Skills section.",
       fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
       labels: ["Must-have gap", "Broad impact"],
-      affects_profiles: ["exact_match", "structure_sensitive", "semantic_fit"],
+      affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"],
       rank_score: 8.7,
     },
     {
@@ -366,7 +366,7 @@ const MOCK: ScanResult = {
       suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
       fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
       labels: ["Fast win", "Quantify"],
-      affects_profiles: ["exact_match", "semantic_fit"],
+      affects_profiles: ["exact_match", "adjacent_coverage"],
       rank_score: 6.2,
     },
     {
@@ -376,7 +376,7 @@ const MOCK: ScanResult = {
       suggested_fix: "Add aws to your Skills section if applicable.",
       fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
       labels: ["Broad impact"],
-      affects_profiles: ["exact_match", "structure_sensitive", "semantic_fit"],
+      affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"],
       rank_score: 6.7,
     },
     {
@@ -386,7 +386,7 @@ const MOCK: ScanResult = {
       suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
       fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
       labels: ["Fast win"],
-      affects_profiles: ["exact_match", "semantic_fit"],
+      affects_profiles: ["exact_match", "adjacent_coverage"],
       rank_score: 3.6,
     },
   ],
@@ -940,7 +940,7 @@ export default function WorkspacePage() {
             const PROFILE_SHORT: Record<string, string> = {
               exact_match: "Exact",
               structure_sensitive: "Structure",
-              semantic_fit: "Semantic",
+              adjacent_coverage: "Adjacent",
             }
             return (
               <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
@@ -1060,7 +1060,7 @@ export default function WorkspacePage() {
                                   { label: "Keywords", v: p.keyword_match },
                                   { label: "Structure", v: p.structure_confidence },
                                   { label: "Parse", v: p.parse_quality },
-                                  { label: "Adj. Skills†", v: p.semantic_fit },
+                                  { label: "Adj. Skills†", v: p.adjacent_skills },
                                 ].map(s => (
                                   <div key={s.label}>
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.62rem", color: "#6f6b64" }}>

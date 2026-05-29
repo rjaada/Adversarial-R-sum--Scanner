@@ -111,7 +111,7 @@ class ProfileResult(BaseModel):
     score: int                                           # 0–100
     parse_quality: int                                   # 0–100
     keyword_match: int                                   # 0–100
-    semantic_fit: int                                    # 0–100 (adjacent skill inference)
+    adjacent_skills: int                                 # 0–100 (adjacent skill inference)
     structure_confidence: int                            # 0–100
     risk_level: Literal["LOW", "MEDIUM", "HIGH"]
     top_strengths: list[str]

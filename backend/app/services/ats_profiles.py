@@ -29,7 +29,7 @@ class ProfileConfig:
     description: str
     w_kw_exact: float       # exact keyword overlap
     w_kw_must: float        # must-have keyword coverage
-    w_semantic: float       # adjacent skill inference (heuristic)
+    w_adjacent: float       # adjacent skill inference (heuristic)
     w_structure: float      # section completeness
     w_parse: float          # parse integrity
     w_impact: float         # evidence / quantification density
@@ -45,7 +45,7 @@ EXACT_MATCH = ProfileConfig(
     ),
     w_kw_exact=0.35,
     w_kw_must=0.20,
-    w_semantic=0.08,
+    w_adjacent=0.08,
     w_structure=0.12,
     w_parse=0.10,
     w_impact=0.08,
@@ -61,16 +61,16 @@ STRUCTURE_SENSITIVE = ProfileConfig(
     ),
     w_kw_exact=0.18,
     w_kw_must=0.12,
-    w_semantic=0.08,
+    w_adjacent=0.08,
     w_structure=0.28,
     w_parse=0.22,
     w_impact=0.06,
     w_experience=0.06,
 )
 
-SEMANTIC_FIT = ProfileConfig(
-    id="semantic_fit",
-    label="Semantic Fit",
+ADJACENT_COVERAGE = ProfileConfig(
+    id="adjacent_coverage",
+    label="Transferable Skills",
     description=(
         "Broader matching using adjacent skill inference; rewards transferable and "
         "contextually relevant experience. Still considers exact keywords but less "
@@ -78,14 +78,14 @@ SEMANTIC_FIT = ProfileConfig(
     ),
     w_kw_exact=0.14,
     w_kw_must=0.10,
-    w_semantic=0.30,
+    w_adjacent=0.30,
     w_structure=0.13,
     w_parse=0.10,
     w_impact=0.13,
     w_experience=0.10,
 )
 
-ALL_PROFILES: list[ProfileConfig] = [EXACT_MATCH, STRUCTURE_SENSITIVE, SEMANTIC_FIT]
+ALL_PROFILES: list[ProfileConfig] = [EXACT_MATCH, STRUCTURE_SENSITIVE, ADJACENT_COVERAGE]
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ def _score_profile(cfg: ProfileConfig, sig: RawSignals) -> float:
     return min(1.0, (
         sig.kw_exact          * cfg.w_kw_exact
         + sig.kw_must         * cfg.w_kw_must
-        + sig.semantic        * cfg.w_semantic
+        + sig.adjacent        * cfg.w_adjacent
         + sig.structure       * cfg.w_structure
         + sig.parse_integrity * cfg.w_parse
         + sig.impact          * cfg.w_impact
@@ -132,7 +132,7 @@ def _strengths(cfg: ProfileConfig, sig: RawSignals, score: int) -> list[str]:
         secs = ", ".join(sorted(sig.sections_found))
         out.append(f"All expected sections found: {secs}")
 
-    if sig.semantic >= 0.75 and cfg.w_semantic >= 0.20:
+    if sig.adjacent >= 0.75 and cfg.w_adjacent >= 0.20:
         out.append("Adjacent skill signals cover most missing required terms")
 
     if sig.impact >= 0.75:
@@ -174,7 +174,7 @@ def _failures(cfg: ProfileConfig, sig: RawSignals, score: int) -> list[str]:
     if sig.impact < 0.40:
         out.append("Low evidence density: few quantified or impact-oriented bullets")
 
-    if sig.semantic < 0.50 and cfg.w_semantic >= 0.20:
+    if sig.adjacent < 0.50 and cfg.w_adjacent >= 0.20:
         out.append("Adjacent skill inference found limited transferable signals")
 
     return out[:3]
@@ -185,7 +185,7 @@ def _lost_signals(cfg: ProfileConfig, sig: RawSignals) -> list[str]:
     if cfg.id == "structure_sensitive" and sig.prose_only_kws:
         for kw in sorted(sig.prose_only_kws)[:3]:
             out.append(f"'{kw}' detected in experience body only — may be skipped without a skills block")
-    if cfg.id == "exact_match" and sig.semantic > sig.kw_exact + 0.15:
+    if cfg.id == "exact_match" and sig.adjacent > sig.kw_exact + 0.15:
         out.append("Adjacent skills present but not exact matches — no credit in this profile")
     if sig.sections_missing:
         for s in sorted(sig.sections_missing)[:2]:
@@ -233,8 +233,8 @@ def _cross_profile_summary(results: list[ProfileResult]) -> str:
         parts.append("Structure-Sensitive score lower due to section or formatting signals.")
     elif worst.id == "exact_match":
         parts.append("Exact-Match score lower due to keyword gap.")
-    elif worst.id == "semantic_fit":
-        parts.append("Semantic Fit score lower — adjacent skill inference found limited overlap.")
+    elif worst.id == "adjacent_coverage":
+        parts.append("Transferable Skills score lower — adjacent skill inference found limited overlap.")
     return " ".join(parts)
 
 
@@ -321,7 +321,7 @@ def simulate_profiles(
             score=score_int,
             parse_quality=round(sig.parse_integrity * 100),
             keyword_match=round(sig.kw_exact * 100),
-            semantic_fit=round(sig.semantic * 100),
+            adjacent_skills=round(sig.adjacent * 100),
             structure_confidence=round(sig.structure * 100),
             risk_level=_risk(score_int),
             top_strengths=strengths,

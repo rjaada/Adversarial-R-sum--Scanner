@@ -58,7 +58,7 @@ class RawSignals:
     """All computed signals before profile weighting. Used by ats_profiles."""
     kw_exact: float          # matched required keywords / total required
     kw_must: float           # matched must-haves / total must-haves (1.0 if none)
-    semantic: float          # adjacent skill inference score (heuristic, 0–1)
+    adjacent: float          # adjacent skill inference score (heuristic, 0–1)
     structure: float         # expected sections found / total expected
     parse_integrity: float   # from extract_resume
     impact: float            # evidence/quantification density (0–1)
@@ -90,7 +90,7 @@ def _match_keywords(required: set[str], resume_text: str) -> tuple[set[str], set
     return matched, required - matched
 
 
-def _semantic_score(required: set[str], resume_text: str) -> float:
+def _adjacent_skill_score(required: set[str], resume_text: str) -> float:
     """
     Heuristic adjacent skill inference: for each missing required keyword,
     check whether related terms appear in the résumé.
@@ -169,7 +169,7 @@ def extract_raw_signals(
     matched_must = must_haves & matched
     kw_must = len(matched_must) / len(must_haves) if must_haves else 1.0
 
-    semantic = _semantic_score(required, resume_text)
+    adjacent = _adjacent_skill_score(required, resume_text)
 
     sections_found = set(resume_sections.keys()) & EXPECTED_SECTIONS
     sections_missing = EXPECTED_SECTIONS - sections_found
@@ -182,14 +182,14 @@ def extract_raw_signals(
     years_in_resume = [int(y) for y in re.findall(r"(\d+)\+?\s*(?:years?|yrs?)", resume_text)]
     max_resume_years = max(years_in_resume, default=0)
     min_jd_years = jd_requirements.get("min_years_experience") or 0
-    experience = 1.0 if min_jd_years == 0 else min(1.0, max_resume_years / min_jd_years)
+    experience = 0.5 if min_jd_years == 0 else min(1.0, max_resume_years / min_jd_years)
 
     prose_only = _prose_only_keywords(matched, resume_sections)
 
     return RawSignals(
-        kw_exact=len(matched) / len(required) if required else 1.0,
+        kw_exact=len(matched) / len(required) if required else 0.5,
         kw_must=kw_must,
-        semantic=semantic,
+        adjacent=adjacent,
         structure=structure,
         parse_integrity=parse_integrity,
         impact=impact,
