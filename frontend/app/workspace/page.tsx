@@ -899,36 +899,155 @@ export default function WorkspacePage() {
           {/* Normal right pane — hidden when compare is active */}
           {compareBase === null && <>
 
-          <div style={{ padding: "1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
-              Scores
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-              {[
-                { label: "Overall", value: display.scores.overall, span: true },
-                { label: "Keywords", value: display.scores.keyword_match, span: false },
-                { label: "Experience", value: display.scores.experience_alignment, span: false },
-                { label: "Parse", value: display.scores.parse_integrity, span: false },
-                { label: "Structure", value: display.scores.structure, span: false },
-                { label: "Impact", value: display.scores.quantified_impact, span: false },
-              ].map((s) => {
-                const p = pct(s.value)
-                const c = scoreColor(p)
-                return (
-                  <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
-                    <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>{s.label}</div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color: c }}>{p}</span>
-                      <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>/100</span>
-                    </div>
-                    <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem" }}>
-                      <div style={{ height: "2px", width: p + "%", background: c, borderRadius: "1px" }} />
-                    </div>
+          {/* P0 evidence UX: neutral defaults + confidence badge */}
+          {(() => {
+            const jdReqs = display.jd_requirements as {
+              required_keywords?: string[]
+              min_years_experience?: number | null
+            }
+            const jdHasKeywords = (jdReqs.required_keywords?.length ?? 0) > 0
+            const jdHasYearsReq = jdReqs.min_years_experience != null && jdReqs.min_years_experience > 0
+
+            const neutralDefaults: Record<string, string> = {}
+            if (!jdHasKeywords)
+              neutralDefaults.keyword_match =
+                "Defaulted to neutral — JD vocabulary not recognized — keyword analysis unavailable"
+            if (!jdHasYearsReq)
+              neutralDefaults.experience_alignment =
+                "Defaulted to neutral — JD specifies no years requirement"
+            const defaultCount = Object.keys(neutralDefaults).length
+
+            const parseScore = pct(display.scores.parse_integrity)
+            const confidence: "high" | "moderate" | "low" =
+              !jdHasKeywords || parseScore < 40
+                ? "low"
+                : defaultCount > 0
+                ? "moderate"
+                : "high"
+
+            const confStyle = {
+              high: {
+                dot: "#0f5c52",
+                label: "High confidence",
+                tip: "Score is based on recognized JD vocabulary, parsed résumé sections, and measurable signals. Results are reliable for this input.",
+              },
+              moderate: {
+                dot: "#9a4d22",
+                label: "Moderate confidence",
+                tip: "One or more scoring signals defaulted to neutral because the JD or résumé lacked measurable data. Review the sub-score breakdown for details.",
+              },
+              low: {
+                dot: "#8c2f4e",
+                label: "Low confidence",
+                tip: "Most signals defaulted to neutral. The score has limited diagnostic value for this JD/résumé pair. This typically occurs with JDs in fields outside our recognized vocabulary.",
+              },
+            }[confidence]
+
+            const scoreItems = [
+              { label: "Overall",    key: "overall",              value: display.scores.overall,              span: true,  weight: null  },
+              { label: "Keywords",   key: "keyword_match",        value: display.scores.keyword_match,        span: false, weight: "35%" },
+              { label: "Experience", key: "experience_alignment", value: display.scores.experience_alignment, span: false, weight: "25%" },
+              { label: "Parse",      key: "parse_integrity",      value: display.scores.parse_integrity,      span: false, weight: null  },
+              { label: "Structure",  key: "structure",            value: display.scores.structure,            span: false, weight: null  },
+              { label: "Impact",     key: "quantified_impact",    value: display.scores.quantified_impact,    span: false, weight: null  },
+            ]
+
+            return (
+              <>
+                <div style={{ padding: "1.25rem", borderBottom: defaultCount > 0 ? "none" : "1px solid #d9d3ca" }}>
+                  <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
+                    Scores
                   </div>
-                )
-              })}
-            </div>
-          </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                    {scoreItems.map((s) => {
+                      const isNeutral = s.key in neutralDefaults
+                      const reason = neutralDefaults[s.key]
+                      const p = pct(s.value)
+                      const c = isNeutral ? "#a0998e" : scoreColor(p)
+                      return (
+                        <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
+                          <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>
+                            {s.label}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem", flexWrap: "wrap" }}>
+                            {isNeutral ? (
+                              <span
+                                title={`This sub-score was not computable for this input. It contributed 0.50 × ${s.weight} to the overall score.`}
+                                style={{ fontFamily: "monospace", fontSize: "1.1rem", fontWeight: 600, color: "#a0998e", cursor: "help" }}
+                              >
+                                —
+                              </span>
+                            ) : (
+                              <>
+                                <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color: c }}>
+                                  {p}
+                                </span>
+                                <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>/100</span>
+                                {s.span && (
+                                  <span
+                                    title={confStyle.tip}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.3rem",
+                                      fontSize: "0.67rem",
+                                      color: confStyle.dot,
+                                      background: confStyle.dot + "14",
+                                      border: `1px solid ${confStyle.dot}35`,
+                                      borderRadius: 3,
+                                      padding: "0.12rem 0.45rem",
+                                      marginLeft: "0.4rem",
+                                      cursor: "help",
+                                      letterSpacing: "0.02em",
+                                      verticalAlign: "middle",
+                                      fontFamily: "Inter, system-ui, sans-serif",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: confStyle.dot, display: "inline-block", flexShrink: 0 }} />
+                                    {confStyle.label}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {/* Progress bar or muted N/A line */}
+                          {isNeutral ? (
+                            <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem", opacity: 0.45 }} />
+                          ) : (
+                            <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem" }}>
+                              <div style={{ height: "2px", width: `${p}%`, background: c, borderRadius: "1px" }} />
+                            </div>
+                          )}
+                          {/* Neutral reason text */}
+                          {isNeutral && reason && (
+                            <div style={{ fontSize: "0.62rem", color: "#a0998e", marginTop: "0.25rem", lineHeight: 1.5 }}>
+                              {reason}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                {/* Neutral default banner */}
+                {defaultCount > 0 && (
+                  <div style={{
+                    padding: "0.6rem 1.25rem",
+                    borderBottom: "1px solid #d9d3ca",
+                    background: "rgba(111,107,100,0.055)",
+                    fontSize: "0.78rem",
+                    color: "#6f6b64",
+                    lineHeight: 1.65,
+                  }}>
+                    One or more sub-scores defaulted to neutral because the job description
+                    didn&apos;t provide enough measurable data. These defaults are noted in
+                    the score breakdown. They are not penalties.
+                  </div>
+                )}
+              </>
+            )
+          })()}
 
           {display.top_fixes.length > 0 && (() => {
             const LABEL_COLOR: Record<string, { bg: string; color: string }> = {
