@@ -23,11 +23,21 @@ _IMPACT_RE = re.compile("|".join(IMPACT_PATTERNS), re.IGNORECASE)
 EXPECTED_SECTIONS = {"summary", "experience", "education", "skills"}
 
 # Resume-side synonyms: if the JD keyword is the key, any synonym in the set counts.
+# Only industry-standard exact-equivalents — not broad semantic cousins.
 _SYNONYMS: dict[str, set[str]] = {
-    "go": {"go", "golang"},
-    "postgresql": {"postgresql", "postgres"},
-    "javascript": {"javascript", "js"},
-    "typescript": {"typescript", "ts"},
+    "go":                            {"go", "golang"},
+    "postgresql":                    {"postgresql", "postgres"},
+    "javascript":                    {"javascript", "js"},
+    "typescript":                    {"typescript", "ts"},
+    "kubernetes":                    {"kubernetes", "k8s"},
+    "node.js":                       {"node.js", "nodejs", "node"},
+    "vue":                           {"vue", "vue.js"},
+    ".net":                          {".net", "dotnet"},
+    "c#":                            {"c#", "csharp"},
+    "ruby on rails":                 {"ruby on rails", "rails"},
+    "ci/cd":                         {"ci/cd", "continuous integration", "continuous deployment"},
+    "machine learning":              {"machine learning", "ml"},
+    "natural language processing":   {"natural language processing", "nlp"},
 }
 
 # Adjacent/transferable skills map for heuristic semantic scoring.
@@ -81,7 +91,11 @@ def _match_keywords(required: set[str], resume_text: str) -> tuple[set[str], set
     for kw in required:
         synonyms = _SYNONYMS.get(kw, {kw})
         if " " in kw or "/" in kw:
-            if any(syn in resume_text for syn in synonyms):
+            # Phrase keywords: long synonyms use substring match; short abbreviations
+            # (≤4 stripped chars, e.g. "ml", "nlp") use word-set to avoid false substring hits.
+            long_syns = {s for s in synonyms if len(s.replace(" ", "").replace("/", "")) > 4}
+            short_syns = {s for s in synonyms if len(s.replace(" ", "").replace("/", "")) <= 4}
+            if any(syn in resume_text for syn in long_syns) or (short_syns & resume_words):
                 matched.add(kw)
         else:
             if synonyms & resume_words:
@@ -111,6 +125,46 @@ def _adjacent_skill_score(required: set[str], resume_text: str) -> float:
             if adjacent_words & resume_words:
                 score += 0.5
     return min(1.0, score / len(required))
+
+
+_CURRENT_YEAR = 2026  # Treat "Present"/"Current" as this year; update annually.
+
+# Matches "2019 – 2023", "2019-2021", "Jan 2020 – Dec 2022", etc.
+_YEAR_TO_YEAR_RE = re.compile(
+    r"(20\d{2})\s*[–\-—―]+\s*(?:[A-Za-z]{3,9}\s+)?(20\d{2})"
+)
+# Matches "2020 – Present", "2018 - Current", "2019–now"
+_YEAR_TO_PRESENT_RE = re.compile(
+    r"(20\d{2})\s*[–\-—―]+\s*(?:[A-Za-z]{3,9}\s+)?(?:present|current|now)",
+    re.IGNORECASE,
+)
+
+
+def _infer_years_from_dates(resume_text: str) -> int:
+    """
+    Heuristic: parse date ranges in résumé text to estimate total career span.
+    Merges overlapping spans to avoid double-counting concurrent roles.
+    Year-granularity only; "Present"/"Current" resolves to _CURRENT_YEAR.
+    """
+    spans: list[list[int]] = []
+    for m in _YEAR_TO_YEAR_RE.finditer(resume_text):
+        start, end = int(m.group(1)), int(m.group(2))
+        if 1990 <= start < end <= _CURRENT_YEAR:
+            spans.append([start, end])
+    for m in _YEAR_TO_PRESENT_RE.finditer(resume_text):
+        start = int(m.group(1))
+        if 1990 <= start < _CURRENT_YEAR:
+            spans.append([start, _CURRENT_YEAR])
+    if not spans:
+        return 0
+    spans.sort(key=lambda x: x[0])
+    merged: list[list[int]] = [spans[0][:]]
+    for s, e in spans[1:]:
+        if s <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], e)
+        else:
+            merged.append([s, e])
+    return sum(e - s for s, e in merged)
 
 
 def _prose_only_keywords(matched_kws: set[str], resume_sections: dict) -> set[str]:
@@ -180,7 +234,10 @@ def extract_raw_signals(
     impact = min(1.0, impact_hits / 8)
 
     years_in_resume = [int(y) for y in re.findall(r"(\d+)\+?\s*(?:years?|yrs?)", resume_text)]
-    max_resume_years = max(years_in_resume, default=0)
+    explicit_years = max(years_in_resume, default=0)
+    # Heuristic: also infer from date ranges; use the larger of both signals
+    inferred_years = _infer_years_from_dates(resume_text)
+    max_resume_years = max(explicit_years, inferred_years)
     min_jd_years = jd_requirements.get("min_years_experience") or 0
     experience = 0.5 if min_jd_years == 0 else min(1.0, max_resume_years / min_jd_years)
 

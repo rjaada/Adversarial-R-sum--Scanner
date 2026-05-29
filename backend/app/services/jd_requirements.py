@@ -6,12 +6,36 @@ from __future__ import annotations
 import re
 
 # Unambiguous single-token tech keywords — all lowercase, no spaces.
+# Organized by category for maintainability. Add only unambiguous tool/language names.
 _SINGLE_KEYWORDS: frozenset[str] = frozenset({
-    "python", "javascript", "typescript", "java", "rust",
+    # Languages
+    "python", "javascript", "typescript", "java", "rust", "ruby", "scala", "php",
+    "swift", "kotlin",
+    "c#", ".net",
+    # Web frameworks
     "react", "vue", "angular", "fastapi", "django", "flask",
+    # Databases / storage
     "postgresql", "mysql", "mongodb", "redis", "elasticsearch",
+    "snowflake", "databricks", "dynamodb",
+    # Cloud / infra / DevOps
     "aws", "gcp", "azure", "docker", "kubernetes", "terraform",
-    "pytorch", "tensorflow", "sql", "nosql", "graphql", "grpc",
+    "serverless", "microservices",
+    # Data / ML / analytics
+    "pytorch", "tensorflow", "spark", "kafka", "airflow", "dbt",
+    "pandas", "sklearn", "tableau", "looker",
+    # Observability / monitoring
+    "datadog", "grafana", "prometheus", "splunk",
+    # Dev tooling
+    "jira", "jenkins", "gitlab", "github",
+    "webpack", "vite", "jest", "cypress", "storybook",
+    # Design
+    "figma",
+    # Styling
+    "sass",
+    # Mobile / cross-platform
+    "flutter", "android", "ios",
+    # General
+    "sql", "nosql", "graphql", "grpc",
     "git", "linux", "bash", "agile", "scrum",
     "analytics", "etl",
 })
@@ -21,6 +45,9 @@ _PHRASE_KEYWORDS: frozenset[str] = frozenset({
     "machine learning", "deep learning", "data engineering",
     "data science", "rest api", "ci/cd", "next.js", "node.js",
     "product management", "cross-functional", "natural language processing",
+    "computer vision", "data warehouse", "business intelligence",
+    "react native", "ruby on rails",
+    "github actions", "test driven development",
 })
 
 # "go" the language — only treat as a keyword when JD uses it in a technical sense.

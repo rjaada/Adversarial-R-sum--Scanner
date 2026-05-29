@@ -283,3 +283,174 @@ def test_missing_section_has_no_rewrite_starter():
     issues = _check_missing_sections({"experience": "Engineer at Corp"})
     for issue in issues:
         assert issue.rewrite_starter == ""
+
+
+# ── Item 1: Synonym / acronym matching ────────────────────────────────────────
+
+def test_k8s_matches_kubernetes():
+    """k8s in résumé should satisfy a 'kubernetes' JD requirement."""
+    sections = {"skills": "Python, k8s, Docker, Terraform"}
+    reqs = {"required_keywords": ["kubernetes"], "min_years_experience": None}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    assert "kubernetes" in reqs["matched_keywords"]
+
+
+def test_ml_matches_machine_learning():
+    """'ml' as a whole word in résumé should satisfy 'machine learning' JD requirement."""
+    sections = {"skills": "Python, ML, TensorFlow, SQL"}
+    reqs = {"required_keywords": ["machine learning"], "min_years_experience": None}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    assert "machine learning" in reqs["matched_keywords"]
+
+
+def test_nlp_matches_natural_language_processing():
+    """'nlp' as a whole word should satisfy 'natural language processing' JD requirement."""
+    sections = {"skills": "Python, NLP, PyTorch"}
+    reqs = {"required_keywords": ["natural language processing"], "min_years_experience": None}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    assert "natural language processing" in reqs["matched_keywords"]
+
+
+def test_continuous_integration_matches_cicd():
+    """'continuous integration' in résumé should satisfy 'ci/cd' JD requirement."""
+    sections = {"experience": "Built continuous integration and deployment pipelines using GitHub."}
+    reqs = {"required_keywords": ["ci/cd"], "min_years_experience": None}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    assert "ci/cd" in reqs["matched_keywords"]
+
+
+def test_xml_does_not_match_machine_learning():
+    """'xml' in résumé must NOT trigger 'ml' synonym — word-set prevents substring false positive."""
+    sections = {"skills": "XML processing, XSLT, Java"}
+    reqs = {"required_keywords": ["machine learning"], "min_years_experience": None}
+    compute_scores(sections, reqs, parse_integrity=1.0)
+    assert "machine learning" not in reqs["matched_keywords"]
+
+
+# ── Item 2: Expanded JD vocabulary ────────────────────────────────────────────
+
+def test_jd_extracts_snowflake_dbt_airflow():
+    """Expanded vocabulary should extract data analytics tools."""
+    jd = "Experience with Snowflake, dbt, and Airflow required."
+    reqs = extract_jd_requirements(jd)
+    assert "snowflake" in reqs["required_keywords"]
+    assert "dbt" in reqs["required_keywords"]
+    assert "airflow" in reqs["required_keywords"]
+
+
+def test_jd_extracts_mobile_terms():
+    """Expanded vocabulary should extract mobile platform terms."""
+    jd = "We need iOS and Android experience. Swift or Kotlin preferred."
+    reqs = extract_jd_requirements(jd)
+    assert "ios" in reqs["required_keywords"]
+    assert "android" in reqs["required_keywords"]
+
+
+def test_jd_extracts_figma():
+    """Expanded vocabulary should extract design tool Figma."""
+    jd = "Must be proficient in Figma and comfortable working with design systems."
+    reqs = extract_jd_requirements(jd)
+    assert "figma" in reqs["required_keywords"]
+
+
+def test_jd_extracts_ruby_on_rails():
+    """Phrase 'ruby on rails' should be extracted from JD."""
+    jd = "Strong Ruby on Rails experience required with PostgreSQL."
+    reqs = extract_jd_requirements(jd)
+    assert "ruby on rails" in reqs["required_keywords"]
+
+
+def test_jd_extracts_computer_vision():
+    """Phrase 'computer vision' should be extracted from JD."""
+    jd = "Experience in computer vision and deep learning is required."
+    reqs = extract_jd_requirements(jd)
+    assert "computer vision" in reqs["required_keywords"]
+
+
+# ── Item 3: Section header synonyms ───────────────────────────────────────────
+
+def test_parse_about_me_maps_to_summary():
+    """'About Me' header should map to summary section."""
+    resume = "About Me\nExperienced backend engineer focused on distributed systems.\n\nExperience\nEng at Corp"
+    sections = parse_resume_sections(resume)
+    assert "summary" in sections
+
+
+def test_parse_professional_background_maps_to_experience():
+    """'Professional Background' header should map to experience section."""
+    resume = "Professional Background\nSoftware Engineer 2019-2024\n\nSkills\nPython"
+    sections = parse_resume_sections(resume)
+    assert "experience" in sections
+
+
+def test_parse_relevant_experience_maps_to_experience():
+    """'Relevant Experience' header should map to experience section."""
+    resume = "Relevant Experience\nBuilt backend services at three startups.\n\nEducation\nBS CS"
+    sections = parse_resume_sections(resume)
+    assert "experience" in sections
+
+
+def test_parse_educational_background_maps_to_education():
+    """'Educational Background' header should map to education section."""
+    resume = "Educational Background\nB.S. Computer Science, MIT 2018\n\nExperience\nEng at Corp"
+    sections = parse_resume_sections(resume)
+    assert "education" in sections
+
+
+def test_parse_technical_background_maps_to_skills():
+    """'Technical Background' header should map to skills section."""
+    resume = "Technical Background\nPython, AWS, Docker\n\nExperience\nEng at Corp"
+    sections = parse_resume_sections(resume)
+    assert "skills" in sections
+
+
+# ── Item 4: Date-range experience inference ────────────────────────────────────
+
+def test_date_range_infers_experience_years():
+    """Date range in résumé contributes to experience signal when no 'X years' stated."""
+    from app.services.scoring import _infer_years_from_dates
+    text = "Software Engineer at Acme 2019-2024"
+    assert _infer_years_from_dates(text) == 5
+
+
+def test_date_range_present_resolves_to_current_year():
+    """'Present' end in date range resolves to _CURRENT_YEAR."""
+    from app.services.scoring import _infer_years_from_dates, _CURRENT_YEAR
+    text = "Software Engineer 2020-Present"
+    assert _infer_years_from_dates(text) == _CURRENT_YEAR - 2020
+
+
+def test_date_range_no_double_count_overlap():
+    """Overlapping date ranges are merged before summing years."""
+    from app.services.scoring import _infer_years_from_dates
+    text = "Company A 2019-2022\nCompany B 2021-2024"
+    total = _infer_years_from_dates(text)
+    # [2019,2022] + [2021,2024] merges to [2019,2024] = 5 years
+    assert total == 5
+
+
+def test_date_range_non_overlapping_spans_sum():
+    """Non-overlapping spans should be summed independently."""
+    from app.services.scoring import _infer_years_from_dates
+    text = "Role A 2015-2018\nRole B 2020-2023"
+    total = _infer_years_from_dates(text)
+    # [2015,2018]=3 + [2020,2023]=3 = 6 years (gap 2018-2020 not counted)
+    assert total == 6
+
+
+def test_date_range_improves_experience_score():
+    """Date range in résumé raises experience_alignment when no explicit 'X years' stated."""
+    resume = "Experience\nSoftware Engineer at Acme 2019-2024\n- Built distributed systems."
+    sections = parse_resume_sections(resume)
+    reqs = {"required_keywords": [], "min_years_experience": 4}
+    scores = compute_scores(sections, reqs, parse_integrity=1.0)
+    # 5 inferred years / 4 required = meets requirement
+    assert scores.experience_alignment >= 1.0
+
+
+def test_date_range_uses_larger_of_explicit_and_inferred():
+    """Takes the larger of explicit 'X years' self-report vs date-range inference."""
+    from app.services.scoring import _infer_years_from_dates
+    # Explicit says "3 years" but date range covers 5 years
+    text = "3 years experience. Software Engineer 2019-2024."
+    assert _infer_years_from_dates(text) == 5  # date range wins

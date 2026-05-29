@@ -17,15 +17,17 @@ SECTION_HEADERS: dict[str, list[str]] = {
     "experience": [
         "experience", "work experience", "professional experience",
         "work history", "employment", "employment history", "career",
+        "relevant experience", "professional background", "career history",
     ],
     "education": [
         "education", "academic background", "academic history",
         "academic", "degree", "university", "college",
+        "educational", "schooling",
     ],
     "skills": [
         "skills", "technical skills", "key skills", "core skills",
         "core competencies", "competencies", "areas of expertise",
-        "technical expertise", "technologies", "technology stack",
+        "technical expertise", "technical background", "technologies", "technology stack",
         "tech stack", "tools", "tools & technologies",
         "programming languages", "languages & frameworks",
         "proficiencies",
