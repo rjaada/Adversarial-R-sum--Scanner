@@ -601,6 +601,7 @@ export default function WorkspacePage() {
           <span style={{ fontSize: "0.75rem", color: "#6f6b64" }}>
             {isMock ? "Showing sample scan" : "Scanned: " + display.source_id}
           </span>
+          <Link href="/methodology" target="_blank" style={{ fontSize: "0.7rem", color: "#6f6b64", textDecoration: "none", letterSpacing: "0.02em" }}>How scoring works</Link>
           <button
             onClick={() => void handleExport()}
             disabled={exporting}

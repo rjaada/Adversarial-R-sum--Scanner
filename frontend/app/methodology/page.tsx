@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import type { ReactNode } from "react"
 import Link from "next/link"
+import { SCORING_YEAR } from "@/lib/scoring-year"
 
 export const metadata: Metadata = {
   title: "How scoring works — TraceRank",
@@ -491,7 +492,7 @@ export default function MethodologyPage() {
             avoid double-counting concurrent roles. For example: if a résumé shows
             "Company A, 2019–2022" and "Company B, 2021–2024," the inferred total is
             5 years — not 6 — because the 2021–2022 overlap is counted once. "Present"
-            and "Current" resolve to 2026, updated annually.
+            and "Current" resolve to {SCORING_YEAR}, updated annually.
           </p>
           <Callout variant="warning" title="Experience inference limitations">
             Year-granularity only — months are not parsed. Sub-year roles, consulting

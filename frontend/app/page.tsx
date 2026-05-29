@@ -415,6 +415,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #d9d3ca", padding: "1.5rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
         <span style={{ fontFamily: "Georgia, serif", fontSize: "0.85rem", color: "#1f1d1a", fontWeight: 600 }}>TraceRank</span>
+        <Link href="/methodology" style={{ fontSize: "0.75rem", color: "#0f5c52", textDecoration: "none" }}>How scoring works</Link>
         <span style={{ fontSize: "0.72rem", color: "#a0998e" }}>Adversarial Résumé Scanner — profile simulations are heuristic, not exact ATS replicas</span>
       </footer>
 
