@@ -395,6 +395,13 @@ const MOCK: ScanResult = {
 
 const API_BASE = ""
 
+const SECTION_HEADER_VARIANTS: Record<string, string[]> = {
+  summary: ["summary", "professional summary", "career summary", "objective", "career objective", "profile", "professional profile", "about", "overview"],
+  skills: ["skills", "technical skills", "key skills", "core skills", "core competencies", "competencies", "areas of expertise", "technical expertise", "technical background", "technologies", "technology stack", "tech stack", "tools", "tools & technologies", "programming languages", "languages & frameworks", "proficiencies"],
+  experience: ["experience", "work experience", "professional experience", "work history", "employment", "employment history", "career", "relevant experience", "professional background", "career history"],
+  education: ["education", "academic background", "academic history", "academic", "degree", "university", "college", "educational", "schooling"],
+}
+
 // Fire-and-forget analytics. Silently discards all errors.
 // Property keys that look like PII are blocked server-side; do not send them here.
 function track(event: string, properties: Record<string, string | number | boolean | null> = {}): void {
@@ -947,10 +954,48 @@ export default function WorkspacePage() {
               { label: "Overall",    key: "overall",              value: display.scores.overall,              span: true,  weight: null  },
               { label: "Keywords",   key: "keyword_match",        value: display.scores.keyword_match,        span: false, weight: "35%" },
               { label: "Experience", key: "experience_alignment", value: display.scores.experience_alignment, span: false, weight: "25%" },
-              { label: "Parse",      key: "parse_integrity",      value: display.scores.parse_integrity,      span: false, weight: null  },
-              { label: "Structure",  key: "structure",            value: display.scores.structure,            span: false, weight: null  },
-              { label: "Impact",     key: "quantified_impact",    value: display.scores.quantified_impact,    span: false, weight: null  },
+              { label: "Parse",      key: "parse_integrity",      value: display.scores.parse_integrity,      span: false, weight: "20%" },
+              { label: "Structure",  key: "structure",            value: display.scores.structure,            span: false, weight: "10%" },
+              { label: "Impact",     key: "quantified_impact",    value: display.scores.quantified_impact,    span: false, weight: "10%" },
             ]
+
+            // Source lines: one plain-language line per sub-score, derived from existing payload data
+            const sourceLines: Record<string, string> = {}
+            const totalJdKeywords = display.matched_keywords.length + display.missing_keywords.length
+            if (totalJdKeywords > 0) {
+              sourceLines.keyword_match = `${display.matched_keywords.length} of ${totalJdKeywords} recognized JD keywords found`
+            }
+            if (jdHasYearsReq) {
+              const mn = jdReqs.min_years_experience as number
+              const expPct = pct(display.scores.experience_alignment)
+              sourceLines.experience_alignment = expPct >= 90
+                ? `Meets or exceeds ${mn}-year JD requirement`
+                : expPct >= 60
+                ? `Partial alignment with ${mn}-year JD requirement`
+                : `Below ${mn}-year JD minimum — alignment score ${expPct}/100`
+            }
+            const parsePct = pct(display.scores.parse_integrity)
+            sourceLines.parse_integrity = parsePct >= 90
+              ? "No significant parse issues detected"
+              : parsePct >= 70
+              ? "Minor formatting concerns detected"
+              : `Parse penalty applied — formatting score ${parsePct}/100`
+            const sectionKeys = display.resume_sections ?? {}
+            const structFound = ["summary", "experience", "education", "skills"].filter(sec => sec in sectionKeys).length
+            sourceLines.structure = `${structFound} of 4 expected sections found`
+            const lowQIssue = display.issues.find(i => i.issue_type === "low_quantification")
+            const qMatch = lowQIssue?.evidence?.match(/^(\d+) of (\d+) experience bullets/)
+            if (qMatch) {
+              const quantified = parseInt(qMatch[2]) - parseInt(qMatch[1])
+              sourceLines.quantified_impact = `${quantified} of ${qMatch[2]} bullets include measurable impact`
+            } else {
+              const qPct = pct(display.scores.quantified_impact)
+              sourceLines.quantified_impact = qPct >= 70
+                ? "Most bullets include measurable impact"
+                : qPct >= 40
+                ? "Some bullets include measurable impact"
+                : "Few bullets include measurable impact"
+            }
 
             return (
               <>
@@ -966,8 +1011,15 @@ export default function WorkspacePage() {
                       const c = isNeutral ? "#a0998e" : scoreColor(p)
                       return (
                         <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
-                          <div style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.2rem" }}>
-                            {s.label}
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginBottom: "0.2rem" }}>
+                            <span style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                              {s.label}
+                            </span>
+                            {s.weight && !s.span && (
+                              <span style={{ fontSize: "0.57rem", color: "#a0998e", background: "rgba(0,0,0,0.04)", padding: "0.05rem 0.3rem", borderRadius: "1px", letterSpacing: "0.01em", fontFamily: "Inter, system-ui, sans-serif" }}>
+                                {s.weight} of total
+                              </span>
+                            )}
                           </div>
                           <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem", flexWrap: "wrap" }}>
                             {isNeutral ? (
@@ -1023,6 +1075,12 @@ export default function WorkspacePage() {
                           {isNeutral && reason && (
                             <div style={{ fontSize: "0.62rem", color: "#a0998e", marginTop: "0.25rem", lineHeight: 1.5 }}>
                               {reason}
+                            </div>
+                          )}
+                          {/* Source line — real signal evidence */}
+                          {!isNeutral && !s.span && sourceLines[s.key] && (
+                            <div style={{ fontSize: "0.62rem", color: "#a0998e", marginTop: "0.2rem", lineHeight: 1.4 }}>
+                              {sourceLines[s.key]}
                             </div>
                           )}
                         </div>
@@ -1284,11 +1342,31 @@ export default function WorkspacePage() {
                     <div style={{ fontSize: "0.76rem", color: "#6f6b64" }}>{issue.description}</div>
                     {selectedIssue === i && (
                       <div style={{ marginTop: "0.75rem", fontSize: "0.76rem", color: "#1f1d1a" }}>
-                        {issue.evidence && (
+                        {issue.issue_type === "missing_section" ? (() => {
+                          const secKey = issue.title.toLowerCase().replace(/^missing\s+/, "").replace(/\s+section$/, "").trim()
+                          const sects = display.resume_sections ?? {}
+                          const foundSects = Object.keys(sects).filter(k => k !== "_unparsed")
+                          const variants = SECTION_HEADER_VARIANTS[secKey] ?? []
+                          const shown = variants.slice(0, 6)
+                          const extra = variants.length - shown.length
+                          const hasUnparsed = "_unparsed" in sects && (sects as Record<string, string>)["_unparsed"]?.length > 0
+                          return (
+                            <div style={{ padding: "0.45rem 0.65rem", background: "rgba(0,0,0,0.03)", border: "1px solid #e8e3dc", borderRadius: "2px", marginBottom: "0.5rem", fontSize: "0.71rem", color: "#6f6b64", lineHeight: 1.9 }}>
+                              <div><span style={{ color: "#1f1d1a", fontWeight: 500 }}>Sections found:</span> {foundSects.length > 0 ? foundSects.join(", ") : "none"}</div>
+                              <div><span style={{ color: "#1f1d1a", fontWeight: 500 }}>Searched for <em>{secKey}</em> using:</span> {shown.join(", ")}{extra > 0 ? `, and ${extra} others` : ""}</div>
+                              <div style={{ color: "#8c2f4e", fontWeight: 500 }}>Result: none matched.</div>
+                              {hasUnparsed && (
+                                <div style={{ marginTop: "0.25rem", color: "#9a4d22" }}>
+                                  Some résumé content couldn&apos;t be assigned to a section — an unrecognized header may be present.
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })() : issue.evidence ? (
                           <div style={{ padding: "0.45rem 0.65rem", background: "rgba(0,0,0,0.03)", border: "1px solid #e8e3dc", borderRadius: "2px", marginBottom: "0.5rem", fontSize: "0.72rem", color: "#6f6b64", fontStyle: "italic" }}>
                             {issue.evidence}
                           </div>
-                        )}
+                        ) : null}
                         <div style={{ padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px" }}>
                           <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Fix pattern</div>
                           <div>{issue.fix_pattern || issue.suggested_fix}</div>

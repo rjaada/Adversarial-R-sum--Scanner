@@ -74,6 +74,9 @@ export default function LandingPage() {
           <a href="#sample" style={{ fontSize: "0.85rem", color: "#6f6b64", textDecoration: "none", borderBottom: "1px solid #d9d3ca" }}>
             See sample output ↓
           </a>
+          <Link href="/methodology" style={{ fontSize: "0.82rem", color: "#6f6b64", textDecoration: "none" }}>
+            How scoring works →
+          </Link>
         </div>
       </section>
 
