@@ -64,7 +64,7 @@ _GO_TECH_RE = re.compile(
 TECH_KEYWORDS = _SINGLE_KEYWORDS | _PHRASE_KEYWORDS | {"go"}
 
 EXPERIENCE_PATTERN = re.compile(
-    r"(\d+)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp\.?)",
+    r"(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?(?:\s+(?!experience\b)\w+){0,4}\s+(?:experience|exp\.?)",
     re.IGNORECASE,
 )
 

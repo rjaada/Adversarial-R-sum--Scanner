@@ -487,3 +487,24 @@ def test_scan_route_keyword_matching_uses_required_keywords():
     assert "docker" in missing
     # Sanity: wrong key would have returned empty lists
     assert reqs.get("keywords") is None
+
+
+def test_experience_pattern_matches_qualified_phrase():
+    """
+    Regression: EXPERIENCE_PATTERN required "experience" immediately after "years [of]",
+    missing phrases like "3+ years of software engineering experience" (words between "of" and "experience").
+    """
+    from app.services.jd_requirements import extract_jd_requirements
+    cases = [
+        ("We need 3+ years of software engineering experience.", 3),
+        ("Requires 4+ years of professional backend experience.", 4),
+        ("5+ years of product management experience required.", 5),
+        ("Minimum 3 years of data engineering experience.", 3),
+        ("2 years experience required.", 2),       # no "of", no qualifier words
+        ("3+ years of experience preferred.", 3),  # direct "of experience"
+    ]
+    for jd_text, expected_years in cases:
+        reqs = extract_jd_requirements(jd_text)
+        assert reqs["min_years_experience"] == expected_years, (
+            f"Expected {expected_years} for: {jd_text!r}, got {reqs['min_years_experience']}"
+        )
