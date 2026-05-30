@@ -454,3 +454,36 @@ def test_date_range_uses_larger_of_explicit_and_inferred():
     # Explicit says "3 years" but date range covers 5 years
     text = "3 years experience. Software Engineer 2019-2024."
     assert _infer_years_from_dates(text) == 5  # date range wins
+
+
+def test_jd_requirements_key_is_required_keywords_not_keywords():
+    """
+    Regression: scan.py formerly used jd_reqs.get("keywords", []) — always empty.
+    Correct key is "required_keywords". Verify dict contract so this can't silently regress.
+    """
+    from app.services.jd_requirements import extract_jd_requirements
+    reqs = extract_jd_requirements("We need Python and AWS experience.")
+    # Correct key exists and is populated
+    assert "required_keywords" in reqs
+    assert len(reqs["required_keywords"]) > 0
+    # Wrong key must not exist — its presence would let callers use either accidentally
+    assert "keywords" not in reqs
+
+
+def test_scan_route_keyword_matching_uses_required_keywords():
+    """
+    Simulates the corrected scan route keyword split: matched vs missing.
+    Before fix: jd_reqs.get("keywords", []) returned [] → both lists always empty.
+    After fix: jd_reqs.get("required_keywords", []) returns real keyword list.
+    """
+    from app.services.jd_requirements import extract_jd_requirements
+    jd = "Required: Python, AWS, Docker, kubernetes"
+    reqs = extract_jd_requirements(jd)
+    resume_text = "Experienced Python developer with AWS cloud expertise."
+    matched = [k for k in reqs.get("required_keywords", []) if k.lower() in resume_text.lower()]
+    missing = [k for k in reqs.get("required_keywords", []) if k.lower() not in resume_text.lower()]
+    assert "python" in matched
+    assert "aws" in matched
+    assert "docker" in missing
+    # Sanity: wrong key would have returned empty lists
+    assert reqs.get("keywords") is None

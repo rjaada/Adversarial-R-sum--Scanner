@@ -51,8 +51,8 @@ async def scan_resume(
         sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
         top_fixes = rank_fixes(sorted_issues, raw)
 
-        matched_kw = [k for k in jd_reqs.get("keywords", []) if k.lower() in extracted["text"].lower()]
-        missing_kw = [k for k in jd_reqs.get("keywords", []) if k.lower() not in extracted["text"].lower()]
+        matched_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() in extracted["text"].lower()]
+        missing_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() not in extracted["text"].lower()]
 
         summary = ScanSummary(
             scan_id=scan_id,
