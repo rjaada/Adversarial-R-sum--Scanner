@@ -2,29 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Cormorant, Figtree, IBM_Plex_Mono } from 'next/font/google'
-
-// --- Fonts ---
-const cormorant = Cormorant({
-  subsets: ['latin'],
-  weight: ['300', '400', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-cormorant',
-  display: 'swap',
-})
-const figtree = Figtree({
-  subsets: ['latin'],
-  weight: ['300', '400', '500'],
-  variable: '--font-figtree',
-  display: 'swap',
-})
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-  display: 'swap',
-})
-
 // --- Hooks ---
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null)
@@ -148,24 +125,9 @@ export default function LandingPage() {
   const benchCount3 = useCountUp(44,   1500, benchmark.visible)
 
   return (
-    <div className={`lp ${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`}>
+    <div className="lp">
 
       <style>{`
-        :root {
-          --bg-base:       #0d0c0a;
-          --bg-surface:    #131210;
-          --bg-elevated:   #1a1916;
-          --bg-muted:      #201f1c;
-          --bg-accent-low: #1e2214;
-          --border-subtle: #2a2824;
-          --border-mid:    #3b3930;
-          --text-primary:  #ede8df;
-          --text-secondary:#9a9489;
-          --text-dim:      #615d57;
-          --accent:        #7c8e5c;
-          --accent-hover:  #95a870;
-          --mineral:       #c6c1b8;
-        }
         .lp {
           --font-display: var(--font-cormorant), Georgia, 'Times New Roman', serif;
           --font-body:    var(--font-figtree), system-ui, -apple-system, sans-serif;

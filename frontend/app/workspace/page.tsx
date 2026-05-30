@@ -112,7 +112,7 @@ interface CompareResult {
   verdict: "improved" | "neutral" | "regressed"
   scoreBefore: number
   scoreAfter: number
-  scoreDelta: number           // integer pts (already *100)
+  scoreDelta: number
   subDeltas: SubDeltas
   keywordsGained: string[]
   keywordsStillMissing: string[]
@@ -121,12 +121,9 @@ interface CompareResult {
   newRegressions: Issue[]
   volatilityBefore: number | null
   volatilityAfter: number | null
-  volatilityDelta: number | null  // negative = less volatile = good
+  volatilityDelta: number | null
 }
 
-// Pure deterministic compare — no fuzzy matching.
-// Issue identity = title string equality.
-// Verdict threshold: ±2 pts (i.e. 0.02 on 0–1 scale).
 function compareScans(before: ScanResult, after: ScanResult): CompareResult {
   const rawDelta = after.scores.overall - before.scores.overall
   const scoreDelta = Math.round(rawDelta * 100)
@@ -159,100 +156,40 @@ function compareScans(before: ScanResult, after: ScanResult): CompareResult {
       ? volatilityAfter - volatilityBefore
       : null
 
-  return {
-    verdict,
-    scoreBefore: pct(before.scores.overall),
-    scoreAfter:  pct(after.scores.overall),
-    scoreDelta,
-    subDeltas,
-    keywordsGained,
-    keywordsStillMissing,
-    issuesResolved,
-    issuesRemaining,
-    newRegressions,
-    volatilityBefore,
-    volatilityAfter,
-    volatilityDelta,
-  }
+  return { verdict, scoreBefore: pct(before.scores.overall), scoreAfter: pct(after.scores.overall), scoreDelta, subDeltas, keywordsGained, keywordsStillMissing, issuesResolved, issuesRemaining, newRegressions, volatilityBefore, volatilityAfter, volatilityDelta }
 }
 
 const MOCK_SIMULATION: ProfileSimulation = {
   profiles: [
     {
-      id: "exact_match",
-      label: "Exact Match",
-      description: "Rewards exact keyword overlap; heavily penalises missing must-have terms. Simulates keyword-first screening.",
-      score: 52,
-      parse_quality: 85,
-      keyword_match: 38,
-      adjacent_skills: 42,
-      structure_confidence: 75,
+      id: "exact_match", label: "Exact Match",
+      description: "Rewards exact keyword overlap; heavily penalises missing must-have terms.",
+      score: 52, parse_quality: 85, keyword_match: 38, adjacent_skills: 42, structure_confidence: 75,
       risk_level: "MEDIUM",
-      top_strengths: [
-        "Clean parse: résumé structure extracted with high confidence",
-        "3 of 8 required terms present",
-      ],
-      top_failures: [
-        "Missing must-have term(s): kubernetes, aws, terraform",
-        "Keyword gap: 62% of required terms absent (kubernetes, aws, terraform...)",
-      ],
-      lost_signals: [
-        "'python' detected in experience body only — may be skipped without a skills block",
-      ],
-      recommended_fixes: [
-        "Add must-have keywords to résumé: kubernetes, aws, terraform",
-        "Add a dedicated skills section with your full tech stack",
-      ],
+      top_strengths: ["Clean parse: résumé structure extracted with high confidence", "3 of 8 required terms present"],
+      top_failures: ["Missing must-have term(s): kubernetes, aws, terraform", "Keyword gap: 62% of required terms absent"],
+      lost_signals: ["'python' detected in experience body only — may be skipped without a skills block"],
+      recommended_fixes: ["Add must-have keywords to résumé: kubernetes, aws, terraform", "Add a dedicated skills section"],
     },
     {
-      id: "structure_sensitive",
-      label: "Structure Sensitive",
-      description: "Penalises ambiguous or fragmented formatting; rewards clearly parsed sections and dedicated skills blocks.",
-      score: 61,
-      parse_quality: 85,
-      keyword_match: 38,
-      adjacent_skills: 42,
-      structure_confidence: 75,
+      id: "structure_sensitive", label: "Structure Sensitive",
+      description: "Penalises ambiguous or fragmented formatting; rewards clearly parsed sections.",
+      score: 61, parse_quality: 85, keyword_match: 38, adjacent_skills: 42, structure_confidence: 75,
       risk_level: "MEDIUM",
-      top_strengths: [
-        "All expected sections found: education, experience, skills, summary",
-        "High parse confidence across all extracted sections",
-      ],
-      top_failures: [
-        "Missing must-have term(s): kubernetes, aws, terraform",
-        "2 skills only found in prose — may not register in this profile",
-      ],
-      lost_signals: [
-        "'python' detected in experience body only — not in skills block",
-        "'docker' detected in experience body only — not in skills block",
-      ],
-      recommended_fixes: [
-        "Move 'python', 'docker' into a dedicated skills block",
-        "Add must-have keywords to résumé: kubernetes, aws, terraform",
-      ],
+      top_strengths: ["All expected sections found: education, experience, skills, summary", "High parse confidence"],
+      top_failures: ["Missing must-have term(s): kubernetes, aws, terraform", "2 skills only found in prose"],
+      lost_signals: ["'python' detected in experience body only", "'docker' detected in experience body only"],
+      recommended_fixes: ["Move 'python', 'docker' into a dedicated skills block", "Add must-have keywords"],
     },
     {
-      id: "adjacent_coverage",
-      label: "Transferable Skills",
-      description: "Broader matching using adjacent skill inference (heuristic). Rewards transferable and contextually relevant experience.",
-      score: 67,
-      parse_quality: 85,
-      keyword_match: 38,
-      adjacent_skills: 65,
-      structure_confidence: 75,
+      id: "adjacent_coverage", label: "Transferable Skills",
+      description: "Broader matching using adjacent skill inference (heuristic). Rewards transferable experience.",
+      score: 67, parse_quality: 85, keyword_match: 38, adjacent_skills: 65, structure_confidence: 75,
       risk_level: "LOW",
-      top_strengths: [
-        "Adjacent skill signals cover most missing required terms",
-        "Strong evidence density: quantified impact language present",
-      ],
-      top_failures: [
-        "Partial keyword coverage: 38%",
-      ],
+      top_strengths: ["Adjacent skill signals cover most missing required terms", "Strong evidence density"],
+      top_failures: ["Partial keyword coverage: 38%"],
       lost_signals: [],
-      recommended_fixes: [
-        "Add explicit kubernetes and aws to skills section",
-        "Add 2–3 bullets with quantified impact (%, $, scale, or time saved)",
-      ],
+      recommended_fixes: ["Add explicit kubernetes and aws to skills section", "Add 2–3 bullets with quantified impact"],
     },
   ],
   universal_fixes: [
@@ -288,107 +225,20 @@ const MOCK: ScanResult = {
   scan_id: "mock-001",
   source_id: "sample_resume.pdf",
   ats_text_preview: MOCK_ATS,
-  scores: {
-    overall: 0.52,
-    keyword_match: 0.38,
-    experience_alignment: 0.70,
-    parse_integrity: 0.85,
-    structure: 0.75,
-    quantified_impact: 0.15,
-  },
+  scores: { overall: 0.52, keyword_match: 0.38, experience_alignment: 0.70, parse_integrity: 0.85, structure: 0.75, quantified_impact: 0.15 },
   issues: [
-    {
-      issue_type: "keyword_gap",
-      severity: "high",
-      title: "Missing keyword: kubernetes",
-      description: "The JD requires kubernetes but your resume does not mention it.",
-      evidence: '"kubernetes" does not appear anywhere in your résumé text.',
-      fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
-      rewrite_starter: "",
-      source_excerpt: "",
-      suggested_fix: "Add kubernetes in your Skills section.",
-      impact_score: 3.2,
-    },
-    {
-      issue_type: "low_quantification",
-      severity: "high",
-      title: "Most bullets lack measurable impact",
-      description: "4 of 4 experience bullets have no numbers or percentages.",
-      evidence: "4 of 4 experience bullets contain no numbers, percentages, currency, or scale indicators.",
-      fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
-      rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].",
-      source_excerpt: "- Responsible for migration of monolith to microservices",
-      suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
-      impact_score: 3.2,
-    },
-    {
-      issue_type: "weak_phrasing",
-      severity: "medium",
-      title: 'Weak verb: "responsible for"',
-      description: "Passive phrasing reduces impact score in LLM screeners.",
-      evidence: 'Phrase "responsible for" signals passive ownership. Screeners weight active verbs more heavily.',
-      fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
-      rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].",
-      source_excerpt: "...Responsible for migration of monolith...",
-      suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
-      impact_score: 1.6,
-    },
-    {
-      issue_type: "keyword_gap",
-      severity: "high",
-      title: "Missing keyword: aws",
-      description: "The JD requires aws but your resume does not mention it.",
-      evidence: '"aws" does not appear anywhere in your résumé text.',
-      fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
-      rewrite_starter: "",
-      source_excerpt: "",
-      suggested_fix: "Add aws to your Skills section if applicable.",
-      impact_score: 3.2,
-    },
+    { issue_type: "keyword_gap", severity: "high", title: "Missing keyword: kubernetes", description: "The JD requires kubernetes but your resume does not mention it.", evidence: '"kubernetes" does not appear anywhere in your résumé text.', fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.', rewrite_starter: "", source_excerpt: "", suggested_fix: "Add kubernetes in your Skills section.", impact_score: 3.2 },
+    { issue_type: "low_quantification", severity: "high", title: "Most bullets lack measurable impact", description: "4 of 4 experience bullets have no numbers or percentages.", evidence: "4 of 4 experience bullets contain no numbers, percentages, currency, or scale indicators.", fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.", rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].", source_excerpt: "- Responsible for migration of monolith to microservices", suggested_fix: 'Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%', impact_score: 3.2 },
+    { issue_type: "weak_phrasing", severity: "medium", title: 'Weak verb: "responsible for"', description: "Passive phrasing reduces impact score in LLM screeners.", evidence: 'Phrase "responsible for" signals passive ownership. Screeners weight active verbs more heavily.', fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].", rewrite_starter: "Migrated monolith to [N] microservices, cutting deployment time by [X%] and rollback time to [Y min].", source_excerpt: "...Responsible for migration of monolith...", suggested_fix: "Replace with: Led migration of monolith to 12 microservices", impact_score: 1.6 },
+    { issue_type: "keyword_gap", severity: "high", title: "Missing keyword: aws", description: "The JD requires aws but your resume does not mention it.", evidence: '"aws" does not appear anywhere in your résumé text.', fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.', rewrite_starter: "", source_excerpt: "", suggested_fix: "Add aws to your Skills section if applicable.", impact_score: 3.2 },
   ],
   missing_keywords: ["kubernetes", "aws", "terraform", "go"],
   matched_keywords: ["python", "docker", "postgresql"],
   top_fixes: [
-    {
-      issue_index: 0,
-      issue_type: "keyword_gap",
-      title: "Missing keyword: kubernetes",
-      suggested_fix: "Add kubernetes in your Skills section.",
-      fix_pattern: 'Add "kubernetes" in your Skills section or work it into a relevant experience bullet.',
-      labels: ["Must-have gap", "Broad impact"],
-      affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"],
-      rank_score: 8.7,
-    },
-    {
-      issue_index: 1,
-      issue_type: "low_quantification",
-      title: "Most bullets lack measurable impact",
-      suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%",
-      fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s, cost saved, or delivery time.",
-      labels: ["Fast win", "Quantify"],
-      affects_profiles: ["exact_match", "adjacent_coverage"],
-      rank_score: 6.2,
-    },
-    {
-      issue_index: 3,
-      issue_type: "keyword_gap",
-      title: "Missing keyword: aws",
-      suggested_fix: "Add aws to your Skills section if applicable.",
-      fix_pattern: 'Add "aws" in your Skills section or work it into a relevant experience bullet.',
-      labels: ["Broad impact"],
-      affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"],
-      rank_score: 6.7,
-    },
-    {
-      issue_index: 2,
-      issue_type: "weak_phrasing",
-      title: 'Weak verb: "responsible for"',
-      suggested_fix: "Replace with: Led migration of monolith to 12 microservices",
-      fix_pattern: "Start the bullet with: Built / Led / Reduced / Delivered / Scaled + [what] + [measurable result].",
-      labels: ["Fast win"],
-      affects_profiles: ["exact_match", "adjacent_coverage"],
-      rank_score: 3.6,
-    },
+    { issue_index: 0, issue_type: "keyword_gap", title: "Missing keyword: kubernetes", suggested_fix: "Add kubernetes in your Skills section.", fix_pattern: 'Add "kubernetes" in your Skills section.', labels: ["Must-have gap", "Broad impact"], affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"], rank_score: 8.7 },
+    { issue_index: 1, issue_type: "low_quantification", title: "Most bullets lack measurable impact", suggested_fix: "Add metrics: e.g. Migrated monolith to 12 microservices, reducing p99 latency by 35%", fix_pattern: "Rewrite 2–3 bullets: add %, $, users, team size, latency ms, requests/s.", labels: ["Fast win", "Quantify"], affects_profiles: ["exact_match", "adjacent_coverage"], rank_score: 6.2 },
+    { issue_index: 3, issue_type: "keyword_gap", title: "Missing keyword: aws", suggested_fix: "Add aws to your Skills section if applicable.", fix_pattern: 'Add "aws" in your Skills section.', labels: ["Broad impact"], affects_profiles: ["exact_match", "structure_sensitive", "adjacent_coverage"], rank_score: 6.7 },
+    { issue_index: 2, issue_type: "weak_phrasing", title: 'Weak verb: "responsible for"', suggested_fix: "Replace with: Led migration of monolith to 12 microservices", fix_pattern: "Start the bullet with: Built / Led / Reduced.", labels: ["Fast win"], affects_profiles: ["exact_match", "adjacent_coverage"], rank_score: 3.6 },
   ],
   simulation: MOCK_SIMULATION,
 }
@@ -402,8 +252,6 @@ const SECTION_HEADER_VARIANTS: Record<string, string[]> = {
   education: ["education", "academic background", "academic history", "academic", "degree", "university", "college", "educational", "schooling"],
 }
 
-// Fire-and-forget analytics. Silently discards all errors.
-// Property keys that look like PII are blocked server-side; do not send them here.
 function track(event: string, properties: Record<string, string | number | boolean | null> = {}): void {
   void fetch(`${API_BASE}/api/analytics/event`, {
     method: "POST",
@@ -413,10 +261,10 @@ function track(event: string, properties: Record<string, string | number | boole
 }
 
 const SEV_COLOR: Record<string, string> = {
-  critical: "#8c2f4e",
-  high: "#9a4d22",
-  medium: "#6f6b64",
-  low: "#a0998e",
+  critical: "var(--sev-critical)",
+  high:     "var(--sev-high)",
+  medium:   "var(--sev-medium)",
+  low:      "var(--sev-low)",
 }
 
 function pct(v: number): number {
@@ -424,9 +272,9 @@ function pct(v: number): number {
 }
 
 function scoreColor(p: number): string {
-  if (p >= 70) return "#0f5c52"
-  if (p >= 50) return "#9a4d22"
-  return "#8c2f4e"
+  if (p >= 75) return "var(--accent)"
+  if (p >= 55) return "var(--mineral)"
+  return "var(--sev-critical)"
 }
 
 export default function WorkspacePage() {
@@ -500,12 +348,7 @@ export default function WorkspacePage() {
       const data = await res.json() as ScanResult
       setResult((prev) => { setPreviousResult(prev); return data })
       setSelectedIssue(null)
-      track("scan_completed", {
-        overall_score: pct(data.scores.overall),
-        issue_count: data.issues.length,
-        has_simulation: data.simulation != null,
-        keyword_match_count: data.matched_keywords.length,
-      })
+      track("scan_completed", { overall_score: pct(data.scores.overall), issue_count: data.issues.length, has_simulation: data.simulation != null, keyword_match_count: data.matched_keywords.length })
       setHistory((prev) => [
         { scan_id: data.scan_id, source_id: data.source_id, scanned_at: new Date().toISOString(), overall_score: data.scores.overall },
         ...prev.filter((h) => h.scan_id !== data.scan_id),
@@ -520,21 +363,14 @@ export default function WorkspacePage() {
   async function loadScan(scanId: string) {
     try {
       const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
-      if (res.ok) {
-        setResult(await res.json() as ScanResult)
-        setSelectedIssue(null)
-        setCompareBase(null)
-      }
+      if (res.ok) { setResult(await res.json() as ScanResult); setSelectedIssue(null); setCompareBase(null) }
     } catch (_) {}
   }
 
   async function loadScanForCompare(scanId: string) {
     try {
       const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
-      if (res.ok) {
-        setCompareBase(await res.json() as ScanResult)
-        track("compare_started", {})
-      }
+      if (res.ok) { setCompareBase(await res.json() as ScanResult); track("compare_started", {}) }
     } catch (_) {}
   }
 
@@ -546,15 +382,7 @@ export default function WorkspacePage() {
       const res = await fetch(`${API_BASE}/api/rewrite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          issue_type: issue.issue_type,
-          original_text: issue.source_excerpt || issue.rewrite_starter || "",
-          evidence: issue.evidence || "",
-          fix_pattern: issue.fix_pattern || "",
-          rewrite_starter: issue.rewrite_starter || "",
-          jd_keywords: display.matched_keywords.slice(0, 8),
-          count: 3,
-        }),
+        body: JSON.stringify({ issue_type: issue.issue_type, original_text: issue.source_excerpt || issue.rewrite_starter || "", evidence: issue.evidence || "", fix_pattern: issue.fix_pattern || "", rewrite_starter: issue.rewrite_starter || "", jd_keywords: display.matched_keywords.slice(0, 8), count: 3 }),
       })
       const data = await res.json() as RewriteResponse
       if (!data.available) {
@@ -575,11 +403,7 @@ export default function WorkspacePage() {
     setExporting(true)
     track("export_triggered", { has_real_scan: result !== null })
     try {
-      const res = await fetch(`${API_BASE}/api/export`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(display),
-      })
+      const res = await fetch(`${API_BASE}/api/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(display) })
       if (!res.ok) throw new Error("Export failed")
       const htmlBlob = await res.blob()
       const url = URL.createObjectURL(htmlBlob)
@@ -598,67 +422,73 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div style={{ background: "#f6f3ee", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ background: "var(--bg-base)", minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>
 
-      <nav className="ws-nav" style={{ borderBottom: "1px solid #d9d3ca", padding: "0 1.5rem", height: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fbfaf7", flexShrink: 0 }}>
-        <Link href="/" style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 600, color: "#1f1d1a", textDecoration: "none" }}>
+      {/* Nav */}
+      <nav className="ws-nav">
+        <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 400, color: "var(--text-primary)", letterSpacing: "0.01em" }}>
           TraceRank
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "#6f6b64" }}>
-            {isMock ? "Showing sample scan" : "Scanned: " + display.source_id}
-          </span>
-          <Link href="/methodology" target="_blank" style={{ fontSize: "0.7rem", color: "#6f6b64", textDecoration: "none", letterSpacing: "0.02em" }}>How scoring works</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+          {result && (
+            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.65rem", color: "var(--text-dim)", letterSpacing: "0.06em", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {display.source_id}
+            </span>
+          )}
+          {isMock && (
+            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", color: "var(--sev-medium)", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.12rem 0.4rem", border: "1px solid var(--border-mid)", borderRadius: "2px" }}>
+              sample
+            </span>
+          )}
+          <Link href="/methodology" target="_blank" style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-dim)", letterSpacing: "0.02em" }}>
+            Methodology
+          </Link>
           <button
             onClick={() => void handleExport()}
             disabled={exporting}
-            style={{ fontSize: "0.7rem", padding: "0.25rem 0.65rem", background: "transparent", border: "1px solid #d9d3ca", color: "#6f6b64", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1, letterSpacing: "0.03em" }}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.2rem 0.6rem", background: "transparent", border: "1px solid var(--border-mid)", color: "var(--text-dim)", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1 }}
           >
-            {exporting ? "Exporting…" : "Export report"}
+            {exporting ? "Exporting…" : "Export"}
           </button>
         </div>
       </nav>
 
-      <div className="ws-main" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="ws-main">
 
-        <div className="ws-sidebar" style={{ width: "280px", flexShrink: 0, borderRight: "1px solid #d9d3ca", background: "#fbfaf7", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem", overflowY: "auto" }}>
+        {/* Control rail */}
+        <div className="ws-sidebar">
+
           <div>
-            <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", display: "block", marginBottom: "0.5rem" }}>
-              Resume
+            <label style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", display: "block", marginBottom: "0.45rem" }}>
+              Résumé
             </label>
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              style={{ border: "1px dashed #d9d3ca", borderRadius: "2px", padding: "1.25rem", textAlign: "center", cursor: "pointer", background: file ? "#f0f7f5" : undefined }}
+              style={{ border: `1px ${file ? "solid" : "dashed"} ${file ? "var(--accent)" : "var(--border-mid)"}`, borderRadius: "3px", padding: "1.125rem 1rem", textAlign: "center", cursor: "pointer", background: file ? "var(--bg-accent-low)" : "transparent", transition: "border-color 0.2s, background 0.2s" }}
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx"
-                style={{ display: "none" }}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }}
-              />
-              <span style={{ fontSize: "0.8rem", color: file ? "#0f5c52" : "#6f6b64", fontWeight: file ? 500 : undefined }}>
-                {file ? "Selected: " + file.name : "Drop PDF or DOCX, or click to browse"}
+              <input ref={fileInputRef} type="file" accept=".pdf,.docx" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: file ? "var(--accent)" : "var(--text-dim)", fontWeight: file ? 500 : undefined, lineHeight: 1.4, display: "block" }}>
+                {file ? file.name : "PDF or DOCX"}
               </span>
             </div>
           </div>
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", display: "block", marginBottom: "0.5rem" }}>
-              Job Description
+            <label style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", display: "block", marginBottom: "0.45rem" }}>
+              Job description
             </label>
             <textarea
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               placeholder="Paste the full job description here"
-              style={{ flex: 1, minHeight: "160px", resize: "vertical", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "0.75rem", fontSize: "0.8rem", fontFamily: "Inter, system-ui, sans-serif", color: "#1f1d1a", background: "#f6f3ee", outline: "none" }}
+              style={{ flex: 1, minHeight: "160px", resize: "vertical", border: "1px solid var(--border-mid)", borderRadius: "2px", padding: "0.75rem", fontSize: "0.78rem", fontFamily: "var(--font-body)", color: "var(--text-primary)", background: "var(--bg-elevated)", outline: "none", lineHeight: 1.65 }}
             />
           </div>
 
           {error && (
-            <div style={{ fontSize: "0.8rem", color: "#8c2f4e", padding: "0.5rem 0.75rem", border: "1px solid #d9d3ca", borderRadius: "2px" }}>
+            <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--sev-critical)", padding: "0.45rem 0.65rem", border: "1px solid rgba(192,112,128,0.3)", borderRadius: "2px", background: "rgba(140,47,78,0.08)", lineHeight: 1.5 }}>
               {error}
             </div>
           )}
@@ -666,15 +496,15 @@ export default function WorkspacePage() {
           <button
             onClick={handleScan}
             disabled={scanning}
-            style={{ background: scanning ? "#6f6b64" : "#0f5c52", color: "#fff", border: "none", borderRadius: "2px", padding: "0.7rem", fontSize: "0.875rem", fontWeight: 500, cursor: scanning ? "not-allowed" : "pointer" }}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", fontWeight: 500, background: scanning ? "var(--border-mid)" : "var(--accent)", color: scanning ? "var(--text-dim)" : "#0d0c0a", border: "none", borderRadius: "2px", padding: "0.75rem", cursor: scanning ? "not-allowed" : "pointer", transition: "background 0.2s", letterSpacing: "0.01em" }}
           >
-            {scanning ? "Scanning..." : "Run Scan"}
+            {scanning ? "Analyzing…" : "Analyze résumé"}
           </button>
 
           {previousResult !== null && result !== null && (
-            <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "0.75rem" }}>
-              <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>
-                In-session
+            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "1rem" }}>
+              <div style={{ fontFamily: "var(--font-data)", fontSize: "0.52rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.45rem" }}>
+                Compare
               </div>
               <button
                 onClick={() => {
@@ -685,51 +515,40 @@ export default function WorkspacePage() {
                     track("compare_started", {})
                   }
                 }}
-                style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem", background: compareBase?.scan_id === previousResult.scan_id ? "#0f5c52" : "transparent", color: compareBase?.scan_id === previousResult.scan_id ? "#fff" : "#6f6b64", border: "1px solid " + (compareBase?.scan_id === previousResult.scan_id ? "#0f5c52" : "#d9d3ca"), borderRadius: "2px", cursor: "pointer", width: "100%" }}
+                style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.25rem 0.5rem", background: compareBase?.scan_id === previousResult.scan_id ? "var(--accent)" : "transparent", color: compareBase?.scan_id === previousResult.scan_id ? "#0d0c0a" : "var(--text-secondary)", border: `1px solid ${compareBase?.scan_id === previousResult.scan_id ? "var(--accent)" : "var(--border-mid)"}`, borderRadius: "2px", cursor: "pointer", width: "100%", transition: "background 0.2s" }}
               >
-                ↔ compare with previous scan
+                ↔ Compare with previous
               </button>
             </div>
           )}
 
-          <div style={{ borderTop: "1px solid #d9d3ca", paddingTop: "1rem" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
-              Scan History
+          <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "1rem" }}>
+            <div style={{ fontFamily: "var(--font-data)", fontSize: "0.52rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.65rem" }}>
+              History
             </div>
             {history.length === 0 ? (
-              <div style={{ fontSize: "0.78rem", color: "#a0998e" }}>No saved scans yet.</div>
+              <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-dim)", fontStyle: "italic" }}>No saved scans.</div>
             ) : (
               history.map((h) => {
                 const p = pct(h.overall_score)
                 const isCompareBase = compareBase?.scan_id === h.scan_id
                 return (
-                  <div
-                    key={h.scan_id}
-                    style={{ padding: "0.5rem 0", borderBottom: "1px solid #d9d3ca" }}
-                  >
-                    <div
-                      onClick={() => void loadScan(h.scan_id)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <div style={{ fontSize: "0.78rem", color: "#1f1d1a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div key={h.scan_id} style={{ padding: "0.5rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                    <div onClick={() => void loadScan(h.scan_id)} style={{ cursor: "pointer" }}>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {h.source_id}
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.2rem" }}>
-                        <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>
+                        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--text-dim)" }}>
                           {new Date(h.scanned_at).toLocaleDateString()}
                         </span>
-                        <span style={{ fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600, color: scoreColor(p) }}>
-                          {p}
-                        </span>
+                        <span style={{ fontFamily: "var(--font-data)", fontSize: "0.7rem", color: scoreColor(p) }}>{p}</span>
                       </div>
                     </div>
                     {result !== null && (
                       <button
-                        onClick={() => {
-                          if (isCompareBase) setCompareBase(null)
-                          else void loadScanForCompare(h.scan_id)
-                        }}
-                        style={{ marginTop: "0.25rem", fontSize: "0.65rem", padding: "0.1rem 0.4rem", background: isCompareBase ? "#0f5c52" : "transparent", color: isCompareBase ? "#fff" : "#6f6b64", border: "1px solid " + (isCompareBase ? "#0f5c52" : "#d9d3ca"), borderRadius: "2px", cursor: "pointer", letterSpacing: "0.03em" }}
+                        onClick={() => { if (isCompareBase) setCompareBase(null); else void loadScanForCompare(h.scan_id) }}
+                        style={{ marginTop: "0.22rem", fontFamily: "var(--font-body)", fontSize: "0.62rem", padding: "0.1rem 0.4rem", background: isCompareBase ? "var(--accent)" : "transparent", color: isCompareBase ? "#0d0c0a" : "var(--text-dim)", border: `1px solid ${isCompareBase ? "var(--accent)" : "var(--border-subtle)"}`, borderRadius: "2px", cursor: "pointer" }}
                       >
                         {isCompareBase ? "comparing" : "↔ compare"}
                       </button>
@@ -739,42 +558,26 @@ export default function WorkspacePage() {
               })
             )}
           </div>
+
         </div>
 
-        <div className="ws-middle" style={{ flex: 1, padding: "1.5rem", overflowY: "auto", borderRight: "1px solid #d9d3ca" }}>
-          <div style={{ maxWidth: "640px" }}>
-            <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
-                What ATS sees
-              </span>
-              {isMock && (
-                <span style={{ fontSize: "0.65rem", color: "#9a4d22", padding: "0.15rem 0.5rem", border: "1px solid #d9d3ca", borderRadius: "1px" }}>
-                  sample
-                </span>
-              )}
-            </div>
-            <pre style={{ fontFamily: "monospace", fontSize: "0.78rem", lineHeight: 1.7, color: "#1f1d1a", whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", padding: "1.25rem", margin: 0 }}>
-              {display.ats_text_preview}
-            </pre>
-          </div>
-        </div>
+        {/* Report area */}
+        <div className="ws-report">
 
-        <div className="ws-right" style={{ width: "340px", flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-
-          {/* Compare panel — replaces normal right pane when compareBase is set */}
+          {/* Compare panel */}
           {compareBase !== null && result !== null && (() => {
             const cmp = compareScans(compareBase, result)
             const VERDICT_STYLE: Record<string, { color: string; bg: string; label: string }> = {
-              improved:  { color: "#0f5c52", bg: "rgba(15,92,82,0.07)",  label: "Improved" },
-              neutral:   { color: "#6f6b64", bg: "rgba(0,0,0,0.04)",     label: "Neutral"  },
-              regressed: { color: "#8c2f4e", bg: "rgba(140,47,78,0.07)", label: "Regressed" },
+              improved:  { color: "var(--accent)",          bg: "rgba(124,142,92,0.08)", label: "Improved"  },
+              neutral:   { color: "var(--text-dim)",        bg: "rgba(0,0,0,0.06)",     label: "Neutral"   },
+              regressed: { color: "var(--sev-critical)",    bg: "rgba(140,47,78,0.08)", label: "Regressed" },
             }
             const vs = VERDICT_STYLE[cmp.verdict]
 
             function deltaLabel(n: number): JSX.Element {
-              if (n > 0)  return <span style={{ color: "#0f5c52", fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600 }}>+{n}</span>
-              if (n < 0)  return <span style={{ color: "#8c2f4e", fontFamily: "monospace", fontSize: "0.7rem", fontWeight: 600 }}>−{Math.abs(n)}</span>
-              return <span style={{ color: "#a0998e", fontFamily: "monospace", fontSize: "0.7rem" }}>±0</span>
+              if (n > 0) return <span style={{ color: "var(--accent)",       fontFamily: "var(--font-data)", fontSize: "0.72rem", fontWeight: 500 }}>+{n}</span>
+              if (n < 0) return <span style={{ color: "var(--sev-critical)", fontFamily: "var(--font-data)", fontSize: "0.72rem", fontWeight: 500 }}>−{Math.abs(n)}</span>
+              return <span style={{ color: "var(--text-dim)", fontFamily: "var(--font-data)", fontSize: "0.72rem" }}>±0</span>
             }
 
             const SUB_LABELS: [keyof SubDeltas, string][] = [
@@ -786,127 +589,73 @@ export default function WorkspacePage() {
             ]
 
             return (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-
-                {/* Compare header */}
-                <div style={{ padding: "0.75rem 1.25rem", borderBottom: "1px solid #d9d3ca", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
-                    Compare
-                  </span>
-                  <button
-                    onClick={() => setCompareBase(null)}
-                    style={{ fontSize: "0.65rem", padding: "0.15rem 0.5rem", background: "transparent", border: "1px solid #d9d3ca", color: "#6f6b64", borderRadius: "2px", cursor: "pointer" }}
-                  >
+              <div style={{ padding: "1.5rem 2rem", maxWidth: "640px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+                  <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>Compare mode</span>
+                  <button onClick={() => setCompareBase(null)} style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", padding: "0.18rem 0.55rem", background: "transparent", border: "1px solid var(--border-mid)", color: "var(--text-dim)", borderRadius: "2px", cursor: "pointer" }}>
                     Exit compare
                   </button>
                 </div>
-
-                <div style={{ padding: "1rem 1.25rem", overflowY: "auto", flex: 1 }}>
-
-                  {/* File labels */}
-                  <div style={{ marginBottom: "0.75rem", fontSize: "0.72rem", color: "#6f6b64", lineHeight: 1.6 }}>
-                    <div><span style={{ color: "#a0998e", marginRight: "0.4rem" }}>Before</span>{compareBase.source_id}</div>
-                    <div><span style={{ color: "#a0998e", marginRight: "0.5rem" }}>After</span>{result.source_id}</div>
-                  </div>
-
-                  {/* Verdict */}
-                  <div style={{ padding: "0.5rem 0.75rem", background: vs.bg, borderRadius: "2px", marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: vs.color, letterSpacing: "0.06em", textTransform: "uppercase" }}>{vs.label}</span>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "#6f6b64" }}>
-                      {cmp.scoreBefore} → {cmp.scoreAfter} &nbsp;({deltaLabel(cmp.scoreDelta)})
-                    </span>
-                  </div>
-
-                  {/* Sub-score deltas */}
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Score breakdown</div>
-                    {SUB_LABELS.map(([key, label]) => (
-                      <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.2rem 0", borderBottom: "1px solid #ece7e0" }}>
-                        <span style={{ fontSize: "0.72rem", color: "#6f6b64" }}>{label}</span>
-                        {deltaLabel(cmp.subDeltas[key])}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* ATS volatility */}
-                  {cmp.volatilityDelta !== null && (
-                    <div style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>ATS profile spread</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#1f1d1a" }}>
-                        <span>{cmp.volatilityBefore} → {cmp.volatilityAfter} pts</span>
-                        <span style={{ fontFamily: "monospace", fontSize: "0.7rem", color: (cmp.volatilityDelta ?? 0) < 0 ? "#0f5c52" : (cmp.volatilityDelta ?? 0) > 0 ? "#8c2f4e" : "#a0998e" }}>
-                          {(cmp.volatilityDelta ?? 0) < 0 ? "↓ less volatile" : (cmp.volatilityDelta ?? 0) > 0 ? "↑ more volatile" : "unchanged"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Keywords gained */}
-                  {cmp.keywordsGained.length > 0 && (
-                    <div style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Keywords gained ({cmp.keywordsGained.length})</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                        {cmp.keywordsGained.map(k => (
-                          <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.1rem 0.4rem", borderRadius: "1px" }}>{k}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Still missing */}
-                  {cmp.keywordsStillMissing.length > 0 && (
-                    <div style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Still missing ({cmp.keywordsStillMissing.length})</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                        {cmp.keywordsStillMissing.map(k => (
-                          <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.1rem 0.4rem", borderRadius: "1px" }}>–{k}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Issues resolved */}
-                  {cmp.issuesResolved.length > 0 && (
-                    <div style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#0f5c52", marginBottom: "0.4rem" }}>Resolved ({cmp.issuesResolved.length})</div>
-                      {cmp.issuesResolved.map((iss, i) => (
-                        <div key={i} style={{ fontSize: "0.72rem", color: "#0f5c52", marginBottom: "0.2rem" }}>✓ {iss.title}</div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Issues remaining */}
-                  {cmp.issuesRemaining.length > 0 && (
-                    <div style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.4rem" }}>Still present ({cmp.issuesRemaining.length})</div>
-                      {cmp.issuesRemaining.map((iss, i) => (
-                        <div key={i} style={{ fontSize: "0.72rem", color: "#6f6b64", marginBottom: "0.2rem" }}>· {iss.title}</div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Regressions */}
-                  <div style={{ marginBottom: "0.5rem" }}>
-                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: cmp.newRegressions.length > 0 ? "#8c2f4e" : "#6f6b64", marginBottom: "0.4rem" }}>
-                      New issues ({cmp.newRegressions.length})
-                    </div>
-                    {cmp.newRegressions.length === 0
-                      ? <div style={{ fontSize: "0.72rem", color: "#a0998e" }}>None</div>
-                      : cmp.newRegressions.map((iss, i) => (
-                          <div key={i} style={{ fontSize: "0.72rem", color: "#8c2f4e", marginBottom: "0.2rem" }}>✗ {iss.title}</div>
-                        ))
-                    }
-                  </div>
-
+                <div style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-dim)", lineHeight: 1.7, marginBottom: "1rem" }}>
+                  <div><span style={{ color: "var(--text-secondary)", marginRight: "0.4rem" }}>Before</span>{compareBase.source_id}</div>
+                  <div><span style={{ color: "var(--text-secondary)", marginRight: "0.5rem" }}>After</span>{result.source_id}</div>
                 </div>
+                <div style={{ padding: "0.65rem 0.875rem", background: vs.bg, borderRadius: "2px", marginBottom: "1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", fontWeight: 500, color: vs.color, letterSpacing: "0.04em", textTransform: "uppercase" }}>{vs.label}</span>
+                  <span style={{ fontFamily: "var(--font-data)", fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                    {cmp.scoreBefore} → {cmp.scoreAfter} &nbsp;({deltaLabel(cmp.scoreDelta)})
+                  </span>
+                </div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.65rem" }}>Score breakdown</div>
+                  {SUB_LABELS.map(([key, label]) => (
+                    <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)" }}>{label}</span>
+                      {deltaLabel(cmp.subDeltas[key])}
+                    </div>
+                  ))}
+                </div>
+                {cmp.volatilityDelta !== null && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>ATS profile spread</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                      <span>{cmp.volatilityBefore} → {cmp.volatilityAfter} pts</span>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "0.72rem", color: (cmp.volatilityDelta ?? 0) < 0 ? "var(--accent)" : (cmp.volatilityDelta ?? 0) > 0 ? "var(--sev-critical)" : "var(--text-dim)" }}>
+                        {(cmp.volatilityDelta ?? 0) < 0 ? "↓ less volatile" : (cmp.volatilityDelta ?? 0) > 0 ? "↑ more volatile" : "unchanged"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {cmp.keywordsGained.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>Keywords gained</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                      {cmp.keywordsGained.map(k => (
+                        <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", color: "var(--accent)", padding: "0.12rem 0.35rem", border: "1px solid rgba(124,142,92,0.3)", borderRadius: "2px" }}>{k}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {cmp.issuesResolved.length > 0 && (
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.4rem" }}>Issues resolved</div>
+                    {cmp.issuesResolved.map((iss, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--accent)", marginBottom: "0.2rem" }}>✓ {iss.title}</div>)}
+                  </div>
+                )}
+                {cmp.newRegressions.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.4rem" }}>New issues</div>
+                    {cmp.newRegressions.map((iss, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--sev-critical)", marginBottom: "0.2rem" }}>✗ {iss.title}</div>)}
+                  </div>
+                )}
               </div>
             )
           })()}
 
-          {/* Normal right pane — hidden when compare is active */}
+          {/* Normal report */}
           {compareBase === null && <>
 
-          {/* P0 evidence UX: neutral defaults + confidence badge */}
+          {/* Score section — P0 logic intact, specification-row rendering */}
           {(() => {
             const jdReqs = (display.jd_requirements ?? {}) as {
               required_keywords?: string[]
@@ -916,38 +665,18 @@ export default function WorkspacePage() {
             const jdHasYearsReq = jdReqs.min_years_experience != null && jdReqs.min_years_experience > 0
 
             const neutralDefaults: Record<string, string> = {}
-            if (!jdHasKeywords)
-              neutralDefaults.keyword_match =
-                "Defaulted to neutral — JD vocabulary not recognized — keyword analysis unavailable"
-            if (!jdHasYearsReq)
-              neutralDefaults.experience_alignment =
-                "Defaulted to neutral — JD specifies no years requirement"
+            if (!jdHasKeywords) neutralDefaults.keyword_match = "Defaulted to neutral — JD vocabulary not recognized — keyword analysis unavailable"
+            if (!jdHasYearsReq) neutralDefaults.experience_alignment = "Defaulted to neutral — JD specifies no years requirement"
             const defaultCount = Object.keys(neutralDefaults).length
 
             const parseScore = pct(display.scores.parse_integrity)
             const confidence: "high" | "moderate" | "low" =
-              !jdHasKeywords || parseScore < 40
-                ? "low"
-                : defaultCount > 0
-                ? "moderate"
-                : "high"
+              !jdHasKeywords || parseScore < 40 ? "low" : defaultCount > 0 ? "moderate" : "high"
 
             const confStyle = {
-              high: {
-                dot: "#0f5c52",
-                label: "High confidence",
-                tip: "Score is based on recognized JD vocabulary, parsed résumé sections, and measurable signals. Results are reliable for this input.",
-              },
-              moderate: {
-                dot: "#9a4d22",
-                label: "Moderate confidence",
-                tip: "One or more scoring signals defaulted to neutral because the JD or résumé lacked measurable data. Review the sub-score breakdown for details.",
-              },
-              low: {
-                dot: "#8c2f4e",
-                label: "Low confidence",
-                tip: "Most signals defaulted to neutral. The score has limited diagnostic value for this JD/résumé pair. This typically occurs with JDs in fields outside our recognized vocabulary.",
-              },
+              high:     { color: "var(--accent)",         label: "High confidence",     tip: "Score is based on recognized JD vocabulary, parsed résumé sections, and measurable signals." },
+              moderate: { color: "var(--mineral)",        label: "Moderate confidence", tip: "One or more signals defaulted to neutral. Review sub-score breakdown for details."            },
+              low:      { color: "var(--text-secondary)", label: "Low confidence",       tip: "Most signals defaulted to neutral. Score has limited diagnostic value for this pair."          },
             }[confidence]
 
             const scoreItems = [
@@ -959,203 +688,133 @@ export default function WorkspacePage() {
               { label: "Impact",     key: "quantified_impact",    value: display.scores.quantified_impact,    span: false, weight: "10%" },
             ]
 
-            // Source lines: one plain-language line per sub-score, derived from existing payload data
             const sourceLines: Record<string, string> = {}
             const totalJdKeywords = display.matched_keywords.length + display.missing_keywords.length
-            if (totalJdKeywords > 0) {
-              sourceLines.keyword_match = `${display.matched_keywords.length} of ${totalJdKeywords} recognized JD keywords found`
-            }
+            if (totalJdKeywords > 0) { sourceLines.keyword_match = `${display.matched_keywords.length} of ${totalJdKeywords} recognized JD keywords found` }
             if (jdHasYearsReq) {
               const mn = jdReqs.min_years_experience as number
               const expPct = pct(display.scores.experience_alignment)
-              sourceLines.experience_alignment = expPct >= 90
-                ? `Meets or exceeds ${mn}-year JD requirement`
-                : expPct >= 60
-                ? `Partial alignment with ${mn}-year JD requirement`
-                : `Below ${mn}-year JD minimum — alignment score ${expPct}/100`
+              sourceLines.experience_alignment = expPct >= 90 ? `Meets or exceeds ${mn}-year JD requirement` : expPct >= 60 ? `Partial alignment with ${mn}-year JD requirement` : `Below ${mn}-year JD minimum — alignment score ${expPct}/100`
             }
             const parsePct = pct(display.scores.parse_integrity)
-            sourceLines.parse_integrity = parsePct >= 90
-              ? "No significant parse issues detected"
-              : parsePct >= 70
-              ? "Minor formatting concerns detected"
-              : `Parse penalty applied — formatting score ${parsePct}/100`
+            sourceLines.parse_integrity = parsePct >= 90 ? "No significant parse issues detected" : parsePct >= 70 ? "Minor formatting concerns detected" : `Parse penalty applied — formatting score ${parsePct}/100`
             const sectionKeys = display.resume_sections ?? {}
             const structFound = ["summary", "experience", "education", "skills"].filter(sec => sec in sectionKeys).length
             sourceLines.structure = `${structFound} of 4 expected sections found`
             const lowQIssue = display.issues.find(i => i.issue_type === "low_quantification")
             const qMatch = lowQIssue?.evidence?.match(/^(\d+) of (\d+) experience bullets/)
             if (qMatch) {
-              const quantified = parseInt(qMatch[2]) - parseInt(qMatch[1])
-              sourceLines.quantified_impact = `${quantified} of ${qMatch[2]} bullets include measurable impact`
+              sourceLines.quantified_impact = `${parseInt(qMatch[2]) - parseInt(qMatch[1])} of ${qMatch[2]} bullets include measurable impact`
             } else {
               const qPct = pct(display.scores.quantified_impact)
-              sourceLines.quantified_impact = qPct >= 70
-                ? "Most bullets include measurable impact"
-                : qPct >= 40
-                ? "Some bullets include measurable impact"
-                : "Few bullets include measurable impact"
+              sourceLines.quantified_impact = qPct >= 70 ? "Most bullets include measurable impact" : qPct >= 40 ? "Some bullets include measurable impact" : "Few bullets include measurable impact"
             }
 
             return (
               <>
-                <div style={{ padding: "1.25rem", borderBottom: defaultCount > 0 ? "none" : "1px solid #d9d3ca" }}>
-                  <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.75rem" }}>
-                    Scores
+                <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "1.25rem" }}>
+                    Score breakdown
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    {scoreItems.map((s) => {
-                      const isNeutral = s.key in neutralDefaults
-                      const reason = neutralDefaults[s.key]
-                      const p = pct(s.value)
-                      const c = isNeutral ? "#a0998e" : scoreColor(p)
-                      return (
-                        <div key={s.label} style={s.span ? { gridColumn: "span 2" } : undefined}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginBottom: "0.2rem" }}>
-                            <span style={{ fontSize: "0.65rem", color: "#6f6b64", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                              {s.label}
-                            </span>
-                            {s.weight && !s.span && (
-                              <span style={{ fontSize: "0.57rem", color: "#a0998e", background: "rgba(0,0,0,0.04)", padding: "0.05rem 0.3rem", borderRadius: "1px", letterSpacing: "0.01em", fontFamily: "Inter, system-ui, sans-serif" }}>
-                                {s.weight} of total
-                              </span>
-                            )}
+                  {/* Overall */}
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", paddingBottom: "1rem", borderBottom: "1px solid var(--border-subtle)", marginBottom: "0.25rem" }}>
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--text-secondary)" }}>Overall</span>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "2.5rem", fontWeight: 500, color: "var(--text-primary)", lineHeight: 1 }}>
+                        {pct(display.scores.overall)}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "1rem", color: "var(--text-dim)" }}>/100</span>
+                      <span
+                        title={confStyle.tip}
+                        style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: confStyle.color, cursor: "help", letterSpacing: "0.01em" }}
+                      >
+                        {confStyle.label}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Sub-score rows */}
+                  {scoreItems.filter(s => !s.span).map((s) => {
+                    const isNeutral = s.key in neutralDefaults
+                    const reason = neutralDefaults[s.key]
+                    const p = pct(s.value)
+                    return (
+                      <div key={s.key} className="ws-score-row" style={isNeutral ? { borderLeft: "2px solid var(--border-mid)", paddingLeft: "0.75rem" } : undefined}>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                          <div>
+                            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)" }}>{s.label}</span>
+                            {s.weight && <span style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", color: "var(--text-dim)", marginLeft: "0.5rem", opacity: 0.65 }}>· {s.weight}</span>}
                           </div>
-                          <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem", flexWrap: "wrap" }}>
-                            {isNeutral ? (
-                              <span
-                                title={`This sub-score was not computable for this input. It contributed 0.50 × ${s.weight} to the overall score.`}
-                                style={{ fontFamily: "monospace", fontSize: "1.1rem", fontWeight: 600, color: "#a0998e", cursor: "help" }}
-                              >
-                                —
-                              </span>
-                            ) : (
-                              <>
-                                <span style={{ fontFamily: "monospace", fontSize: s.span ? "1.8rem" : "1.1rem", fontWeight: 600, color: c }}>
-                                  {p}
-                                </span>
-                                <span style={{ fontSize: "0.7rem", color: "#6f6b64" }}>/100</span>
-                                {s.span && (
-                                  <span
-                                    title={confStyle.tip}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "0.3rem",
-                                      fontSize: "0.67rem",
-                                      color: confStyle.dot,
-                                      background: confStyle.dot + "14",
-                                      border: `1px solid ${confStyle.dot}35`,
-                                      borderRadius: 3,
-                                      padding: "0.12rem 0.45rem",
-                                      marginLeft: "0.4rem",
-                                      cursor: "help",
-                                      letterSpacing: "0.02em",
-                                      verticalAlign: "middle",
-                                      fontFamily: "Inter, system-ui, sans-serif",
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: confStyle.dot, display: "inline-block", flexShrink: 0 }} />
-                                    {confStyle.label}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                          {/* Progress bar or muted N/A line */}
                           {isNeutral ? (
-                            <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem", opacity: 0.45 }} />
+                            <span title={`Not computable for this input. Contributed 0.50 × ${s.weight} to overall.`} style={{ fontFamily: "var(--font-data)", fontSize: "1.25rem", color: "var(--text-dim)", cursor: "help" }}>—</span>
                           ) : (
-                            <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px", marginTop: "0.3rem" }}>
-                              <div style={{ height: "2px", width: `${p}%`, background: c, borderRadius: "1px" }} />
-                            </div>
-                          )}
-                          {/* Neutral reason text */}
-                          {isNeutral && reason && (
-                            <div style={{ fontSize: "0.62rem", color: "#a0998e", marginTop: "0.25rem", lineHeight: 1.5 }}>
-                              {reason}
-                            </div>
-                          )}
-                          {/* Source line — real signal evidence */}
-                          {!isNeutral && !s.span && sourceLines[s.key] && (
-                            <div style={{ fontSize: "0.62rem", color: "#a0998e", marginTop: "0.2rem", lineHeight: 1.4 }}>
-                              {sourceLines[s.key]}
-                            </div>
+                            <span style={{ fontFamily: "var(--font-data)", fontSize: "1.25rem", fontWeight: 500, color: "var(--text-primary)" }}>{p}</span>
                           )}
                         </div>
-                      )
-                    })}
+                        <div style={{ height: "2px", background: "var(--border-subtle)", borderRadius: "1px", overflow: "hidden", marginBottom: "0.35rem" }}>
+                          {!isNeutral && <div style={{ height: "100%", width: `${p}%`, background: "var(--accent)", opacity: 0.65, borderRadius: "1px" }} />}
+                        </div>
+                        {isNeutral && reason ? (
+                          <div style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "var(--text-dim)", fontStyle: "italic", lineHeight: 1.5 }}>{reason}</div>
+                        ) : !isNeutral && sourceLines[s.key] ? (
+                          <div style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>{sourceLines[s.key]}</div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                  {defaultCount > 0 && (
+                    <div style={{ marginTop: "1rem", padding: "0.65rem 0.875rem", background: "rgba(97,93,87,0.08)", border: "1px solid var(--border-subtle)", borderRadius: "2px", fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>
+                      One or more sub-scores defaulted to neutral — the job description lacked measurable data for that signal. Not penalties.
+                    </div>
+                  )}
+                  <div style={{ marginTop: "1rem" }}>
+                    <a href="/methodology" target="_blank" style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "var(--text-dim)", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1px" }}>
+                      Scoring weights and methodology →
+                    </a>
                   </div>
                 </div>
-                {/* Neutral default banner */}
-                {defaultCount > 0 && (
-                  <div style={{
-                    padding: "0.6rem 1.25rem",
-                    borderBottom: "1px solid #d9d3ca",
-                    background: "rgba(111,107,100,0.055)",
-                    fontSize: "0.78rem",
-                    color: "#6f6b64",
-                    lineHeight: 1.65,
-                  }}>
-                    One or more sub-scores defaulted to neutral because the job description
-                    didn&apos;t provide enough measurable data. These defaults are noted in
-                    the score breakdown. They are not penalties.
-                  </div>
-                )}
               </>
             )
           })()}
 
+          {/* Fix priorities */}
           {display.top_fixes.length > 0 && (() => {
             const LABEL_COLOR: Record<string, { bg: string; color: string }> = {
-              "Must-have gap": { bg: "rgba(140,47,78,0.07)", color: "#8c2f4e" },
-              "Critical section": { bg: "rgba(140,47,78,0.07)", color: "#8c2f4e" },
-              "Broad impact": { bg: "rgba(15,92,82,0.07)", color: "#0f5c52" },
-              "Fast win": { bg: "rgba(15,92,82,0.07)", color: "#0f5c52" },
-              "Quantify": { bg: "rgba(154,77,34,0.07)", color: "#9a4d22" },
+              "Must-have gap":    { bg: "rgba(140,47,78,0.1)",  color: "var(--sev-critical)" },
+              "Critical section": { bg: "rgba(140,47,78,0.1)",  color: "var(--sev-critical)" },
+              "Broad impact":     { bg: "rgba(124,142,92,0.1)", color: "var(--accent)"       },
+              "Fast win":         { bg: "rgba(124,142,92,0.1)", color: "var(--accent)"       },
+              "Quantify":         { bg: "rgba(184,135,78,0.1)", color: "var(--sev-high)"     },
             }
-            const PROFILE_SHORT: Record<string, string> = {
-              exact_match: "Exact",
-              structure_sensitive: "Structure",
-              adjacent_coverage: "Adjacent",
-            }
+            const PROFILE_SHORT: Record<string, string> = { exact_match: "Exact", structure_sensitive: "Structure", adjacent_coverage: "Adjacent" }
             return (
-              <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-                <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.65rem" }}>
+              <div style={{ padding: "1.25rem 2rem", borderBottom: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "1rem" }}>
                   Fix this first
                 </div>
                 {display.top_fixes.map((fix, i) => (
                   <div
                     key={fix.issue_index}
-                    onClick={() => {
-                      setSelectedIssue(fix.issue_index)
-                      track("fix_clicked", { issue_type: fix.issue_type, label: fix.labels[0] ?? "" })
-                    }}
-                    style={{ marginBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, paddingBottom: i < display.top_fixes.length - 1 ? "0.75rem" : 0, borderBottom: i < display.top_fixes.length - 1 ? "1px solid #ece7e0" : "none", cursor: "pointer" }}
+                    onClick={() => { setSelectedIssue(fix.issue_index); track("fix_clicked", { issue_type: fix.issue_type, label: fix.labels[0] ?? "" }) }}
+                    style={{ marginBottom: i < display.top_fixes.length - 1 ? "0.875rem" : 0, paddingBottom: i < display.top_fixes.length - 1 ? "0.875rem" : 0, borderBottom: i < display.top_fixes.length - 1 ? "1px solid var(--border-subtle)" : "none", cursor: "pointer" }}
                   >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: "0.6rem", color: "#a0998e", paddingTop: "1px", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.65rem", marginBottom: "0.25rem" }}>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "0.6rem", color: "var(--text-dim)", paddingTop: "2px", flexShrink: 0, minWidth: "1.25rem" }}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#1f1d1a", lineHeight: 1.4 }}>
+                      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.4 }}>
                         {fix.title}
                       </span>
                     </div>
-                    <div style={{ marginLeft: "1.25rem" }}>
-                      <div style={{ fontSize: "0.72rem", color: "#6f6b64", marginBottom: "0.3rem", lineHeight: 1.4 }}>
+                    <div style={{ marginLeft: "1.9rem" }}>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.35rem", lineHeight: 1.5 }}>
                         {fix.suggested_fix}
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", alignItems: "center" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.2rem", alignItems: "center" }}>
                         {fix.labels.map((label) => {
-                          const style = LABEL_COLOR[label] ?? { bg: "rgba(0,0,0,0.04)", color: "#6f6b64" }
-                          return (
-                            <span key={label} style={{ fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "1px", background: style.bg, color: style.color, fontWeight: 500, letterSpacing: "0.04em" }}>
-                              {label}
-                            </span>
-                          )
+                          const ls = LABEL_COLOR[label] ?? { bg: "rgba(0,0,0,0.06)", color: "var(--text-dim)" }
+                          return <span key={label} style={{ fontFamily: "var(--font-body)", fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "2px", background: ls.bg, color: ls.color, fontWeight: 500, letterSpacing: "0.04em" }}>{label}</span>
                         })}
-                        <span style={{ marginLeft: "auto", fontSize: "0.6rem", color: "#a0998e", fontFamily: "monospace" }}>
+                        <span style={{ marginLeft: "auto", fontFamily: "var(--font-data)", fontSize: "0.58rem", color: "var(--text-dim)" }}>
                           {fix.affects_profiles.map(p => PROFILE_SHORT[p] ?? p).join(" · ")}
                         </span>
                       </div>
@@ -1166,124 +825,75 @@ export default function WorkspacePage() {
             )
           })()}
 
+          {/* ATS profile simulation */}
           {display.simulation && (() => {
             const sim = display.simulation!
-            const VOL_COLOR: Record<string, string> = { LOW: "#0f5c52", MEDIUM: "#9a4d22", HIGH: "#8c2f4e" }
+            const VOL_COLOR: Record<string, string> = { LOW: "var(--accent)", MEDIUM: "var(--sev-high)", HIGH: "var(--sev-critical)" }
             const volColor = VOL_COLOR[sim.score_spread.volatility]
             return (
-              <div style={{ borderBottom: "1px solid #d9d3ca" }}>
-                {/* Header strip — always visible */}
-                <div
-                  onClick={() => setSimExpanded(v => !v)}
-                  style={{ padding: "0.75rem 1.25rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
-                >
-                  <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64" }}>
+              <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                <div onClick={() => setSimExpanded(v => !v)} style={{ padding: "0.875rem 2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}>
+                  <span style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
                     ATS Profile Simulation
                   </span>
-                  <span style={{ fontSize: "0.65rem", color: volColor, fontFamily: "monospace", fontWeight: 600 }}>
-                    {simExpanded ? "▴" : "▾"}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <div style={{ display: "flex", gap: "0.35rem" }}>
+                      {sim.profiles.map(p => (
+                        <span key={p.id} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", fontWeight: 500, color: scoreColor(p.score), padding: "0.12rem 0.4rem", border: `1px solid ${scoreColor(p.score)}`, borderRadius: "2px" }}>
+                          {p.label.split(" ")[0]} {p.score}
+                        </span>
+                      ))}
+                    </div>
+                    <span style={{ fontFamily: "var(--font-data)", fontSize: "0.62rem", color: volColor }}>Δ{sim.score_spread.delta} {simExpanded ? "▴" : "▾"}</span>
+                  </div>
                 </div>
-
-                {/* Score chips — always visible */}
-                <div style={{ padding: "0 1.25rem 0.75rem", display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
-                  {sim.profiles.map(p => {
-                    const c = scoreColor(p.score)
-                    return (
-                      <span key={p.id} style={{ fontFamily: "monospace", fontSize: "0.68rem", fontWeight: 600, color: c, padding: "0.15rem 0.45rem", border: `1px solid ${c}`, borderRadius: "1px", opacity: 0.9 }}>
-                        {p.label.split(" ")[0]} {p.score}
-                      </span>
-                    )
-                  })}
-                  <span style={{ fontSize: "0.65rem", color: volColor, fontFamily: "monospace", marginLeft: "auto" }}>
-                    Δ{sim.score_spread.delta} {sim.score_spread.volatility}
-                  </span>
-                </div>
-
-                {/* Expanded content */}
                 {simExpanded && (
-                  <div style={{ padding: "0 1.25rem 1rem" }}>
-                    {/* Cross-profile summary */}
-                    <div style={{ fontSize: "0.72rem", color: "#6f6b64", fontStyle: "italic", marginBottom: "0.75rem", lineHeight: 1.5 }}>
+                  <div style={{ padding: "0 2rem 1.25rem" }}>
+                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", fontStyle: "italic", marginBottom: "1rem", lineHeight: 1.6 }}>
                       {sim.cross_profile_summary}
                     </div>
-
-                    {/* Profile cards */}
                     {sim.profiles.map(p => {
                       const open = expandedProfile === p.id
                       const c = scoreColor(p.score)
                       const riskColor = VOL_COLOR[p.risk_level]
                       return (
-                        <div
-                          key={p.id}
-                          style={{ border: "1px solid #d9d3ca", borderRadius: "2px", marginBottom: "0.5rem", background: open ? "#fbfaf7" : undefined }}
-                        >
-                          {/* Card header */}
-                          <div
-                            onClick={() => setExpandedProfile(open ? null : p.id)}
-                            style={{ padding: "0.55rem 0.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              <span style={{ fontFamily: "monospace", fontSize: "1rem", fontWeight: 700, color: c }}>{p.score}</span>
-                              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#1f1d1a" }}>{p.label}</span>
+                        <div key={p.id} style={{ border: "1px solid var(--border-subtle)", borderRadius: "3px", marginBottom: "0.5rem", background: open ? "var(--bg-elevated)" : "transparent" }}>
+                          <div onClick={() => setExpandedProfile(open ? null : p.id)} style={{ padding: "0.6rem 0.875rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                              <span style={{ fontFamily: "var(--font-data)", fontSize: "1.1rem", fontWeight: 500, color: c }}>{p.score}</span>
+                              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 500, color: "var(--text-primary)" }}>{p.label}</span>
                             </div>
-                            <span style={{ fontSize: "0.6rem", fontFamily: "monospace", color: riskColor, fontWeight: 600 }}>{p.risk_level}</span>
+                            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.6rem", color: riskColor, letterSpacing: "0.08em" }}>{p.risk_level}</span>
                           </div>
-
-                          {/* Sub-score bar */}
                           {open && (
-                            <div style={{ padding: "0 0.75rem 0.75rem" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.3rem 0.75rem", marginBottom: "0.6rem" }}>
-                                {[
-                                  { label: "Keywords", v: p.keyword_match },
-                                  { label: "Structure", v: p.structure_confidence },
-                                  { label: "Parse", v: p.parse_quality },
-                                  { label: "Adj. Skills†", v: p.adjacent_skills },
-                                ].map(s => (
+                            <div style={{ padding: "0 0.875rem 0.875rem" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem 1rem", marginBottom: "0.75rem" }}>
+                                {[{ label: "Keywords", v: p.keyword_match }, { label: "Structure", v: p.structure_confidence }, { label: "Parse", v: p.parse_quality }, { label: "Adj. Skills†", v: p.adjacent_skills }].map(s => (
                                   <div key={s.label}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.62rem", color: "#6f6b64" }}>
-                                      <span>{s.label}</span>
-                                      <span style={{ fontFamily: "monospace" }}>{s.v}</span>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--text-secondary)", marginBottom: "0.2rem" }}>
+                                      <span>{s.label}</span><span style={{ fontFamily: "var(--font-data)" }}>{s.v}</span>
                                     </div>
-                                    <div style={{ height: "2px", background: "#d9d3ca", borderRadius: "1px" }}>
+                                    <div style={{ height: "2px", background: "var(--border-subtle)", borderRadius: "1px" }}>
                                       <div style={{ height: "2px", width: s.v + "%", background: scoreColor(s.v), borderRadius: "1px" }} />
                                     </div>
                                   </div>
                                 ))}
                               </div>
-
-                              {p.top_strengths.length > 0 && (
-                                <div style={{ marginBottom: "0.4rem" }}>
-                                  {p.top_strengths.map((s, i) => (
-                                    <div key={i} style={{ fontSize: "0.7rem", color: "#0f5c52", marginBottom: "0.15rem" }}>✓ {s}</div>
-                                  ))}
-                                </div>
-                              )}
-                              {p.top_failures.length > 0 && (
-                                <div style={{ marginBottom: "0.4rem" }}>
-                                  {p.top_failures.map((s, i) => (
-                                    <div key={i} style={{ fontSize: "0.7rem", color: "#8c2f4e", marginBottom: "0.15rem" }}>✗ {s}</div>
-                                  ))}
-                                </div>
-                              )}
+                              {p.top_strengths.length > 0 && <div style={{ marginBottom: "0.5rem" }}>{p.top_strengths.map((s, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--accent)", marginBottom: "0.15rem" }}>✓ {s}</div>)}</div>}
+                              {p.top_failures.length > 0 && <div style={{ marginBottom: "0.5rem" }}>{p.top_failures.map((s, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--sev-critical)", marginBottom: "0.15rem" }}>✗ {s}</div>)}</div>}
                               {p.lost_signals.length > 0 && (
-                                <div style={{ marginBottom: "0.4rem" }}>
-                                  <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#9a4d22", fontWeight: 600, marginBottom: "0.2rem" }}>Lost signals</div>
-                                  {p.lost_signals.map((s, i) => (
-                                    <div key={i} style={{ fontSize: "0.69rem", color: "#9a4d22", marginBottom: "0.15rem", fontFamily: "monospace" }}>{s}</div>
-                                  ))}
+                                <div style={{ marginBottom: "0.5rem" }}>
+                                  <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--sev-high)", marginBottom: "0.25rem" }}>Lost signals</div>
+                                  {p.lost_signals.map((s, i) => <div key={i} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", color: "var(--sev-high)", marginBottom: "0.15rem" }}>{s}</div>)}
                                 </div>
                               )}
                               {p.recommended_fixes.length > 0 && (
                                 <div>
-                                  <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6f6b64", fontWeight: 600, marginBottom: "0.2rem" }}>Fixes</div>
-                                  {p.recommended_fixes.map((s, i) => (
-                                    <div key={i} style={{ fontSize: "0.69rem", color: "#1f1d1a", marginBottom: "0.15rem" }}>→ {s}</div>
-                                  ))}
+                                  <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.25rem" }}>Fixes</div>
+                                  {p.recommended_fixes.map((s, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-primary)", marginBottom: "0.2rem" }}>→ {s}</div>)}
                                 </div>
                               )}
-
-                              <div style={{ marginTop: "0.5rem", fontSize: "0.6rem", color: "#a0998e", fontStyle: "italic" }}>
+                              <div style={{ marginTop: "0.5rem", fontFamily: "var(--font-body)", fontSize: "0.62rem", color: "var(--text-dim)", fontStyle: "italic" }}>
                                 † Adj. Skills = adjacent skill inference (heuristic). Not exact ATS behavior.
                               </div>
                             </div>
@@ -1291,16 +901,10 @@ export default function WorkspacePage() {
                         </div>
                       )
                     })}
-
-                    {/* Universal fixes */}
                     {sim.universal_fixes.length > 0 && (
-                      <div style={{ marginTop: "0.5rem", padding: "0.65rem 0.75rem", background: "rgba(15,92,82,0.04)", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
-                        <div style={{ fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.4rem" }}>
-                          Universal-safe edits
-                        </div>
-                        {sim.universal_fixes.map((f, i) => (
-                          <div key={i} style={{ fontSize: "0.7rem", color: "#1f1d1a", marginBottom: "0.25rem" }}>• {f}</div>
-                        ))}
+                      <div style={{ marginTop: "0.75rem", padding: "0.75rem 0.875rem", background: "var(--bg-accent-low)", border: "1px solid rgba(124,142,92,0.2)", borderRadius: "2px" }}>
+                        <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.5rem" }}>Universal-safe edits</div>
+                        {sim.universal_fixes.map((f, i) => <div key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>• {f}</div>)}
                       </div>
                     )}
                   </div>
@@ -1309,121 +913,148 @@ export default function WorkspacePage() {
             )
           })()}
 
-          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #d9d3ca" }}>
-            <div style={{ fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.5rem" }}>
-              Keywords
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+          {/* Keywords */}
+          <div style={{ padding: "1rem 2rem", borderBottom: "1px solid var(--border-subtle)" }}>
+            <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.65rem" }}>Keywords</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
               {display.matched_keywords.map((k) => (
-                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(15,92,82,0.08)", color: "#0f5c52", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{k}</span>
+                <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(124,142,92,0.1)", color: "var(--accent)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(124,142,92,0.2)" }}>{k}</span>
               ))}
               {display.missing_keywords.map((k) => (
-                <span key={k} style={{ fontSize: "0.7rem", fontFamily: "monospace", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.4rem", borderRadius: "1px" }}>{"miss: " + k}</span>
+                <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(140,47,78,0.08)", color: "var(--sev-critical)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(192,112,128,0.2)" }}>{"miss: " + k}</span>
               ))}
             </div>
           </div>
 
-          <div ref={issuesSectionRef} style={{ flex: 1, overflowY: "auto" }}>
-            <div style={{ padding: "0.75rem 1.25rem", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6f6b64", borderBottom: "1px solid #d9d3ca" }}>
+          {/* Issues */}
+          <div ref={issuesSectionRef}>
+            <div style={{ padding: "0.75rem 2rem", fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border-subtle)" }}>
               Issues — {display.issues.length} found
             </div>
-            {display.issues.map((issue, i) => (
-              <div
-                key={i}
-                onClick={() => { setSelectedIssue(selectedIssue === i ? null : i); if (selectedIssue !== i) void refreshLlmStatus() }}
-                style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid #d9d3ca", cursor: "pointer", background: selectedIssue === i ? "#f0f7f5" : undefined }}
-              >
-                <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                  <span style={{ fontFamily: "monospace", fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", color: SEV_COLOR[issue.severity], fontWeight: 600, minWidth: "52px", paddingTop: "2px", flexShrink: 0 }}>
-                    {issue.severity}
-                  </span>
-                  <div>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>{issue.title}</div>
-                    <div style={{ fontSize: "0.76rem", color: "#6f6b64" }}>{issue.description}</div>
-                    {selectedIssue === i && (
-                      <div style={{ marginTop: "0.75rem", fontSize: "0.76rem", color: "#1f1d1a" }}>
-                        {issue.issue_type === "missing_section" ? (() => {
-                          const secKey = issue.title.toLowerCase().replace(/^missing\s+/, "").replace(/\s+section$/, "").trim()
-                          const sects = display.resume_sections ?? {}
-                          const foundSects = Object.keys(sects).filter(k => k !== "_unparsed")
-                          const variants = SECTION_HEADER_VARIANTS[secKey] ?? []
-                          const shown = variants.slice(0, 6)
-                          const extra = variants.length - shown.length
-                          const hasUnparsed = "_unparsed" in sects && (sects as Record<string, string>)["_unparsed"]?.length > 0
-                          return (
-                            <div style={{ padding: "0.45rem 0.65rem", background: "rgba(0,0,0,0.03)", border: "1px solid #e8e3dc", borderRadius: "2px", marginBottom: "0.5rem", fontSize: "0.71rem", color: "#6f6b64", lineHeight: 1.9 }}>
-                              <div><span style={{ color: "#1f1d1a", fontWeight: 500 }}>Sections found:</span> {foundSects.length > 0 ? foundSects.join(", ") : "none"}</div>
-                              <div><span style={{ color: "#1f1d1a", fontWeight: 500 }}>Searched for <em>{secKey}</em> using:</span> {shown.join(", ")}{extra > 0 ? `, and ${extra} others` : ""}</div>
-                              <div style={{ color: "#8c2f4e", fontWeight: 500 }}>Result: none matched.</div>
-                              {hasUnparsed && (
-                                <div style={{ marginTop: "0.25rem", color: "#9a4d22" }}>
-                                  Some résumé content couldn&apos;t be assigned to a section — an unrecognized header may be present.
+            {display.issues.map((issue, i) => {
+              const isSelected = selectedIssue === i
+              return (
+                <div
+                  key={i}
+                  className={`ws-issue-row${isSelected ? " active" : ""}`}
+                  onClick={() => { setSelectedIssue(isSelected ? null : i); if (!isSelected) void refreshLlmStatus() }}
+                >
+                  <div style={{ display: "flex", gap: "0.875rem", alignItems: "flex-start" }}>
+                    <div style={{ flexShrink: 0, paddingTop: "2px", minWidth: "4.5rem" }}>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "0.58rem", letterSpacing: "0.1em", textTransform: "uppercase", color: SEV_COLOR[issue.severity], display: "block", marginBottom: "0.12rem" }}>
+                        {issue.severity}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-data)", fontSize: "0.52rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)" }}>
+                        {issue.issue_type.replace("_", " ")}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", fontWeight: 500, color: "var(--text-primary)", marginBottom: "0.2rem", lineHeight: 1.4 }}>
+                        {issue.title}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                        {issue.description}
+                      </div>
+
+                      {isSelected && (
+                        <div style={{ marginTop: "0.875rem" }}>
+                          {issue.issue_type === "missing_section" ? (() => {
+                            const secKey = issue.title.toLowerCase().replace(/^missing\s+/, "").replace(/\s+section$/, "").trim()
+                            const sects = display.resume_sections ?? {}
+                            const foundSects = Object.keys(sects).filter(k => k !== "_unparsed")
+                            const variants = SECTION_HEADER_VARIANTS[secKey] ?? []
+                            const shown = variants.slice(0, 6)
+                            const extra = variants.length - shown.length
+                            const hasUnparsed = "_unparsed" in sects && (sects as Record<string, string>)["_unparsed"]?.length > 0
+                            return (
+                              <div className="ws-evidence-block" style={{ marginBottom: "0.75rem", lineHeight: 1.9 }}>
+                                <div><span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Sections found:</span> {foundSects.length > 0 ? foundSects.join(", ") : "none"}</div>
+                                <div><span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Searched for <em>{secKey}</em> using:</span> {shown.join(", ")}{extra > 0 ? `, and ${extra} others` : ""}</div>
+                                <div style={{ color: "var(--sev-critical)", fontWeight: 500 }}>Result: none matched.</div>
+                                {hasUnparsed && <div style={{ marginTop: "0.3rem", color: "var(--sev-high)" }}>Some résumé content couldn&apos;t be assigned to a section — an unrecognized header may be present.</div>}
+                              </div>
+                            )
+                          })() : issue.evidence ? (
+                            <div className="ws-evidence-block" style={{ marginBottom: "0.75rem" }}>{issue.evidence}</div>
+                          ) : null}
+
+                          <div style={{ padding: "0.65rem 0.875rem", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", borderRadius: "2px", marginBottom: "0.5rem" }}>
+                            <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.35rem" }}>Fix pattern</div>
+                            <div style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-primary)", lineHeight: 1.65 }}>
+                              {issue.fix_pattern || issue.suggested_fix}
+                            </div>
+                            {issue.source_excerpt && (
+                              <pre style={{ marginTop: "0.5rem", fontFamily: "var(--font-data)", fontSize: "0.7rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", margin: "0.5rem 0 0", lineHeight: 1.6 }}>
+                                {issue.source_excerpt}
+                              </pre>
+                            )}
+                          </div>
+
+                          {issue.rewrite_starter && (
+                            <div className="ws-rewrite-block" style={{ marginBottom: "0.5rem" }}>
+                              <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.35rem" }}>Rewrite starter</div>
+                              <div>{issue.rewrite_starter}</div>
+                            </div>
+                          )}
+
+                          {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
+                            <div style={{ marginTop: "0.5rem" }}>
+                              {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy !== false && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); void handleGenerateRewrites(i, issue) }}
+                                  disabled={rewriteLoading[i]}
+                                  style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.3rem 0.75rem", background: "transparent", border: "1px solid var(--accent)", color: "var(--accent)", borderRadius: "2px", cursor: rewriteLoading[i] ? "default" : "pointer", opacity: rewriteLoading[i] ? 0.6 : 1 }}
+                                >
+                                  {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
+                                </button>
+                              )}
+                              {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy === false && (
+                                <div style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", color: "var(--sev-high)", marginTop: "0.2rem" }}>
+                                  LLM endpoint unreachable — check {llmStatus.model || "LLM_ENDPOINT"} is running
+                                </div>
+                              )}
+                              {rewriteVariants[i]?.length > 0 && (
+                                <div style={{ marginTop: "0.4rem" }}>
+                                  <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.45rem" }}>AI-assisted rewrites</div>
+                                  {rewriteVariants[i].map((v, vi) => (
+                                    <div key={vi} style={{ padding: "0.55rem 0.75rem", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", borderRadius: "2px", marginBottom: "0.3rem", fontFamily: "var(--font-data)", fontSize: "0.75rem", color: "var(--text-primary)", lineHeight: 1.65 }}>
+                                      {v}
+                                    </div>
+                                  ))}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setRewriteVariants((prev) => { const n = {...prev}; delete n[i]; return n }) }}
+                                    style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0" }}
+                                  >
+                                    clear
+                                  </button>
                                 </div>
                               )}
                             </div>
-                          )
-                        })() : issue.evidence ? (
-                          <div style={{ padding: "0.45rem 0.65rem", background: "rgba(0,0,0,0.03)", border: "1px solid #e8e3dc", borderRadius: "2px", marginBottom: "0.5rem", fontSize: "0.72rem", color: "#6f6b64", fontStyle: "italic" }}>
-                            {issue.evidence}
-                          </div>
-                        ) : null}
-                        <div style={{ padding: "0.6rem 0.75rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px" }}>
-                          <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Fix pattern</div>
-                          <div>{issue.fix_pattern || issue.suggested_fix}</div>
-                          {issue.source_excerpt && (
-                            <pre style={{ marginTop: "0.5rem", fontSize: "0.7rem", fontFamily: "monospace", color: "#6f6b64", whiteSpace: "pre-wrap", margin: "0.5rem 0 0" }}>
-                              {issue.source_excerpt}
-                            </pre>
                           )}
                         </div>
-                        {issue.rewrite_starter && (
-                          <div style={{ marginTop: "0.5rem", padding: "0.6rem 0.75rem", background: "#f0f7f5", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
-                            <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.3rem" }}>Rewrite starter</div>
-                            <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#1f1d1a", lineHeight: 1.6 }}>{issue.rewrite_starter}</div>
-                          </div>
-                        )}
-                        {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
-                          <div style={{ marginTop: "0.6rem" }}>
-                            {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy !== false && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); void handleGenerateRewrites(i, issue) }}
-                                disabled={rewriteLoading[i]}
-                                style={{ fontSize: "0.7rem", padding: "0.3rem 0.75rem", background: "transparent", border: "1px solid #0f5c52", color: "#0f5c52", borderRadius: "2px", cursor: rewriteLoading[i] ? "default" : "pointer", opacity: rewriteLoading[i] ? 0.6 : 1 }}
-                              >
-                                {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
-                              </button>
-                            )}
-                            {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy === false && (
-                              <div style={{ fontSize: "0.65rem", color: "#9a4d22", marginTop: "0.2rem" }}>
-                                LLM endpoint unreachable — check {llmStatus.model || "LLM_ENDPOINT"} is running
-                              </div>
-                            )}
-                            {rewriteVariants[i] && rewriteVariants[i].length > 0 && (
-                              <div style={{ marginTop: "0.4rem" }}>
-                                <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6f6b64", fontWeight: 600, marginBottom: "0.4rem" }}>
-                                  AI-assisted rewrites
-                                </div>
-                                {rewriteVariants[i].map((v, vi) => (
-                                  <div key={vi} style={{ padding: "0.45rem 0.65rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "2px", marginBottom: "0.3rem", fontFamily: "monospace", fontSize: "0.74rem", color: "#1f1d1a", lineHeight: 1.6 }}>
-                                    {v}
-                                  </div>
-                                ))}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setRewriteVariants((prev) => { const n = {...prev}; delete n[i]; return n }) }}
-                                  style={{ fontSize: "0.65rem", color: "#a0998e", background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0" }}
-                                >
-                                  clear
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
+          </div>
+
+          {/* ATS text preview */}
+          <div style={{ padding: "1.25rem 2rem 2rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
+              <span style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
+                What ATS sees
+              </span>
+              {isMock && (
+                <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--sev-medium)", padding: "0.12rem 0.4rem", border: "1px solid var(--border-mid)", borderRadius: "2px" }}>
+                  sample
+                </span>
+              )}
+            </div>
+            <pre style={{ fontFamily: "var(--font-data)", fontSize: "0.75rem", lineHeight: 1.75, color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word", background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "2px", padding: "1.25rem", margin: 0 }}>
+              {display.ats_text_preview}
+            </pre>
           </div>
 
           </>}
