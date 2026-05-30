@@ -1,0 +1,6 @@
+# Generated run artifacts — do not commit
+outputs/
+
+# Résumé and JD input files — may contain real personal data
+inputs/resumes/
+inputs/jds/

@@ -1,0 +1,11 @@
+pair_id,resume_file,jd_file,role_type,source_resume,source_jd,expected_tier,notes
+p001,swe_kaggle_01.txt,jd_swe_greenhouse_01.txt,software_engineer,kaggle,greenhouse,,
+p002,swe_kaggle_02.txt,jd_swe_greenhouse_02.txt,software_engineer,kaggle,greenhouse,,
+p003,pm_synthetic_01.txt,jd_pm_greenhouse_01.txt,product_manager,synthetic,greenhouse,,
+p004,ml_kaggle_01.txt,jd_ml_greenhouse_01.txt,ml_engineer,kaggle,greenhouse,,
+p005,swe_github_01.txt,jd_swe_greenhouse_03.txt,software_engineer,github,greenhouse,,
+p006,data_kaggle_01.txt,jd_data_greenhouse_01.txt,data_engineer,kaggle,greenhouse,,
+p007,swe_kaggle_01.txt,jd_pm_greenhouse_01.txt,cross_role,kaggle,greenhouse,,cross-role pair
+p008,pm_synthetic_02.txt,jd_pm_greenhouse_02.txt,product_manager,synthetic,greenhouse,,
+p009,swe_synthetic_01.txt,jd_swe_sparse_01.txt,software_engineer,synthetic,synthetic,,"sparse JD — few recognized keywords"
+p010,swe_github_02.txt,jd_swe_greenhouse_01.txt,software_engineer,github,greenhouse,,pilot calibration anchor
