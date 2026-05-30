@@ -502,10 +502,14 @@ def test_experience_pattern_matches_qualified_phrase():
         ("Minimum 3 years of data engineering experience.", 3),
         ("2 years experience required.", 2),           # no "of", no qualifier words
         ("3+ years of experience preferred.", 3),      # direct "of experience"
-        ("3 plus years of software engineering experience.", 3),   # "plus" word form
+        ("3 plus years of software engineering experience.", 3),          # "plus" word form
         ("4 plus years of professional backend experience.", 4),
         ("7 plus years of professional software engineering experience.", 7),
         ("5 plus years of product management experience required.", 5),
+        ("3 plus years of machine learning engineering or data science experience.", 3),  # "or" = 6 qualifiers
+        ("3 plus years of analytics engineering or data analysis experience.", 3),
+        ("5 plus years of professional C++ development experience.", 5),                  # C++ non-word token
+        ("3 plus years of data engineering or ML engineering experience.", 3),
     ]
     for jd_text, expected_years in cases:
         reqs = extract_jd_requirements(jd_text)
