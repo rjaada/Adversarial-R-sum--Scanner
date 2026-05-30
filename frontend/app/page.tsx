@@ -1,427 +1,830 @@
-import Link from "next/link"
+'use client'
 
-export default function LandingPage() {
+import { useEffect, useState, useRef } from 'react'
+import Link from 'next/link'
+import { Cormorant, Figtree, IBM_Plex_Mono } from 'next/font/google'
+
+// --- Fonts ---
+const cormorant = Cormorant({
+  subsets: ['latin'],
+  weight: ['300', '400', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-cormorant',
+  display: 'swap',
+})
+const figtree = Figtree({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  variable: '--font-figtree',
+  display: 'swap',
+})
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
+  display: 'swap',
+})
+
+// --- Hooks ---
+function useFadeIn() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold: 0.07 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return { ref, visible }
+}
+
+function useCountUp(target: number, duration = 1600, trigger = false): number {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (!trigger) return
+    const start = Date.now()
+    let raf: number
+    const tick = () => {
+      const p = Math.min((Date.now() - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setVal(Math.round(eased * target))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [trigger, target, duration])
+  return val
+}
+
+// --- Sub-score bar ---
+function ScoreBar({ label, value, delay = 0 }: { label: string; value: number; delay?: number }) {
   return (
-    <main style={{ background: "#f6f3ee", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ marginBottom: '0.9rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.32rem' }}>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 500 }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: 'var(--font-data)', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+          {value}
+        </span>
+      </div>
+      <div style={{ height: '2px', background: 'var(--border-mid)', borderRadius: '1px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${value}%`,
+          background: 'var(--accent)',
+          borderRadius: '1px',
+          transition: `width 1.3s cubic-bezier(0.25, 0, 0.1, 1) ${delay}ms`,
+        }} />
+      </div>
+    </div>
+  )
+}
+
+// --- Hero score artifact ---
+function ScoreArtifact({ loaded }: { loaded: boolean }) {
+  return (
+    <div style={{
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: '3px',
+      padding: '1.75rem',
+      maxWidth: '300px',
+      width: '100%',
+    }}>
+      <div style={{ marginBottom: '1.4rem' }}>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.56rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 500, marginBottom: '0.5rem' }}>
+          Overall Score
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: '3.25rem', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>73</span>
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: '1.1rem', color: 'var(--text-dim)', lineHeight: 1 }}>/100</span>
+        </div>
+      </div>
+      <div style={{ height: '1px', background: 'var(--border-subtle)', marginBottom: '1.25rem' }} />
+      <ScoreBar label="Keyword Match" value={loaded ? 38 : 0} delay={0} />
+      <ScoreBar label="Experience" value={loaded ? 82 : 0} delay={130} />
+      <ScoreBar label="Parse Integrity" value={loaded ? 91 : 0} delay={260} />
+      <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '1.2rem 0 1rem' }} />
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.62rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+        Based on 5 signals · Full breakdown in workspace
+      </div>
+    </div>
+  )
+}
+
+// --- Page ---
+export default function LandingPage() {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoaded(true), 500)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    const prev = document.body.style.background
+    document.body.style.background = '#0d0c0a'
+    document.body.style.margin = '0'
+    return () => {
+      document.body.style.background = prev
+      document.body.style.margin = ''
+    }
+  }, [])
+
+  const orient     = useFadeIn()
+  const problem    = useFadeIn()
+  const anatomy    = useFadeIn()
+  const evidence   = useFadeIn()
+  const methodology = useFadeIn()
+  const benchmark  = useFadeIn()
+  const cta        = useFadeIn()
+
+  const benchCount1 = useCountUp(50,   1200, benchmark.visible)
+  const benchCount3 = useCountUp(44,   1500, benchmark.visible)
+
+  return (
+    <div className={`lp ${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`}>
+
+      <style>{`
+        :root {
+          --bg-base:       #0d0c0a;
+          --bg-surface:    #131210;
+          --bg-elevated:   #1a1916;
+          --bg-muted:      #201f1c;
+          --bg-accent-low: #1e2214;
+          --border-subtle: #2a2824;
+          --border-mid:    #3b3930;
+          --text-primary:  #ede8df;
+          --text-secondary:#9a9489;
+          --text-dim:      #615d57;
+          --accent:        #7c8e5c;
+          --accent-hover:  #95a870;
+          --mineral:       #c6c1b8;
+        }
+        .lp {
+          --font-display: var(--font-cormorant), Georgia, 'Times New Roman', serif;
+          --font-body:    var(--font-figtree), system-ui, -apple-system, sans-serif;
+          --font-data:    var(--font-mono), 'Courier New', monospace;
+          background: var(--bg-base);
+          color: var(--text-primary);
+          min-height: 100vh;
+        }
+        .lp *, .lp *::before, .lp *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ---- Nav ---- */
+        .lp-nav {
+          position: sticky; top: 0; z-index: 50;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 2.5rem;
+          height: 58px;
+          background: rgba(13,12,10,0.94);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .nav-wordmark {
+          font-family: var(--font-display);
+          font-size: 1.1rem; font-weight: 400;
+          color: var(--text-primary);
+          text-decoration: none; letter-spacing: 0.01em;
+        }
+        .nav-links { display: flex; align-items: center; gap: 2rem; }
+        .nav-link {
+          font-family: var(--font-body);
+          font-size: 0.78rem; font-weight: 400; letter-spacing: 0.02em;
+          color: var(--text-secondary); text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .nav-link:hover { color: var(--text-primary); }
+        .nav-cta {
+          font-family: var(--font-body);
+          font-size: 0.78rem; font-weight: 500; letter-spacing: 0.02em;
+          color: var(--accent); text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .nav-cta:hover { color: var(--accent-hover); }
+
+        /* ---- Hero ---- */
+        .lp-hero { padding: 9vh 2.5rem 8rem; max-width: 1200px; margin: 0 auto; }
+        .hero-grid {
+          display: grid; grid-template-columns: 7fr 5fr;
+          gap: 4.5rem; align-items: center;
+        }
+        .hero-eyebrow {
+          font-family: var(--font-body);
+          font-size: 0.62rem; letter-spacing: 0.15em;
+          text-transform: uppercase; color: var(--accent);
+          font-weight: 500; margin-bottom: 1.5rem;
+        }
+        .hero-headline {
+          font-family: var(--font-display);
+          font-size: clamp(2.6rem, 4.8vw, 5rem);
+          font-weight: 400; line-height: 1.07;
+          color: var(--text-primary);
+          letter-spacing: -0.015em;
+          margin-bottom: 1.75rem;
+        }
+        .hero-sub {
+          font-family: var(--font-body);
+          font-size: 1rem; font-weight: 300;
+          color: var(--text-secondary);
+          line-height: 1.8; margin-bottom: 2.5rem;
+          max-width: 500px;
+        }
+        .hero-cta-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+        .artifact-col { display: flex; justify-content: flex-end; align-items: center; }
+
+        /* ---- Buttons & links ---- */
+        .btn-primary {
+          font-family: var(--font-body);
+          font-size: 0.85rem; font-weight: 500; letter-spacing: 0.01em;
+          color: #0d0c0a; background: var(--accent);
+          border: none; border-radius: 2px;
+          padding: 0.8rem 1.875rem;
+          text-decoration: none; display: inline-block; cursor: pointer;
+          transition: background 0.25s ease, box-shadow 0.3s ease;
+        }
+        .btn-primary:hover {
+          background: var(--accent-hover);
+          box-shadow: 0 0 28px rgba(124,142,92,0.22);
+        }
+        .link-secondary {
+          font-family: var(--font-body);
+          font-size: 0.83rem; font-weight: 400;
+          color: var(--text-secondary); text-decoration: none;
+          border-bottom: 1px solid var(--border-mid);
+          padding-bottom: 2px;
+          transition: color 0.2s ease, border-color 0.2s ease;
+        }
+        .link-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+        .link-accent {
+          font-family: var(--font-body);
+          font-size: 0.83rem; font-weight: 400;
+          color: var(--accent); text-decoration: none;
+          border-bottom: 1px solid currentColor;
+          padding-bottom: 2px;
+          transition: color 0.2s ease;
+        }
+        .link-accent:hover { color: var(--accent-hover); }
+
+        /* ---- Sections ---- */
+        .lp-section      { padding: 8rem 2.5rem;      max-width: 1200px; margin: 0 auto; }
+        .lp-section-sm   { padding: 5.5rem 2.5rem;    max-width: 1200px; margin: 0 auto; }
+        .lp-section-alt  { background: var(--bg-surface); padding: 8rem 0; }
+        .lp-section-alt-inner { padding: 0 2.5rem; max-width: 1200px; margin: 0 auto; }
+        .section-label {
+          font-family: var(--font-body);
+          font-size: 0.6rem; letter-spacing: 0.16em;
+          text-transform: uppercase; color: var(--text-dim);
+          font-weight: 500; margin-bottom: 2.25rem;
+        }
+
+        /* ---- Orientation strip ---- */
+        .orient-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+        .orient-item { padding: 0 3rem 0 0; border-right: 1px solid var(--border-subtle); }
+        .orient-item:first-child { padding-left: 0; }
+        .orient-item:last-child  { border-right: none; padding-right: 0; padding-left: 3rem; }
+        .orient-item:nth-child(2) { padding-left: 3rem; }
+        .orient-label {
+          font-family: var(--font-body);
+          font-size: 0.78rem; font-weight: 500;
+          color: var(--text-primary); margin-bottom: 0.65rem;
+        }
+        .orient-body {
+          font-family: var(--font-body);
+          font-size: 0.85rem; font-weight: 300;
+          color: var(--text-secondary); line-height: 1.75;
+        }
+
+        /* ---- Problem panel ---- */
+        .problem-pullquote {
+          font-family: var(--font-display);
+          font-size: clamp(1.75rem, 3vw, 2.8rem);
+          font-weight: 300; font-style: italic;
+          color: var(--text-primary); line-height: 1.2;
+          margin-bottom: 2.25rem; max-width: 640px;
+        }
+        .problem-body {
+          font-family: var(--font-body);
+          font-size: 0.95rem; font-weight: 300;
+          color: var(--text-secondary); line-height: 1.9;
+          max-width: 580px;
+        }
+
+        /* ---- Cards ---- */
+        .lp-card {
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-subtle);
+          border-radius: 3px; padding: 2rem;
+        }
+        .card-mono-label {
+          font-family: var(--font-data);
+          font-size: 0.6rem; letter-spacing: 0.12em;
+          text-transform: uppercase; color: var(--text-dim);
+          margin-bottom: 1.25rem;
+        }
+        .card-divider { height: 1px; background: var(--border-subtle); margin: 1.25rem 0; }
+        .severity-chip {
+          display: inline-block;
+          font-family: var(--font-data);
+          font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+          padding: 0.18rem 0.45rem; border-radius: 2px;
+          background: rgba(140,47,78,0.12); color: #c07080;
+          border: 1px solid rgba(140,47,78,0.22); margin-bottom: 0.9rem;
+        }
+        .card-title {
+          font-family: var(--font-body);
+          font-size: 1rem; font-weight: 500;
+          color: var(--text-primary); margin-bottom: 1rem; line-height: 1.4;
+        }
+        .card-evidence {
+          font-family: var(--font-body);
+          font-size: 0.875rem; font-weight: 300;
+          color: var(--text-secondary); line-height: 1.75;
+          padding: 1rem;
+          background: var(--bg-muted); border-radius: 2px;
+          border-left: 2px solid var(--border-mid);
+          margin-bottom: 1rem;
+        }
+
+        /* ---- Score anatomy rows ---- */
+        .score-row {
+          display: flex; align-items: flex-start;
+          justify-content: space-between;
+          padding: 0.9rem 0;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .score-row:last-child { border-bottom: none; }
+        .score-row-label {
+          font-family: var(--font-body);
+          font-size: 0.875rem; font-weight: 400;
+          color: var(--text-secondary);
+        }
+        .score-row-note {
+          font-family: var(--font-body);
+          font-size: 0.68rem; color: var(--text-dim);
+          margin-top: 0.2rem; line-height: 1.4;
+        }
+        .score-row-value {
+          font-family: var(--font-data);
+          font-size: 1rem; font-weight: 500;
+          color: var(--text-primary);
+          text-align: right;
+        }
+        .score-row-weight {
+          font-family: var(--font-body);
+          font-size: 0.58rem; color: var(--text-dim);
+          letter-spacing: 0.04em; margin-top: 0.2rem;
+          text-align: right;
+        }
+
+        /* ---- Methodology ---- */
+        .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; }
+        .accent-rule { width: 2px; height: 2.75rem; background: var(--accent); margin-bottom: 1.75rem; }
+        .method-heading {
+          font-family: var(--font-display);
+          font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+          font-weight: 400; line-height: 1.2;
+          color: var(--text-primary); margin-bottom: 1.25rem;
+        }
+        .method-body {
+          font-family: var(--font-body);
+          font-size: 0.875rem; font-weight: 300;
+          color: var(--text-secondary); line-height: 1.85;
+          margin-bottom: 1.25rem;
+        }
+        .weight-row {
+          display: grid; grid-template-columns: 1fr auto;
+          align-items: center; gap: 1rem;
+          padding: 0.7rem 0;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .weight-row:last-child { border-bottom: none; }
+        .weight-label {
+          font-family: var(--font-body);
+          font-size: 0.8rem; font-weight: 400;
+          color: var(--text-secondary);
+        }
+        .weight-value {
+          font-family: var(--font-data);
+          font-size: 0.85rem; font-weight: 500; color: var(--accent);
+        }
+        .weight-bar-track {
+          grid-column: 1 / -1; height: 2px;
+          background: var(--border-subtle);
+          border-radius: 1px; margin-top: -0.45rem;
+          overflow: hidden;
+        }
+
+        /* ---- Benchmark ---- */
+        .bench-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+        .bench-item { padding: 0 3rem 0 0; border-right: 1px solid var(--border-subtle); }
+        .bench-item:last-child { border-right: none; padding-right: 0; }
+        .bench-item:nth-child(2) { padding-left: 3rem; }
+        .bench-item:nth-child(3) { padding-left: 3rem; }
+        .bench-number {
+          font-family: var(--font-data);
+          font-size: clamp(2rem, 4vw, 3rem);
+          font-weight: 400; color: var(--text-primary);
+          line-height: 1; margin-bottom: 0.5rem;
+        }
+        .bench-label {
+          font-family: var(--font-body);
+          font-size: 0.78rem; font-weight: 300;
+          color: var(--text-secondary); line-height: 1.55;
+        }
+        .bench-note {
+          font-family: var(--font-body);
+          font-size: 0.62rem; color: var(--text-dim);
+          margin-top: 0.35rem; font-style: italic;
+        }
+
+        /* ---- CTA ---- */
+        .cta-section { padding: 10rem 2.5rem; max-width: 800px; margin: 0 auto; text-align: center; }
+        .cta-heading {
+          font-family: var(--font-display);
+          font-size: clamp(2rem, 4vw, 3.4rem);
+          font-weight: 400; line-height: 1.15;
+          color: var(--text-primary);
+          letter-spacing: -0.015em; margin-bottom: 2.5rem;
+        }
+        .cta-btn-row {
+          display: flex; align-items: center; justify-content: center;
+          gap: 1.75rem; margin-bottom: 2.25rem; flex-wrap: wrap;
+        }
+        .cta-disclaimer {
+          font-family: var(--font-body);
+          font-size: 0.7rem; font-style: italic;
+          color: var(--text-dim); line-height: 1.65;
+          max-width: 500px; margin: 0 auto;
+        }
+
+        /* ---- Footer ---- */
+        .lp-footer {
+          border-top: 1px solid var(--border-subtle);
+          padding: 1.75rem 2.5rem;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .footer-copy { font-family: var(--font-body); font-size: 0.7rem; color: var(--text-dim); }
+        .footer-links { display: flex; gap: 1.5rem; }
+        .footer-link {
+          font-family: var(--font-body); font-size: 0.7rem;
+          color: var(--text-dim); text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .footer-link:hover { color: var(--text-secondary); }
+
+        /* ---- Fade-up animation ---- */
+        .fade-up { opacity: 0; transform: translateY(18px); transition: opacity 0.75s ease, transform 0.75s ease; }
+        .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+        /* ---- Grain overlay ---- */
+        .grain {
+          position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+          opacity: 0.028;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 960px) {
+          .hero-grid { grid-template-columns: 1fr; gap: 3.5rem; }
+          .artifact-col { justify-content: flex-start; }
+          .orient-grid { grid-template-columns: 1fr; }
+          .orient-item { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 0 0 2rem; }
+          .orient-item:last-child { border-bottom: none; padding-left: 0; }
+          .orient-item:nth-child(2) { padding-left: 0; }
+          .method-grid { grid-template-columns: 1fr; gap: 3rem; }
+          .bench-grid { grid-template-columns: 1fr; }
+          .bench-item { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 0 0 1.75rem; margin-bottom: 1.75rem; }
+          .bench-item:last-child { border-bottom: none; margin-bottom: 0; }
+          .bench-item:nth-child(2), .bench-item:nth-child(3) { padding-left: 0; }
+          .lp-nav { padding: 0 1.5rem; }
+          .lp-hero, .lp-section, .lp-section-sm, .lp-section-alt-inner { padding-left: 1.5rem; padding-right: 1.5rem; }
+          .cta-section { padding: 7rem 1.5rem; }
+          .lp-footer { flex-direction: column; gap: 1rem; text-align: center; }
+        }
+        @media (max-width: 600px) {
+          .nav-link.hide-sm { display: none; }
+          .lp-hero { padding-top: 6vh; padding-bottom: 5rem; }
+          .hero-headline { font-size: clamp(2.1rem, 8.5vw, 2.8rem); }
+          .hero-cta-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+          .cta-btn-row { flex-direction: column; }
+          .lp-section, .lp-section-sm { padding-top: 5rem; padding-bottom: 5rem; }
+          .lp-section-alt { padding-top: 5rem; padding-bottom: 5rem; }
+        }
+      `}</style>
+
+      {/* Grain */}
+      <div className="grain" aria-hidden="true" />
 
       {/* Nav */}
-      <nav style={{
-        borderBottom: "1px solid #d9d3ca",
-        padding: "0 2rem",
-        height: "52px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "#fbfaf7",
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
-      }}>
-        <span style={{ fontFamily: "Georgia, serif", fontSize: "1.1rem", fontWeight: 600, color: "#1f1d1a", letterSpacing: "-0.01em" }}>
-          TraceRank
-        </span>
-        <Link href="/workspace" style={{
-          color: "#0f5c52",
-          fontSize: "0.875rem",
-          fontWeight: 500,
-          display: "flex",
-          alignItems: "center",
-          gap: "0.25rem",
-          textDecoration: "none",
-        }}>
-          Open Scanner →
-        </Link>
+      <nav className="lp-nav">
+        <span className="nav-wordmark">TraceRank</span>
+        <div className="nav-links">
+          <Link href="/methodology" className="nav-link hide-sm">Methodology</Link>
+          <a href="#how-it-works" className="nav-link hide-sm">How it works</a>
+          <Link href="/workspace" className="nav-cta">Scan résumé →</Link>
+        </div>
       </nav>
 
       {/* Hero */}
-      <section style={{ maxWidth: "720px", margin: "0 auto", padding: "6rem 2rem 5rem" }}>
-        <p style={{ fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "1.25rem" }}>
-          Adversarial Résumé Scanner
-        </p>
-        <h1 style={{
-          fontFamily: "Georgia, serif",
-          fontSize: "clamp(2rem, 5vw, 3.25rem)",
-          lineHeight: 1.1,
-          fontWeight: 600,
-          color: "#1f1d1a",
-          letterSpacing: "-0.02em",
-          marginBottom: "1.5rem",
-          maxWidth: "600px",
-        }}>
-          See exactly where automated screening will reject your résumé.
-        </h1>
-        <p style={{ fontSize: "1.05rem", color: "#6f6b64", marginBottom: "0.85rem", maxWidth: "540px", lineHeight: 1.75 }}>
-          ATS parsers fail on columns, tables, and non-standard formatting. Keyword screeners penalize gaps you didn't know existed.
-          The same résumé can score 20 points differently depending on which system reads it.
-        </p>
-        <p style={{ fontSize: "1.05rem", color: "#6f6b64", marginBottom: "2.5rem", maxWidth: "540px", lineHeight: 1.75 }}>
-          TraceRank exposes those failures — before you apply.
-        </p>
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
-          <Link href="/workspace" style={{
-            display: "inline-block",
-            background: "#0f5c52",
-            color: "#fff",
-            padding: "0.75rem 1.75rem",
-            fontSize: "0.9rem",
-            fontWeight: 500,
-            letterSpacing: "0.01em",
-            borderRadius: "2px",
-            textDecoration: "none",
-          }}>
-            Scan your résumé
-          </Link>
-          <a href="#sample" style={{ fontSize: "0.85rem", color: "#6f6b64", textDecoration: "none", borderBottom: "1px solid #d9d3ca" }}>
-            See sample output ↓
-          </a>
-          <Link href="/methodology" style={{ fontSize: "0.82rem", color: "#6f6b64", textDecoration: "none" }}>
-            How scoring works →
-          </Link>
+      <section className="lp-hero">
+        <div className="hero-grid">
+          <div>
+            <p className="hero-eyebrow">Adversarial Résumé Scanner</p>
+            <h1 className="hero-headline">
+              See exactly where automated screening will reject your résumé.
+            </h1>
+            <p className="hero-sub">
+              TraceRank parses your résumé, extracts JD requirements, and returns a scored
+              breakdown with specific evidence — not vague suggestions. The methodology is public.
+            </p>
+            <div className="hero-cta-row">
+              <Link href="/workspace" className="btn-primary">Scan your résumé</Link>
+              <Link href="/methodology" className="link-secondary">How scoring works →</Link>
+            </div>
+          </div>
+          <div className="artifact-col">
+            <ScoreArtifact loaded={loaded} />
+          </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section style={{ background: "#fbfaf7", borderTop: "1px solid #d9d3ca", borderBottom: "1px solid #d9d3ca" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto", padding: "4rem 2rem" }}>
-          <p style={{ fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "2.5rem" }}>
-            How it works
+      {/* Orientation strip */}
+      <section className="lp-section-alt" id="how-it-works">
+        <div
+          ref={orient.ref}
+          className={`lp-section-alt-inner fade-up${orient.visible ? ' visible' : ''}`}
+        >
+          <div className="section-label">What TraceRank is</div>
+          <div className="orient-grid">
+            <div className="orient-item">
+              <p className="orient-label">What it measures.</p>
+              <p className="orient-body">
+                ATS parse integrity, keyword alignment, and experience signal — scored against
+                the structure and vocabulary of a real job description.
+              </p>
+            </div>
+            <div className="orient-item">
+              <p className="orient-label">What it does not claim.</p>
+              <p className="orient-body">
+                TraceRank does not simulate any specific ATS vendor. Scores reflect lexical
+                and structural analysis only.
+              </p>
+            </div>
+            <div className="orient-item">
+              <p className="orient-label">Why that matters.</p>
+              <p className="orient-body">
+                Automated screeners are deterministic. Understanding how they process
+                your résumé should not require guesswork.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem panel */}
+      <section className="lp-section">
+        <div
+          ref={problem.ref}
+          className={`fade-up${problem.visible ? ' visible' : ''}`}
+        >
+          <div className="section-label">The problem</div>
+          <p className="problem-pullquote">
+            &ldquo;The résumé isn&apos;t the problem.<br />The reader is.&rdquo;
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-            {[
-              {
-                n: "01",
-                title: "Upload your résumé",
-                body: "PDF or DOCX. TraceRank extracts what an ATS parser would actually see — not what you intended to show.",
-              },
-              {
-                n: "02",
-                title: "Paste the job description",
-                body: "Required keywords, experience signals, and role requirements are extracted automatically.",
-              },
-              {
-                n: "03",
-                title: "Receive the failure report",
-                body: "Parse integrity score, keyword gaps, weak phrasing, structural issues, and ATS profile simulation — all in one scan.",
-              },
-            ].map((step, i) => (
-              <div key={step.n} style={{
-                display: "grid",
-                gridTemplateColumns: "3rem 1fr",
-                gap: "0 1.5rem",
-                padding: "1.75rem 0",
-                borderTop: i > 0 ? "1px solid #e8e3dc" : undefined,
-                alignItems: "start",
-              }}>
-                <span style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.75rem",
-                  color: "#a0998e",
-                  fontWeight: 500,
-                  paddingTop: "0.2rem",
-                  letterSpacing: "0.05em",
-                }}>
-                  {step.n}
-                </span>
+          <p className="problem-body">
+            Automated screening systems parse your document as a structured data object — not as a
+            narrative. They tokenize your experience, match it against a keyword vocabulary, and
+            score it without reading a single sentence in context. By the time a human sees your
+            application, the algorithm has already ranked you.
+          </p>
+        </div>
+      </section>
+
+      {/* Score anatomy */}
+      <section className="lp-section-alt">
+        <div className="lp-section-alt-inner">
+          <div
+            ref={anatomy.ref}
+            className={`fade-up${anatomy.visible ? ' visible' : ''}`}
+          >
+            <div className="section-label">Score anatomy</div>
+            <div className="lp-card" style={{ maxWidth: '680px' }}>
+              <div className="card-mono-label">scan · sample_resume.pdf · backend-engineer-jd.txt</div>
+              <div className="card-divider" />
+              <div className="score-row">
                 <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1f1d1a", marginBottom: "0.4rem" }}>{step.title}</div>
-                  <div style={{ fontSize: "0.875rem", color: "#6f6b64", lineHeight: 1.65 }}>{step.body}</div>
+                  <div className="score-row-label" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Overall Score</div>
+                </div>
+                <div>
+                  <div className="score-row-value">64 <span style={{ fontFamily: 'var(--font-data)', fontSize: '0.75rem', color: 'var(--text-dim)' }}>/100</span></div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why scores differ */}
-      <section style={{ maxWidth: "720px", margin: "0 auto", padding: "4.5rem 2rem" }}>
-        <p style={{ fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "1rem" }}>
-          Why scores differ
-        </p>
-        <h2 style={{
-          fontFamily: "Georgia, serif",
-          fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
-          fontWeight: 600,
-          color: "#1f1d1a",
-          letterSpacing: "-0.015em",
-          lineHeight: 1.2,
-          marginBottom: "1rem",
-          maxWidth: "520px",
-        }}>
-          The same résumé. Three different verdicts.
-        </h2>
-        <p style={{ fontSize: "0.9rem", color: "#6f6b64", lineHeight: 1.7, marginBottom: "2rem", maxWidth: "520px" }}>
-          Different ATS systems weight keywords, structure, and semantic relevance differently.
-          A résumé that passes one pipeline may be ranked low by another.
-          TraceRank simulates multiple scoring profiles and shows you where the gaps are.
-        </p>
-
-        {/* Profile comparison strip */}
-        <div style={{
-          border: "1px solid #d9d3ca",
-          borderRadius: "2px",
-          overflow: "hidden",
-          background: "#fbfaf7",
-        }}>
-          <div style={{ padding: "0.75rem 1.25rem", borderBottom: "1px solid #d9d3ca", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "0.7rem", color: "#6f6b64", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              ATS profile simulation — same résumé
-            </span>
-            <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#9a4d22", fontWeight: 600 }}>
-              Δ15 pts  MEDIUM VOLATILITY
-            </span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-            {[
-              { label: "Exact Match", score: 52, color: "#9a4d22", note: "Strict keyword overlap; penalises missing must-haves" },
-              { label: "Structure Sensitive", score: 61, color: "#9a4d22", note: "Skills buried in prose may not register" },
-              { label: "Semantic Fit", score: 67, color: "#0f5c52", note: "Adjacent skill inference; broader matching" },
-            ].map((p, i) => (
-              <div key={p.label} style={{
-                padding: "1.25rem",
-                borderLeft: i > 0 ? "1px solid #d9d3ca" : undefined,
-              }}>
-                <div style={{ fontFamily: "monospace", fontSize: "1.5rem", fontWeight: 700, color: p.color, marginBottom: "0.25rem" }}>{p.score}</div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#1f1d1a", marginBottom: "0.3rem" }}>{p.label}</div>
-                <div style={{ fontSize: "0.7rem", color: "#6f6b64", lineHeight: 1.5 }}>{p.note}</div>
+              <div className="score-row">
+                <div>
+                  <div className="score-row-label">Keyword Match</div>
+                  <div className="score-row-note">12 of 18 recognized JD keywords found</div>
+                </div>
+                <div>
+                  <div className="score-row-value">38</div>
+                  <div className="score-row-weight">35% of total</div>
+                </div>
               </div>
-            ))}
-          </div>
-          <div style={{ padding: "0.6rem 1.25rem", borderTop: "1px solid #d9d3ca", background: "#f6f3ee" }}>
-            <span style={{ fontSize: "0.65rem", color: "#a0998e", fontStyle: "italic" }}>
-              Profile simulations inspired by common ATS behavior patterns. Adjacent skill inference is a heuristic, not a replica of any specific system.
-            </span>
+              <div className="score-row">
+                <div>
+                  <div className="score-row-label">Experience Alignment</div>
+                  <div className="score-row-note">Meets 3-year JD requirement</div>
+                </div>
+                <div>
+                  <div className="score-row-value">82</div>
+                  <div className="score-row-weight">25% of total</div>
+                </div>
+              </div>
+              <div className="score-row">
+                <div>
+                  <div className="score-row-label">Parse Integrity</div>
+                  <div className="score-row-note">No significant parse issues detected</div>
+                </div>
+                <div>
+                  <div className="score-row-value">91</div>
+                  <div className="score-row-weight">20% of total</div>
+                </div>
+              </div>
+              <div className="score-row">
+                <div>
+                  <div className="score-row-label">Structure</div>
+                  <div className="score-row-note">3 of 4 expected sections found</div>
+                </div>
+                <div>
+                  <div className="score-row-value">75</div>
+                  <div className="score-row-weight">10% of total</div>
+                </div>
+              </div>
+              <div className="score-row">
+                <div>
+                  <div className="score-row-label">Quantified Impact</div>
+                  <div className="score-row-note">Some bullets include measurable impact</div>
+                </div>
+                <div>
+                  <div className="score-row-value">37</div>
+                  <div className="score-row-weight">10% of total</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Sample scan — expanded proof block */}
-      <section id="sample" style={{ background: "#fbfaf7", borderTop: "1px solid #d9d3ca", borderBottom: "1px solid #d9d3ca" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto", padding: "4.5rem 2rem" }}>
-          <p style={{ fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "1rem" }}>
-            Inside the scan
+      {/* Issue evidence */}
+      <section className="lp-section">
+        <div
+          ref={evidence.ref}
+          className={`fade-up${evidence.visible ? ' visible' : ''}`}
+        >
+          <div className="section-label">Issue evidence</div>
+          <div className="lp-card" style={{ maxWidth: '640px' }}>
+            <div className="card-mono-label">issue · keyword_gap</div>
+            <div className="severity-chip">high severity</div>
+            <div className="card-title">Missing keyword: kubernetes</div>
+            <div className="card-evidence">
+              &ldquo;kubernetes&rdquo; does not appear anywhere in your résumé text.
+              The JD lists it as a required skill under infrastructure qualifications.
+            </div>
+            <div className="card-divider" />
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.55rem' }}>
+              Fix pattern
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-primary)', lineHeight: 1.75 }}>
+              Add &ldquo;kubernetes&rdquo; in your Skills section or reference it in a relevant
+              experience bullet where you worked with container orchestration.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Methodology bridge */}
+      <section className="lp-section-alt" style={{ background: 'var(--bg-accent-low)' }}>
+        <div className="lp-section-alt-inner">
+          <div
+            ref={methodology.ref}
+            className={`fade-up${methodology.visible ? ' visible' : ''}`}
+          >
+            <div className="method-grid">
+              <div>
+                <div className="accent-rule" />
+                <h2 className="method-heading">
+                  The scoring methodology<br />is public.
+                </h2>
+                <p className="method-body">
+                  Every signal is documented. Every weight is explicit. TraceRank produces
+                  deterministic scores — the same résumé against the same JD always produces
+                  the same result. No black box. No probabilistic inference.
+                </p>
+                <p className="method-body">
+                  The methodology page includes scoring weights, vocabulary lists, section
+                  detection heuristics, and explicit disclaimers about what the engine
+                  cannot measure.
+                </p>
+                <Link href="/methodology" className="link-accent">
+                  Read the full methodology →
+                </Link>
+              </div>
+              <div>
+                <div className="lp-card">
+                  <div className="card-mono-label" style={{ marginBottom: '1.5rem' }}>scoring weights</div>
+                  {([
+                    { label: 'Keyword / concept match',   pct: 35 },
+                    { label: 'Experience alignment',      pct: 25 },
+                    { label: 'Parse integrity',           pct: 20 },
+                    { label: 'Structure / readability',   pct: 10 },
+                    { label: 'Quantified impact',         pct: 10 },
+                  ] as const).map(({ label, pct }) => (
+                    <div key={label} className="weight-row">
+                      <span className="weight-label">{label}</span>
+                      <span className="weight-value">{pct}%</span>
+                      <div className="weight-bar-track">
+                        <div style={{
+                          height: '100%', width: `${pct * 2.5}%`,
+                          background: 'var(--accent)', opacity: 0.55, borderRadius: '1px',
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benchmark teaser */}
+      <section className="lp-section-sm">
+        <div
+          ref={benchmark.ref}
+          className={`fade-up${benchmark.visible ? ' visible' : ''}`}
+        >
+          <div className="section-label" style={{ marginBottom: '2.5rem' }}>Validation</div>
+          <div className="bench-grid">
+            <div className="bench-item">
+              <div className="bench-number">{benchmark.visible ? benchCount1 : 0}</div>
+              <div className="bench-label">résumé/JD pairs tested</div>
+              <div className="bench-note">internal synthetic validation set</div>
+            </div>
+            <div className="bench-item">
+              <div className="bench-number">30–95</div>
+              <div className="bench-label">score range across validation set</div>
+              <div className="bench-note">strong same-role matches to weak cross-role pairs</div>
+            </div>
+            <div className="bench-item">
+              <div className="bench-number">
+                {benchmark.visible ? benchCount3 : 0}
+                <span style={{ fontFamily: 'var(--font-data)', fontSize: '1.3rem', color: 'var(--text-dim)' }}>/50</span>
+              </div>
+              <div className="bench-label">pairs with recognized JD vocabulary</div>
+              <div className="bench-note">6 sparse JDs confirmed neutral default behavior</div>
+            </div>
+          </div>
+          <p style={{ marginTop: '2.25rem', fontFamily: 'var(--font-body)', fontSize: '0.65rem', fontStyle: 'italic', color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            Internal validation run only. All data is synthetic. Not a production accuracy claim.
           </p>
-          <h2 style={{
-            fontFamily: "Georgia, serif",
-            fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
-            fontWeight: 600,
-            color: "#1f1d1a",
-            letterSpacing: "-0.015em",
-            lineHeight: 1.2,
-            marginBottom: "2rem",
-            maxWidth: "520px",
-          }}>
-            One résumé. Every failure surface exposed.
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section style={{ background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
+        <div
+          ref={cta.ref}
+          className={`cta-section fade-up${cta.visible ? ' visible' : ''}`}
+        >
+          <h2 className="cta-heading">
+            Know what the machine sees<br />before you apply.
           </h2>
-
-          <div style={{ border: "1px solid #d9d3ca", borderRadius: "3px", overflow: "hidden" }}>
-
-            {/* Score cluster */}
-            <div style={{
-              padding: "1.25rem 1.5rem",
-              borderBottom: "1px solid #d9d3ca",
-              display: "flex",
-              gap: "2rem",
-              flexWrap: "wrap",
-              background: "#f6f3ee",
-            }}>
-              {[
-                { label: "Overall", value: "62", color: "#9a4d22" },
-                { label: "Keyword Match", value: "48", color: "#8c2f4e" },
-                { label: "Parse Integrity", value: "80", color: "#0f5c52" },
-                { label: "Experience Align", value: "70", color: "#0f5c52" },
-              ].map((s) => (
-                <div key={s.label}>
-                  <div style={{ fontSize: "0.65rem", color: "#6f6b64", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.2rem" }}>{s.label}</div>
-                  <div style={{ fontFamily: "monospace", fontSize: "1.4rem", fontWeight: 700, color: s.color }}>{s.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Issues */}
-            {[
-              { sev: "CRITICAL", sevColor: "#8c2f4e", title: "Missing Summary section", desc: "ATS systems weight the summary for role-fit classification. No summary found in extracted text." },
-              { sev: "HIGH", sevColor: "#9a4d22", title: 'Missing keyword: "kubernetes"', desc: "The JD requires kubernetes. Your résumé does not contain it or any adjacent signal." },
-            ].map((issue, i) => (
-              <div key={i} style={{
-                padding: "0.875rem 1.5rem",
-                borderBottom: "1px solid #d9d3ca",
-                display: "flex",
-                gap: "1rem",
-                alignItems: "flex-start",
-              }}>
-                <span style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.08em",
-                  color: issue.sevColor,
-                  textTransform: "uppercase",
-                  minWidth: "60px",
-                  paddingTop: "2px",
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}>
-                  {issue.sev}
-                </span>
-                <div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>{issue.title}</div>
-                  <div style={{ fontSize: "0.78rem", color: "#6f6b64", lineHeight: 1.55 }}>{issue.desc}</div>
-                </div>
-              </div>
-            ))}
-
-            {/* Weak phrasing with rewrite */}
-            <div style={{ padding: "0.875rem 1.5rem", borderBottom: "1px solid #d9d3ca" }}>
-              <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", marginBottom: "0.75rem" }}>
-                <span style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.08em",
-                  color: "#6f6b64",
-                  textTransform: "uppercase",
-                  minWidth: "60px",
-                  paddingTop: "2px",
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}>
-                  MEDIUM
-                </span>
-                <div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#1f1d1a", marginBottom: "0.2rem" }}>Weak verb: "responsible for"</div>
-                  <div style={{ fontSize: "0.78rem", color: "#6f6b64", lineHeight: 1.55 }}>Passive phrasing reduces impact score in LLM screeners. Active verbs carry more weight.</div>
-                </div>
-              </div>
-
-              {/* Rewrite suggestion block */}
-              <div style={{ marginLeft: "calc(60px + 1rem)", padding: "0.75rem", background: "#f0f7f5", border: "1px solid #c5dbd7", borderRadius: "2px" }}>
-                <div style={{ fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#0f5c52", fontWeight: 600, marginBottom: "0.4rem" }}>
-                  AI-assisted rewrite
-                </div>
-                {[
-                  "Delivered CI/CD pipeline migration across [N] services, reducing deployment cycle by [X%].",
-                  "Owned backend reliability for platform serving [N] customers with [X%] uptime.",
-                  "Led infrastructure modernisation effort, cutting mean time to recovery by [Y min].",
-                ].map((v, i) => (
-                  <div key={i} style={{ fontFamily: "monospace", fontSize: "0.74rem", color: "#1f1d1a", padding: "0.35rem 0.5rem", background: "#fbfaf7", border: "1px solid #d9d3ca", borderRadius: "1px", marginBottom: i < 2 ? "0.3rem" : 0, lineHeight: 1.6 }}>
-                    {v}
-                  </div>
-                ))}
-                <div style={{ fontSize: "0.62rem", color: "#a0998e", fontStyle: "italic", marginTop: "0.4rem" }}>
-                  [X%], [N], [Y min] are placeholders — fill with your actual metrics.
-                </div>
-              </div>
-            </div>
-
-            {/* ATS profile simulation mini-row */}
-            <div style={{ padding: "0.875rem 1.5rem" }}>
-              <div style={{ fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "0.65rem" }}>
-                ATS profile simulation
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                {[
-                  { label: "Exact Match", score: 52, color: "#9a4d22" },
-                  { label: "Structure Sensitive", score: 61, color: "#9a4d22" },
-                  { label: "Semantic Fit", score: 67, color: "#0f5c52" },
-                ].map((p) => (
-                  <span key={p.label} style={{ fontFamily: "monospace", fontSize: "0.72rem", color: p.color, padding: "0.2rem 0.5rem", border: `1px solid ${p.color}`, borderRadius: "1px", opacity: 0.85 }}>
-                    {p.label} {p.score}
-                  </span>
-                ))}
-                <span style={{ fontSize: "0.68rem", color: "#9a4d22", fontFamily: "monospace", marginLeft: "0.25rem" }}>
-                  Δ15 pts — résumé is ATS-fragile
-                </span>
-              </div>
-            </div>
+          <div className="cta-btn-row">
+            <Link href="/workspace" className="btn-primary">Scan your résumé</Link>
+            <Link href="/methodology" className="link-secondary">How scoring works →</Link>
           </div>
-        </div>
-      </section>
-
-      {/* What TraceRank checks */}
-      <section style={{ maxWidth: "720px", margin: "0 auto", padding: "4.5rem 2rem" }}>
-        <p style={{ fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6f6b64", marginBottom: "2rem" }}>
-          What TraceRank checks
-        </p>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {[
-            {
-              label: "Parse integrity",
-              detail: "What an ATS parser actually extracts from your file — not what you see in a PDF viewer. Catches columns, text boxes, and encoding failures.",
-            },
-            {
-              label: "Keyword coverage",
-              detail: "Exact-match and adjacent-skill analysis against the job description. Shows which required terms are present, missing, or buried in prose.",
-            },
-            {
-              label: "Section structure",
-              detail: "Whether expected sections — summary, experience, skills, education — are found, clearly delimited, and machine-readable.",
-            },
-            {
-              label: "Quantified impact",
-              detail: "Evidence density across experience bullets. Weak verbs, passive phrasing, and bullets without measurable outcomes are flagged individually.",
-            },
-            {
-              label: "ATS profile volatility",
-              detail: "How much your score shifts across different parser/scoring profiles. High volatility means your résumé is fragile — one system pass, another reject.",
-            },
-          ].map((item, i) => (
-            <div key={item.label} style={{
-              display: "grid",
-              gridTemplateColumns: "200px 1fr",
-              gap: "0 2rem",
-              padding: "1.25rem 0",
-              borderTop: i === 0 ? "1px solid #d9d3ca" : "1px solid #e8e3dc",
-              borderBottom: i === 4 ? "1px solid #d9d3ca" : undefined,
-            }}>
-              <div style={{
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                color: "#1f1d1a",
-                paddingLeft: "0.75rem",
-                borderLeft: "2px solid #0f5c52",
-                display: "flex",
-                alignItems: "center",
-              }}>
-                {item.label}
-              </div>
-              <div style={{ fontSize: "0.82rem", color: "#6f6b64", lineHeight: 1.65 }}>
-                {item.detail}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Closing CTA */}
-      <section style={{ background: "#fbfaf7", borderTop: "1px solid #d9d3ca", borderBottom: "1px solid #d9d3ca" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto", padding: "5rem 2rem", textAlign: "center" }}>
-          <p style={{ fontFamily: "Georgia, serif", fontSize: "clamp(1.3rem, 3vw, 1.75rem)", fontWeight: 600, color: "#1f1d1a", letterSpacing: "-0.015em", lineHeight: 1.3, marginBottom: "1rem" }}>
-            Screening happens in seconds.<br />The fixes take minutes.
+          <p className="cta-disclaimer">
+            TraceRank does not predict hiring outcomes. Scores reflect structural and lexical
+            signal analysis — not ATS vendor simulation.
           </p>
-          <p style={{ fontSize: "0.9rem", color: "#6f6b64", lineHeight: 1.7, marginBottom: "2rem", maxWidth: "400px", margin: "0 auto 2rem" }}>
-            Upload once. See parse failures, keyword gaps, and profile simulation in a single report.
-          </p>
-          <Link href="/workspace" style={{
-            display: "inline-block",
-            background: "#0f5c52",
-            color: "#fff",
-            padding: "0.8rem 2rem",
-            fontSize: "0.9rem",
-            fontWeight: 500,
-            letterSpacing: "0.01em",
-            borderRadius: "2px",
-            textDecoration: "none",
-          }}>
-            Scan your résumé →
-          </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #d9d3ca", padding: "1.5rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-        <span style={{ fontFamily: "Georgia, serif", fontSize: "0.85rem", color: "#1f1d1a", fontWeight: 600 }}>TraceRank</span>
-        <Link href="/methodology" style={{ fontSize: "0.75rem", color: "#0f5c52", textDecoration: "none" }}>How scoring works</Link>
-        <span style={{ fontSize: "0.72rem", color: "#a0998e" }}>Adversarial Résumé Scanner — profile simulations are heuristic, not exact ATS replicas</span>
+      <footer className="lp-footer">
+        <span className="footer-copy">© 2026 TraceRank</span>
+        <div className="footer-links">
+          <Link href="/methodology" className="footer-link">Methodology</Link>
+          <Link href="/workspace" className="footer-link">Scanner</Link>
+        </div>
       </footer>
 
-    </main>
+    </div>
   )
 }
