@@ -10,6 +10,19 @@ Usage:
 
     # Pilot mode (skip outlier thresholds, just print distribution)
     python analyze.py --run outputs/run_20260530_120000.csv --pilot
+
+    # .txt calibration mode (adjusted thresholds for plain-text benchmark inputs)
+    python analyze.py --run outputs/run_20260530_120000.csv --txt-mode
+
+Threshold notes:
+    Production (PDF) thresholds : HIGH >= 70 / MEDIUM 45-69 / LOW < 45
+    .txt benchmark thresholds   : HIGH >= 75 / MEDIUM 55-74 / LOW < 55
+
+    .txt inputs score 5-10 points higher than equivalent PDFs because:
+      - parse_integrity is permanently 1.0 (no column/table/encoding penalty)
+      - Synthetic resumes carry explicit date ranges that satisfy experience_alignment
+    Use --txt-mode when running against benchmark/inputs/*.txt fixtures.
+    Use production thresholds for real PDF uploads scored via the API.
 """
 from __future__ import annotations
 
@@ -24,15 +37,21 @@ SCORE_FIELDS = [
     "parse_integrity", "structure", "quantified_impact",
 ]
 
-# Tier thresholds
+# Production thresholds (PDF inputs)
 HIGH_THRESHOLD = 70
 LOW_THRESHOLD = 45
 
+# .txt benchmark thresholds (plain-text synthetic inputs — see docstring)
+TXT_HIGH_THRESHOLD = 75
+TXT_LOW_THRESHOLD = 55
 
-def tier(score: int) -> str:
-    if score >= HIGH_THRESHOLD:
+
+def tier(score: int, txt_mode: bool = False) -> str:
+    high = TXT_HIGH_THRESHOLD if txt_mode else HIGH_THRESHOLD
+    low = TXT_LOW_THRESHOLD if txt_mode else LOW_THRESHOLD
+    if score >= high:
         return "high"
-    if score >= LOW_THRESHOLD:
+    if score >= low:
         return "medium"
     return "low"
 
@@ -53,10 +72,12 @@ def print_distribution(label: str, values: list[int]) -> None:
     if not values:
         print(f"  {label}: no data")
         return
-    print(f"  {label}: mean={statistics.mean(values):.1f}  "
-          f"median={statistics.median(values):.0f}  "
-          f"stdev={statistics.stdev(values) if len(values) > 1 else 0:.1f}  "
-          f"min={min(values)}  max={max(values)}")
+    print(
+        f"  {label}: mean={statistics.mean(values):.1f} "
+        f"median={statistics.median(values):.0f} "
+        f"stdev={statistics.stdev(values) if len(values) > 1 else 0:.1f} "
+        f"min={min(values)} max={max(values)}"
+    )
 
 
 def main() -> None:
@@ -64,7 +85,14 @@ def main() -> None:
     parser.add_argument("--run", required=True)
     parser.add_argument("--review", default="")
     parser.add_argument("--pilot", action="store_true")
+    parser.add_argument(
+        "--txt-mode",
+        action="store_true",
+        help="Use .txt-calibrated thresholds (HIGH>=75 / MEDIUM 55-74 / LOW<55)",
+    )
     args = parser.parse_args()
+
+    txt_mode: bool = args.txt_mode
 
     run_path = Path(args.run)
     if not run_path.is_absolute():
@@ -76,7 +104,18 @@ def main() -> None:
 
     print(f"\n{'='*60}")
     print(f"BENCHMARK RUN: {run_path.name}")
-    print(f"Pairs total: {len(rows)}  |  Scored: {len(ok_rows)}  |  Errors: {len(err_rows)}")
+    print(f"Pairs total: {len(rows)} | Scored: {len(ok_rows)} | Errors: {len(err_rows)}")
+
+    if txt_mode:
+        print()
+        print("  [CALIBRATION] .txt mode active")
+        print("  Thresholds : HIGH >= 75 / MEDIUM 55-74 / LOW < 55")
+        print("  Rationale  : .txt inputs have parse_integrity=1.0 and synthetic")
+        print("               date ranges, inflating scores 5-10 pts vs real PDFs.")
+        print("  Do NOT compare these tier counts directly to production PDF results.")
+    else:
+        print("  Thresholds : HIGH >= 70 / MEDIUM 45-69 / LOW < 45 (production PDF)")
+
     if err_rows:
         for r in err_rows:
             print(f"  SKIP {r['pair_id']}: {r['error']}")
@@ -93,13 +132,21 @@ def main() -> None:
         print_distribution(field, vals)  # type: ignore[arg-type]
 
     # Tier breakdown
-    print("\nTIER BREAKDOWN  (≥70 high / 45–69 medium / <45 low)")
-    overall_vals = [safe_int(r["overall_score"]) for r in ok_rows if safe_int(r["overall_score"]) is not None]
-    tiers = [tier(v) for v in overall_vals]  # type: ignore[arg-type]
+    high_t = TXT_HIGH_THRESHOLD if txt_mode else HIGH_THRESHOLD
+    low_t = TXT_LOW_THRESHOLD if txt_mode else LOW_THRESHOLD
+    tier_label = (
+        f"(>={high_t} high / {low_t}-{high_t-1} medium / <{low_t} low)"
+    )
+    print(f"\nTIER BREAKDOWN {tier_label}")
+    overall_vals = [
+        safe_int(r["overall_score"]) for r in ok_rows
+        if safe_int(r["overall_score"]) is not None
+    ]
+    tiers = [tier(v, txt_mode) for v in overall_vals]  # type: ignore[arg-type]
     for t in ("high", "medium", "low"):
         n = tiers.count(t)
-        bar = "█" * n
-        print(f"  {t:6s}  {bar}  {n} ({100*n//len(tiers) if tiers else 0}%)")
+        bar = "\u2588" * n
+        print(f"  {t:6s} {bar} {n} ({100*n//len(tiers) if tiers else 0}%)")
 
     # Signal flags
     no_kw = sum(1 for r in ok_rows if r.get("has_keyword_signal") == "False")
@@ -122,19 +169,17 @@ def main() -> None:
 
     if review_by_id:
         matched_ids = [r["pair_id"] for r in ok_rows if r["pair_id"] in review_by_id]
-        print(f"\nMANUAL REVIEW  ({len(matched_ids)} pairs joined)")
-
+        print(f"\nMANUAL REVIEW ({len(matched_ids)} pairs joined)")
         matches = 0
         false_pos = []
         false_neg = []
         implausible = []
-
         for r in ok_rows:
             pid = r["pair_id"]
             rev = review_by_id.get(pid)
             if not rev:
                 continue
-            auto_tier = tier(safe_int(r["overall_score"]) or 0)
+            auto_tier = tier(safe_int(r["overall_score"]) or 0, txt_mode)
             human_tier = rev.get("reviewer_judgment", "").strip().lower()
             if human_tier and human_tier == auto_tier:
                 matches += 1
@@ -144,21 +189,19 @@ def main() -> None:
                 false_neg.append(pid)
             if rev.get("score_plausible", "").strip().lower() in ("0", "false", "no"):
                 implausible.append(pid)
-
         total_reviewed = len(matched_ids)
-        print(f"  Judgment match rate: {matches}/{total_reviewed} "
-              f"({100*matches//total_reviewed if total_reviewed else 0}%)")
-        print(f"  False positives:  {len(false_pos)}"
-              + (f"  → {false_pos}" if false_pos else ""))
-        print(f"  False negatives:  {len(false_neg)}"
-              + (f"  → {false_neg}" if false_neg else ""))
-        print(f"  Score implausible: {len(implausible)}"
-              + (f"  → {implausible}" if implausible else ""))
+        print(
+            f"  Judgment match rate: {matches}/{total_reviewed} "
+            f"({100*matches//total_reviewed if total_reviewed else 0}%)"
+        )
+        print(f"  False positives: {len(false_pos)}" + (f" -> {false_pos}" if false_pos else ""))
+        print(f"  False negatives: {len(false_neg)}" + (f" -> {false_neg}" if false_neg else ""))
+        print(f"  Score implausible: {len(implausible)}" + (f" -> {implausible}" if implausible else ""))
 
     # Outlier report (skip in --pilot mode)
     if not args.pilot:
-        print("\nOUTLIER REPORT  (|score - expected midpoint| top 5)")
-        tier_midpoints = {"high": 80, "medium": 57, "low": 30}
+        print("\nOUTLIER REPORT (|score - expected midpoint| top 5)")
+        tier_midpoints = {"high": 82, "medium": 65, "low": 48} if txt_mode else {"high": 80, "medium": 57, "low": 30}
         outliers = []
         for r in ok_rows:
             score = safe_int(r["overall_score"])
@@ -170,9 +213,9 @@ def main() -> None:
         outliers.sort(reverse=True)
         if outliers:
             for delta, pid, score, exp in outliers[:5]:
-                print(f"  {pid}  score={score}  expected={exp}  delta={delta}")
+                print(f"  {pid} score={score} expected={exp} delta={delta}")
         else:
-            print("  No pairs with expected_tier set — fill manifest.csv after pilot.")
+            print("  No pairs with expected_tier set -- fill manifest.csv after pilot.")
 
     # Worst-profile distribution
     worst_counts: dict[str, int] = {}
