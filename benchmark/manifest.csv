@@ -1,11 +1,51 @@
 pair_id,resume_file,jd_file,role_type,source_resume,source_jd,expected_tier,notes
-p001,swe_01.txt,jd_swe_dense_01.txt,software_engineer,synthetic,synthetic,,"calibration anchor — strong SWE vs keyword-dense JD"
-p002,swe_02.txt,jd_swe_java_01.txt,software_engineer,synthetic,synthetic,,"same-role stack mismatch — Python résumé vs Java JD"
-p003,pm_01.txt,jd_pm_01.txt,product_manager,synthetic,synthetic,,"non-tech same-role match"
-p004,data_01.txt,jd_data_01.txt,data_engineer,synthetic,synthetic,,"data/ML same-role match"
-p005,swe_weak_01.txt,jd_swe_dense_01.txt,software_engineer,synthetic,synthetic,,"weak résumé — thin bullets no quantification"
-p006,swe_generic_01.txt,jd_swe_dense_01.txt,software_engineer,synthetic,synthetic,,"generalist résumé vs specific JD"
-p007,swe_01.txt,jd_pm_01.txt,cross_role,synthetic,synthetic,,"cross-role — SWE résumé vs PM JD"
-p008,pm_01.txt,jd_swe_dense_01.txt,cross_role,synthetic,synthetic,,"cross-role — PM résumé vs SWE JD"
-p009,swe_02.txt,jd_swe_sparse_01.txt,software_engineer,synthetic,synthetic,,"neutral default test — sparse JD no recognized keywords"
-p010,swe_nosections_01.txt,jd_swe_dense_01.txt,software_engineer,synthetic,synthetic,,"no section headers — weak structure edge case"
+p001,swe_kaggle_01.txt,jd_swe_greenhouse_01.txt,software_engineer,synthetic,synthetic,high,calibration anchor strong SWE vs keyword-dense JD
+p002,swe_kaggle_02.txt,jd_swe_greenhouse_02.txt,software_engineer,synthetic,synthetic,medium,stack mismatch Python SWE vs Java JD
+p003,pm_synthetic_01.txt,jd_pm_greenhouse_01.txt,product_manager,synthetic,synthetic,high,PM same-role match
+p004,ml_kaggle_01.txt,jd_ml_greenhouse_01.txt,ml_engineer,synthetic,synthetic,high,ML same-role match
+p005,swe_github_01.txt,jd_swe_greenhouse_03.txt,software_engineer,synthetic,synthetic,high,fullstack SWE same-role match
+p006,data_kaggle_01.txt,jd_data_greenhouse_01.txt,data_engineer,synthetic,synthetic,high,data eng same-role match
+p007,swe_kaggle_01.txt,jd_pm_greenhouse_01.txt,cross_role,synthetic,synthetic,medium,cross-role SWE vs PM JD
+p008,pm_synthetic_02.txt,jd_pm_greenhouse_02.txt,product_manager,synthetic,synthetic,high,growth PM same-role match
+p009,swe_synthetic_01.txt,jd_swe_sparse_01.txt,software_engineer,synthetic,synthetic,medium,sparse JD neutral keyword default
+p010,swe_github_02.txt,jd_swe_greenhouse_01.txt,software_engineer,synthetic,synthetic,medium,no section headers prose format
+p011,swe_kaggle_03.txt,jd_swe_greenhouse_04.txt,software_engineer,synthetic,synthetic,high,Go/gRPC strong same-role match
+p012,swe_kaggle_04.txt,jd_swe_greenhouse_05.txt,software_engineer,synthetic,synthetic,high,React/TS/Node strong same-role match
+p013,swe_synthetic_02.txt,jd_swe_greenhouse_06.txt,software_engineer,synthetic,synthetic,medium,cloud infra vs ML infra JD partial stack match
+p014,swe_kaggle_05.txt,jd_swe_greenhouse_07.txt,software_engineer,synthetic,synthetic,high,C++/Rust systems strong same-role match
+p015,swe_synthetic_03.txt,jd_swe_greenhouse_08.txt,software_engineer,synthetic,synthetic,high,senior IC 7yr vs staff level JD
+p016,swe_synthetic_04.txt,jd_swe_greenhouse_09.txt,software_engineer,synthetic,synthetic,high,ML infra strong same-role match
+p017,swe_weak_01.txt,jd_swe_greenhouse_01.txt,software_engineer,synthetic,synthetic,low,weak 1yr exp vs 3yr JD minimal keywords
+p018,swe_weak_02.txt,jd_swe_greenhouse_04.txt,software_engineer,synthetic,synthetic,low,weak vague no dates Go JD requires 4yr
+p019,swe_weak_03.txt,jd_swe_greenhouse_05.txt,software_engineer,synthetic,synthetic,low,weak PHP/jQuery prose vs React/TS JD no headers
+p020,swe_weak_04.txt,jd_swe_greenhouse_06.txt,software_engineer,synthetic,synthetic,low,weak bootcamp no professional dates vs 4yr JD
+p021,swe_weak_05.txt,jd_swe_greenhouse_10.txt,software_engineer,synthetic,synthetic,medium,stack mismatch Ruby/Rails vs Python/Django JD
+p022,swe_weak_06.txt,jd_swe_greenhouse_11.txt,software_engineer,synthetic,synthetic,low,weak soft skills only no tech stack vs Rust JD
+p023,pm_synthetic_03.txt,jd_pm_greenhouse_03.txt,product_manager,synthetic,synthetic,high,PM B2B SaaS strong same-role match
+p024,pm_synthetic_04.txt,jd_pm_greenhouse_04.txt,product_manager,synthetic,synthetic,high,PM growth OKRs strong same-role match
+p025,pm_synthetic_05.txt,jd_pm_greenhouse_05.txt,product_manager,synthetic,synthetic,high,PM consumer mobile same-role match
+p026,pm_synthetic_06.txt,jd_pm_greenhouse_06.txt,product_manager,synthetic,synthetic,high,platform PM same-role match
+p027,pm_synthetic_07.txt,jd_pm_greenhouse_07.txt,product_manager,synthetic,synthetic,high,technical PM API same-role match
+p028,data_kaggle_02.txt,jd_data_greenhouse_02.txt,data_engineer,synthetic,synthetic,high,data eng Spark/dbt/Snowflake strong match
+p029,data_kaggle_03.txt,jd_data_greenhouse_03.txt,data_engineer,synthetic,synthetic,high,analytics eng dbt/Looker strong match
+p030,data_kaggle_04.txt,jd_data_greenhouse_04.txt,data_engineer,synthetic,synthetic,high,ML/data eng sklearn/MLflow strong match
+p031,data_synthetic_01.txt,jd_data_greenhouse_05.txt,data_engineer,synthetic,synthetic,medium,BI analyst resume vs data eng JD partial
+p032,data_synthetic_02.txt,jd_data_greenhouse_06.txt,data_engineer,synthetic,synthetic,medium,R-heavy analyst vs Python/dbt JD stack mismatch
+p033,swe_kaggle_01.txt,jd_pm_greenhouse_03.txt,cross_role,synthetic,synthetic,medium,cross-role SWE vs B2B PM JD
+p034,pm_synthetic_01.txt,jd_swe_greenhouse_01.txt,cross_role,synthetic,synthetic,medium,cross-role PM vs SWE JD
+p035,data_kaggle_01.txt,jd_pm_greenhouse_01.txt,cross_role,synthetic,synthetic,medium,cross-role data eng vs PM JD
+p036,pm_synthetic_03.txt,jd_swe_greenhouse_04.txt,cross_role,synthetic,synthetic,medium,cross-role PM vs Go/gRPC backend JD
+p037,ml_kaggle_01.txt,jd_pm_greenhouse_05.txt,cross_role,synthetic,synthetic,medium,cross-role ML eng vs consumer PM JD
+p038,swe_kaggle_02.txt,jd_swe_greenhouse_11.txt,software_engineer,synthetic,synthetic,medium,stack mismatch Python SWE vs Rust JD
+p039,swe_synthetic_02.txt,jd_swe_greenhouse_05.txt,software_engineer,synthetic,synthetic,medium,stack mismatch cloud infra vs fullstack React JD
+p040,data_kaggle_02.txt,jd_swe_greenhouse_01.txt,software_engineer,synthetic,synthetic,medium,stack mismatch data eng vocab vs backend SWE JD
+p041,pm_synthetic_04.txt,jd_swe_greenhouse_06.txt,cross_role,synthetic,synthetic,medium,cross-role growth PM vs ML infra JD
+p042,swe_kaggle_03.txt,jd_swe_greenhouse_02.txt,software_engineer,synthetic,synthetic,medium,stack mismatch Go backend vs Java JD
+p043,swe_synthetic_01.txt,jd_swe_sparse_01.txt,software_engineer,synthetic,synthetic,medium,sparse JD neutral floor
+p044,data_kaggle_01.txt,jd_swe_sparse_01.txt,data_engineer,synthetic,synthetic,medium,sparse JD data resume vs sparse SWE JD
+p045,pm_synthetic_01.txt,jd_swe_sparse_01.txt,product_manager,synthetic,synthetic,medium,sparse JD PM resume vs sparse JD
+p046,swe_kaggle_01.txt,jd_swe_sparse_02.txt,software_engineer,synthetic,synthetic,medium,strong SWE vs very sparse JD no years
+p047,swe_weak_01.txt,jd_swe_sparse_01.txt,software_engineer,synthetic,synthetic,low,weak resume plus sparse JD both sides degrade
+p048,swe_github_02.txt,jd_swe_greenhouse_04.txt,software_engineer,synthetic,synthetic,medium,no headers prose vs Go/gRPC structured JD
+p049,swe_weak_03.txt,jd_swe_greenhouse_05.txt,software_engineer,synthetic,synthetic,low,weak PHP prose vs React/TS JD no headers wrong stack
+p050,swe_synthetic_04.txt,jd_swe_senior_01.txt,software_engineer,synthetic,synthetic,medium,5yr ML infra vs 8yr staff level JD experience gap
