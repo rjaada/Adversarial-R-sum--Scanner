@@ -908,7 +908,7 @@ export default function WorkspacePage() {
 
           {/* P0 evidence UX: neutral defaults + confidence badge */}
           {(() => {
-            const jdReqs = display.jd_requirements as {
+            const jdReqs = (display.jd_requirements ?? {}) as {
               required_keywords?: string[]
               min_years_experience?: number | null
             }
