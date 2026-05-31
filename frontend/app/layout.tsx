@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from "@clerk/nextjs"
-import { Cormorant, Figtree, IBM_Plex_Mono } from "next/font/google"
+import { Cormorant, Figtree, IBM_Plex_Mono, Albert_Sans, Unbounded } from "next/font/google"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import "./globals.css"
 
@@ -24,6 +24,18 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-mono",
   display: "swap",
 })
+const albertSans = Albert_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-albert",
+  display: "swap",
+})
+const unbounded = Unbounded({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-unbounded",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "TraceRank — Adversarial Résumé Scanner",
@@ -33,7 +45,13 @@ export const metadata: Metadata = {
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const htmlClass = `${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`
+  const htmlClass = [
+    cormorant.variable,
+    figtree.variable,
+    ibmPlexMono.variable,
+    albertSans.variable,
+    unbounded.variable,
+  ].join(" ")
 
   const inner = (
     <html lang="en" data-theme="dark" suppressHydrationWarning className={htmlClass}>
@@ -46,11 +64,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 
-  // ClerkProvider throws at build time if the publishable key is missing.
-  // When NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set (e.g. during a build
-  // before env vars are configured), skip ClerkProvider so the build succeeds.
-  // Auth hooks will be no-ops until the key is present at runtime.
   if (!clerkKey) return inner
-
   return <ClerkProvider publishableKey={clerkKey}>{inner}</ClerkProvider>
 }

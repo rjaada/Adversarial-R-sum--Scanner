@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NavUserButton } from '@/components/NavUserButton'
-// --- Hooks ---
+import styles from './landing.module.css'
+
+// ── Hooks ────────────────────────────────────────────────────────────────────
+
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -22,546 +25,224 @@ function useFadeIn() {
   return { ref, visible }
 }
 
-function useCountUp(target: number, duration = 1600, trigger = false): number {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!trigger) return
-    const start = Date.now()
-    let raf: number
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [trigger, target, duration])
-  return val
-}
+// ── Score bar (light theme) ──────────────────────────────────────────────────
 
-// --- Sub-score bar ---
 function ScoreBar({ label, value, delay = 0 }: { label: string; value: number; delay?: number }) {
   return (
-    <div style={{ marginBottom: '0.9rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.32rem' }}>
-        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 500 }}>
-          {label}
-        </span>
-        <span style={{ fontFamily: 'var(--font-data)', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
-          {value}
-        </span>
+    <div className={styles.scoreBarRow}>
+      <div className={styles.scoreBarHeader}>
+        <span className={styles.scoreBarLabel}>{label}</span>
+        <span className={styles.scoreBarValue}>{value}</span>
       </div>
-      <div style={{ height: '2px', background: 'var(--border-mid)', borderRadius: '1px', overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${value}%`,
-          background: 'var(--accent)',
-          borderRadius: '1px',
-          transition: `width 1.3s cubic-bezier(0.25, 0, 0.1, 1) ${delay}ms`,
-        }} />
+      <div className={styles.scoreBarTrack}>
+        <div
+          className={styles.scoreBarFill}
+          style={{ width: `${value}%`, transition: `width 1.3s cubic-bezier(0.25,0,0.1,1) ${delay}ms` }}
+        />
       </div>
     </div>
   )
 }
 
-// --- Hero score artifact ---
+// ── Hero score artifact (light theme) ────────────────────────────────────────
+
 function ScoreArtifact({ loaded }: { loaded: boolean }) {
   return (
-    <div style={{
-      background: 'var(--bg-elevated)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: '3px',
-      padding: '1.75rem',
-      maxWidth: '300px',
-      width: '100%',
-    }}>
-      <div style={{ marginBottom: '1.4rem' }}>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.56rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 500, marginBottom: '0.5rem' }}>
-          Overall Score
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-          <span style={{ fontFamily: 'var(--font-data)', fontSize: '3.25rem', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>73</span>
-          <span style={{ fontFamily: 'var(--font-data)', fontSize: '1.1rem', color: 'var(--text-dim)', lineHeight: 1 }}>/100</span>
-        </div>
+    <div className={styles.scoreArtifact}>
+      <div className={styles.scoreArtifactLabel}>Overall Score</div>
+      <div className={styles.scoreArtifactNumber}>
+        <span className={styles.scoreArtifactNum}>73</span>
+        <span className={styles.scoreArtifactDenom}>/100</span>
       </div>
-      <div style={{ height: '1px', background: 'var(--border-subtle)', marginBottom: '1.25rem' }} />
-      <ScoreBar label="Keyword Match" value={loaded ? 38 : 0} delay={0} />
-      <ScoreBar label="Experience" value={loaded ? 82 : 0} delay={130} />
+      <div className={styles.scoreArtifactDivider} />
+      <ScoreBar label="Keyword Match"   value={loaded ? 38 : 0} delay={0}   />
+      <ScoreBar label="Experience"      value={loaded ? 82 : 0} delay={130} />
       <ScoreBar label="Parse Integrity" value={loaded ? 91 : 0} delay={260} />
-      <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '1.2rem 0 1rem' }} />
-      <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.62rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+      <div className={styles.scoreArtifactDivider} />
+      <div className={styles.scoreArtifactFooter}>
         Based on 5 signals · Full breakdown in workspace
       </div>
     </div>
   )
 }
 
-// --- Page ---
+// ── Issue card ───────────────────────────────────────────────────────────────
+
+function IssueCard({ severity, title, description, fix }: {
+  severity: 'high' | 'medium'
+  title: string
+  description: string
+  fix: string
+}) {
+  return (
+    <div className={styles.issueCard}>
+      <div className={styles.issueBadge} data-severity={severity}>
+        {severity.toUpperCase()} SEVERITY
+      </div>
+      <div className={styles.issueTitle}>{title}</div>
+      <div className={styles.issueDesc}>{description}</div>
+      <div className={styles.issueFix}>
+        <span className={styles.issueFixLabel}>Fix pattern</span>
+        {fix}
+      </div>
+    </div>
+  )
+}
+
+// ── Score anatomy rows ───────────────────────────────────────────────────────
+
+const ANATOMY_ROWS = [
+  { label: 'Overall Score',        value: 64, weight: null  },
+  { label: 'Keyword Match',        value: 38, weight: '35%' },
+  { label: 'Experience Alignment', value: 82, weight: '25%' },
+  { label: 'Parse Integrity',      value: 91, weight: '20%' },
+  { label: 'Structure',            value: 75, weight: '10%' },
+  { label: 'Quantified Impact',    value: 37, weight: '10%' },
+]
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export default function LandingPage() {
   const { isLoaded: authLoaded, isSignedIn } = useAuth()
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded]               = useState(false)
+  const [navScrolled, setNavScrolled]     = useState(false)
+  const [mobileOpen, setMobileOpen]       = useState(false)
 
+  // light body bg while on landing page
   useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 500)
+    const prev = document.body.style.background
+    document.body.style.background = '#FCFDFB'
+    return () => { document.body.style.background = prev }
+  }, [])
+
+  // score bar animation trigger
+  useEffect(() => {
+    const t = setTimeout(() => setLoaded(true), 400)
     return () => clearTimeout(t)
   }, [])
 
+  // nav shadow on scroll
   useEffect(() => {
-    const prev = document.body.style.background
-    document.body.style.background = '#0d0c0a'
-    document.body.style.margin = '0'
-    return () => {
-      document.body.style.background = prev
-      document.body.style.margin = ''
-    }
+    const onScroll = () => setNavScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const orient     = useFadeIn()
-  const problem    = useFadeIn()
-  const anatomy    = useFadeIn()
-  const evidence   = useFadeIn()
-  const methodology = useFadeIn()
-  const benchmark  = useFadeIn()
-  const cta        = useFadeIn()
-
-  const benchCount1 = useCountUp(50,   1200, benchmark.visible)
-  const benchCount3 = useCountUp(44,   1500, benchmark.visible)
+  // fade-in observers
+  const orient    = useFadeIn()
+  const editorial = useFadeIn()
+  const problem   = useFadeIn()
+  const anatomy   = useFadeIn()
+  const evidence  = useFadeIn()
+  const pricingSec = useFadeIn()
+  const cta       = useFadeIn()
 
   return (
-    <div className="lp">
+    <div className={styles.page}>
 
-      <style>{`
-        .lp {
-          --font-display: var(--font-cormorant), Georgia, 'Times New Roman', serif;
-          --font-body:    var(--font-figtree), system-ui, -apple-system, sans-serif;
-          --font-data:    var(--font-mono), 'Courier New', monospace;
-          background: var(--bg-base);
-          color: var(--text-primary);
-          min-height: 100vh;
-        }
-        .lp *, .lp *::before, .lp *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      {/* ── Navbar ───────────────────────────────────────────────────────── */}
+      <nav className={`${styles.nav} ${navScrolled ? styles.navScrolled : ''}`}>
+        <div className={styles.navInner}>
+          <Link href="/" className={styles.navWordmark}>TraceRank</Link>
 
-        /* ---- Nav ---- */
-        .lp-nav {
-          position: sticky; top: 0; z-index: 50;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 2.5rem;
-          height: 58px;
-          background: rgba(13,12,10,0.94);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          border-bottom: 1px solid var(--border-subtle);
-        }
-        .nav-wordmark {
-          font-family: var(--font-display);
-          font-size: 1.1rem; font-weight: 400;
-          color: var(--text-primary);
-          text-decoration: none; letter-spacing: 0.01em;
-        }
-        .nav-links { display: flex; align-items: center; gap: 2rem; }
-        .nav-link {
-          font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 400; letter-spacing: 0.02em;
-          color: var(--text-secondary); text-decoration: none;
-          transition: color 0.2s ease;
-        }
-        .nav-link:hover { color: var(--text-primary); }
-        .nav-cta {
-          font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 500; letter-spacing: 0.02em;
-          color: var(--accent); text-decoration: none;
-          transition: color 0.2s ease;
-        }
-        .nav-cta:hover { color: var(--accent-hover); }
+          <div className={styles.navLinks}>
+            <Link href="/methodology" className={styles.navLink}>Methodology</Link>
+            <a href="#how-it-works" className={styles.navLink}>How it works</a>
+            <Link href="/pricing" className={styles.navLink}>Pricing</Link>
+          </div>
 
-        /* ---- Hero ---- */
-        .lp-hero { padding: 9vh 2.5rem 8rem; max-width: 1200px; margin: 0 auto; }
-        .hero-grid {
-          display: grid; grid-template-columns: 7fr 5fr;
-          gap: 4.5rem; align-items: center;
-        }
-        .hero-eyebrow {
-          font-family: var(--font-body);
-          font-size: 0.62rem; letter-spacing: 0.15em;
-          text-transform: uppercase; color: var(--accent);
-          font-weight: 500; margin-bottom: 1.5rem;
-        }
-        .hero-headline {
-          font-family: var(--font-display);
-          font-size: clamp(2.6rem, 4.8vw, 5rem);
-          font-weight: 400; line-height: 1.07;
-          color: var(--text-primary);
-          letter-spacing: -0.015em;
-          margin-bottom: 1.75rem;
-        }
-        .hero-sub {
-          font-family: var(--font-body);
-          font-size: 1rem; font-weight: 300;
-          color: var(--text-secondary);
-          line-height: 1.8; margin-bottom: 2.5rem;
-          max-width: 500px;
-        }
-        .hero-cta-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
-        .artifact-col { display: flex; justify-content: flex-end; align-items: center; }
+          <div className={styles.navRight}>
+            {authLoaded && !isSignedIn && (
+              <>
+                <Link href="/sign-in" className={styles.navSignIn}>Sign in</Link>
+                <Link href="/sign-up" className={styles.navCta}>Get started →</Link>
+              </>
+            )}
+            {authLoaded && isSignedIn && <NavUserButton />}
+          </div>
 
-        /* ---- Buttons & links ---- */
-        .btn-primary {
-          font-family: var(--font-body);
-          font-size: 0.85rem; font-weight: 500; letter-spacing: 0.01em;
-          color: #0d0c0a; background: #8fa85a;
-          border: none; border-radius: 2px;
-          padding: 0.8rem 1.875rem;
-          text-decoration: none; display: inline-block; cursor: pointer;
-          transition: background 0.25s ease, box-shadow 0.3s ease;
-        }
-        .btn-primary:hover {
-          background: #9db868;
-          box-shadow: 0 0 28px rgba(143,168,90,0.28);
-        }
-        .nav-btn-accent {
-          font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 500; letter-spacing: 0.01em;
-          color: #0d0c0a; background: #8fa85a;
-          border: none; border-radius: 2px;
-          padding: 0.35rem 0.9rem;
-          text-decoration: none; display: inline-block; cursor: pointer;
-          transition: background 0.2s ease;
-        }
-        .nav-btn-accent:hover { background: #9db868; }
-        .link-secondary {
-          font-family: var(--font-body);
-          font-size: 0.83rem; font-weight: 400;
-          color: var(--text-secondary); text-decoration: none;
-          border-bottom: 1px solid var(--border-mid);
-          padding-bottom: 2px;
-          transition: color 0.2s ease, border-color 0.2s ease;
-        }
-        .link-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
-        .link-accent {
-          font-family: var(--font-body);
-          font-size: 0.83rem; font-weight: 400;
-          color: var(--accent); text-decoration: none;
-          border-bottom: 1px solid currentColor;
-          padding-bottom: 2px;
-          transition: color 0.2s ease;
-        }
-        .link-accent:hover { color: var(--accent-hover); }
-
-        /* ---- Sections ---- */
-        .lp-section      { padding: 8rem 2.5rem;      max-width: 1200px; margin: 0 auto; }
-        .lp-section-sm   { padding: 5.5rem 2.5rem;    max-width: 1200px; margin: 0 auto; }
-        .lp-section-alt  { background: var(--bg-surface); padding: 8rem 0; }
-        .lp-section-alt-inner { padding: 0 2.5rem; max-width: 1200px; margin: 0 auto; }
-        .section-label {
-          font-family: var(--font-body);
-          font-size: 0.6rem; letter-spacing: 0.16em;
-          text-transform: uppercase; color: var(--text-dim);
-          font-weight: 500; margin-bottom: 2.25rem;
-        }
-
-        /* ---- Orientation strip ---- */
-        .orient-grid { display: grid; grid-template-columns: repeat(3,1fr); }
-        .orient-item { padding: 0 3rem 0 0; border-right: 1px solid var(--border-subtle); }
-        .orient-item:first-child { padding-left: 0; }
-        .orient-item:last-child  { border-right: none; padding-right: 0; padding-left: 3rem; }
-        .orient-item:nth-child(2) { padding-left: 3rem; }
-        .orient-label {
-          font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 500;
-          color: var(--text-primary); margin-bottom: 0.65rem;
-        }
-        .orient-body {
-          font-family: var(--font-body);
-          font-size: 0.85rem; font-weight: 300;
-          color: var(--text-secondary); line-height: 1.75;
-        }
-
-        /* ---- Problem panel ---- */
-        .problem-pullquote {
-          font-family: var(--font-display);
-          font-size: clamp(1.75rem, 3vw, 2.8rem);
-          font-weight: 300; font-style: italic;
-          color: var(--text-primary); line-height: 1.2;
-          margin-bottom: 2.25rem; max-width: 640px;
-        }
-        .problem-body {
-          font-family: var(--font-body);
-          font-size: 0.95rem; font-weight: 300;
-          color: var(--text-secondary); line-height: 1.9;
-          max-width: 580px;
-        }
-
-        /* ---- Cards ---- */
-        .lp-card {
-          background: var(--bg-elevated);
-          border: 1px solid var(--border-subtle);
-          border-radius: 3px; padding: 2rem;
-        }
-        .card-mono-label {
-          font-family: var(--font-data);
-          font-size: 0.6rem; letter-spacing: 0.12em;
-          text-transform: uppercase; color: var(--text-dim);
-          margin-bottom: 1.25rem;
-        }
-        .card-divider { height: 1px; background: var(--border-subtle); margin: 1.25rem 0; }
-        .severity-chip {
-          display: inline-block;
-          font-family: var(--font-data);
-          font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
-          padding: 0.18rem 0.45rem; border-radius: 2px;
-          background: rgba(140,47,78,0.12); color: #c07080;
-          border: 1px solid rgba(140,47,78,0.22); margin-bottom: 0.9rem;
-        }
-        .card-title {
-          font-family: var(--font-body);
-          font-size: 1rem; font-weight: 500;
-          color: var(--text-primary); margin-bottom: 1rem; line-height: 1.4;
-        }
-        .card-evidence {
-          font-family: var(--font-body);
-          font-size: 0.875rem; font-weight: 300;
-          color: var(--text-secondary); line-height: 1.75;
-          padding: 1rem;
-          background: var(--bg-muted); border-radius: 2px;
-          border-left: 2px solid var(--border-mid);
-          margin-bottom: 1rem;
-        }
-
-        /* ---- Score anatomy rows ---- */
-        .score-row {
-          display: flex; align-items: flex-start;
-          justify-content: space-between;
-          padding: 0.9rem 0;
-          border-bottom: 1px solid var(--border-subtle);
-        }
-        .score-row:last-child { border-bottom: none; }
-        .score-row-label {
-          font-family: var(--font-body);
-          font-size: 0.875rem; font-weight: 400;
-          color: var(--text-secondary);
-        }
-        .score-row-note {
-          font-family: var(--font-body);
-          font-size: 0.68rem; color: var(--text-dim);
-          margin-top: 0.2rem; line-height: 1.4;
-        }
-        .score-row-value {
-          font-family: var(--font-data);
-          font-size: 1rem; font-weight: 500;
-          color: var(--text-primary);
-          text-align: right;
-        }
-        .score-row-weight {
-          font-family: var(--font-body);
-          font-size: 0.58rem; color: var(--text-dim);
-          letter-spacing: 0.04em; margin-top: 0.2rem;
-          text-align: right;
-        }
-
-        /* ---- Methodology ---- */
-        .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; }
-        .accent-rule { width: 2px; height: 2.75rem; background: var(--accent); margin-bottom: 1.75rem; }
-        .method-heading {
-          font-family: var(--font-display);
-          font-size: clamp(1.4rem, 2.4vw, 2.1rem);
-          font-weight: 400; line-height: 1.2;
-          color: var(--text-primary); margin-bottom: 1.25rem;
-        }
-        .method-body {
-          font-family: var(--font-body);
-          font-size: 0.875rem; font-weight: 300;
-          color: var(--text-secondary); line-height: 1.85;
-          margin-bottom: 1.25rem;
-        }
-        .weight-row {
-          display: grid; grid-template-columns: 1fr auto;
-          align-items: center; gap: 1rem;
-          padding: 0.7rem 0;
-          border-bottom: 1px solid var(--border-subtle);
-        }
-        .weight-row:last-child { border-bottom: none; }
-        .weight-label {
-          font-family: var(--font-body);
-          font-size: 0.8rem; font-weight: 400;
-          color: var(--text-secondary);
-        }
-        .weight-value {
-          font-family: var(--font-data);
-          font-size: 0.85rem; font-weight: 500; color: var(--accent);
-        }
-        .weight-bar-track {
-          grid-column: 1 / -1; height: 2px;
-          background: var(--border-subtle);
-          border-radius: 1px; margin-top: -0.45rem;
-          overflow: hidden;
-        }
-
-        /* ---- Benchmark ---- */
-        .bench-grid { display: grid; grid-template-columns: repeat(3,1fr); }
-        .bench-item { padding: 0 3rem 0 0; border-right: 1px solid var(--border-subtle); }
-        .bench-item:last-child { border-right: none; padding-right: 0; }
-        .bench-item:nth-child(2) { padding-left: 3rem; }
-        .bench-item:nth-child(3) { padding-left: 3rem; }
-        .bench-number {
-          font-family: var(--font-data);
-          font-size: clamp(2rem, 4vw, 3rem);
-          font-weight: 400; color: var(--text-primary);
-          line-height: 1; margin-bottom: 0.5rem;
-        }
-        .bench-label {
-          font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 300;
-          color: var(--text-secondary); line-height: 1.55;
-        }
-        .bench-note {
-          font-family: var(--font-body);
-          font-size: 0.62rem; color: var(--text-dim);
-          margin-top: 0.35rem; font-style: italic;
-        }
-
-        /* ---- CTA ---- */
-        .cta-section { padding: 10rem 2.5rem; max-width: 800px; margin: 0 auto; text-align: center; }
-        .cta-heading {
-          font-family: var(--font-display);
-          font-size: clamp(2rem, 4vw, 3.4rem);
-          font-weight: 400; line-height: 1.15;
-          color: var(--text-primary);
-          letter-spacing: -0.015em; margin-bottom: 2.5rem;
-        }
-        .cta-btn-row {
-          display: flex; align-items: center; justify-content: center;
-          gap: 1.75rem; margin-bottom: 2.25rem; flex-wrap: wrap;
-        }
-        .cta-disclaimer {
-          font-family: var(--font-body);
-          font-size: 0.7rem; font-style: italic;
-          color: var(--text-dim); line-height: 1.65;
-          max-width: 500px; margin: 0 auto;
-        }
-
-        /* ---- Footer ---- */
-        .lp-footer {
-          border-top: 1px solid var(--border-subtle);
-          padding: 1.75rem 2.5rem;
-          display: flex; align-items: center; justify-content: space-between;
-        }
-        .footer-copy { font-family: var(--font-body); font-size: 0.7rem; color: var(--text-dim); }
-        .footer-links { display: flex; gap: 1.5rem; }
-        .footer-link {
-          font-family: var(--font-body); font-size: 0.7rem;
-          color: var(--text-dim); text-decoration: none;
-          transition: color 0.2s ease;
-        }
-        .footer-link:hover { color: var(--text-secondary); }
-
-        /* ---- Fade-up animation ---- */
-        .fade-up { opacity: 0; transform: translateY(18px); transition: opacity 0.75s ease, transform 0.75s ease; }
-        .fade-up.visible { opacity: 1; transform: translateY(0); }
-
-        /* ---- Grain overlay ---- */
-        .grain {
-          position: fixed; inset: 0; pointer-events: none; z-index: 9999;
-          opacity: 0.028;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-        }
-
-        /* ---- Responsive ---- */
-        @media (max-width: 960px) {
-          .hero-grid { grid-template-columns: 1fr; gap: 3.5rem; }
-          .artifact-col { justify-content: flex-start; }
-          .orient-grid { grid-template-columns: 1fr; }
-          .orient-item { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 0 0 2rem; }
-          .orient-item:last-child { border-bottom: none; padding-left: 0; }
-          .orient-item:nth-child(2) { padding-left: 0; }
-          .method-grid { grid-template-columns: 1fr; gap: 3rem; }
-          .bench-grid { grid-template-columns: 1fr; }
-          .bench-item { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 0 0 1.75rem; margin-bottom: 1.75rem; }
-          .bench-item:last-child { border-bottom: none; margin-bottom: 0; }
-          .bench-item:nth-child(2), .bench-item:nth-child(3) { padding-left: 0; }
-          .lp-nav { padding: 0 1.5rem; }
-          .lp-hero, .lp-section, .lp-section-sm, .lp-section-alt-inner { padding-left: 1.5rem; padding-right: 1.5rem; }
-          .cta-section { padding: 7rem 1.5rem; }
-          .lp-footer { flex-direction: column; gap: 1rem; text-align: center; }
-        }
-        @media (max-width: 600px) {
-          .nav-link.hide-sm { display: none; }
-          .lp-hero { padding-top: 6vh; padding-bottom: 5rem; }
-          .hero-headline { font-size: clamp(2.1rem, 8.5vw, 2.8rem); }
-          .hero-cta-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
-          .cta-btn-row { flex-direction: column; }
-          .lp-section, .lp-section-sm { padding-top: 5rem; padding-bottom: 5rem; }
-          .lp-section-alt { padding-top: 5rem; padding-bottom: 5rem; }
-        }
-      `}</style>
-
-      {/* Grain */}
-      <div className="grain" aria-hidden="true" />
-
-      {/* Nav */}
-      <nav className="lp-nav">
-        <span className="nav-wordmark">TraceRank</span>
-        <div className="nav-links">
-          <Link href="/methodology" className="nav-link hide-sm">Methodology</Link>
-          <a href="#how-it-works" className="nav-link hide-sm">How it works</a>
-          {authLoaded && !isSignedIn && (
-            <>
-              <Link href="/sign-in" className="nav-link">Sign in</Link>
-              <Link href="/sign-up" className="nav-btn-accent">Get started</Link>
-            </>
-          )}
-          {authLoaded && isSignedIn && <NavUserButton />}
+          <button
+            className={styles.hamburger}
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label="Toggle menu"
+          >
+            <span /><span /><span />
+          </button>
         </div>
+
+        {mobileOpen && (
+          <div className={styles.mobileMenu}>
+            <Link href="/methodology" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>Methodology</Link>
+            <a href="#how-it-works"  className={styles.mobileLink} onClick={() => setMobileOpen(false)}>How it works</a>
+            <Link href="/pricing"    className={styles.mobileLink} onClick={() => setMobileOpen(false)}>Pricing</Link>
+            <Link href="/sign-up" className={styles.mobileCta}>Get started →</Link>
+          </div>
+        )}
       </nav>
 
-      {/* Hero */}
-      <section className="lp-hero">
-        <div className="hero-grid">
-          <div>
-            <p className="hero-eyebrow">Adversarial Résumé Scanner</p>
-            <h1 className="hero-headline">
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className={styles.hero}>
+        <div className={styles.heroInner}>
+
+          <div className={styles.heroLeft}>
+            <p className={styles.heroEyebrow}>Adversarial Résumé Scanner</p>
+            <h1 className={styles.heroHeadline}>
               See exactly where automated screening will reject your résumé.
             </h1>
-            <p className="hero-sub">
+            <p className={styles.heroSub}>
               TraceRank parses your résumé, extracts JD requirements, and returns a scored
               breakdown with specific evidence — not vague suggestions. The methodology is public.
             </p>
-            <div className="hero-cta-row">
-              <Link href="/workspace" className="btn-primary">Scan your résumé</Link>
-              <Link href="/methodology" className="link-secondary">How scoring works →</Link>
+            <div className={styles.heroCtas}>
+              <Link href="/workspace" className={styles.btnPrimary}>Scan your résumé →</Link>
+              <Link href="/methodology" className={styles.btnGhost}>How scoring works →</Link>
             </div>
           </div>
-          <div className="artifact-col">
+
+          <div className={styles.heroRight}>
             <ScoreArtifact loaded={loaded} />
+            <div className={styles.statCards}>
+              <div className={styles.statCard}>
+                <div className={styles.statNum}>30 SEC</div>
+                <div className={styles.statLabel}>Average scan time</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statNum}>6</div>
+                <div className={styles.statLabel}>Scoring dimensions</div>
+              </div>
+            </div>
           </div>
+
         </div>
       </section>
 
-      {/* Orientation strip */}
-      <section className="lp-section-alt" id="how-it-works">
+      {/* ── What TraceRank is ─────────────────────────────────────────────── */}
+      <section className={styles.sectionWhite} id="how-it-works">
         <div
           ref={orient.ref}
-          className={`lp-section-alt-inner fade-up${orient.visible ? ' visible' : ''}`}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${orient.visible ? styles.fadeUpVisible : ''}`}
         >
-          <div className="section-label">What TraceRank is</div>
-          <div className="orient-grid">
-            <div className="orient-item">
-              <p className="orient-label">What it measures.</p>
-              <p className="orient-body">
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> What TraceRank is
+          </div>
+          <div className={styles.threeCol}>
+            <div className={styles.threeColItem}>
+              <p className={styles.threeColTitle}>What it measures.</p>
+              <p className={styles.threeColBody}>
                 ATS parse integrity, keyword alignment, and experience signal — scored against
                 the structure and vocabulary of a real job description.
               </p>
             </div>
-            <div className="orient-item">
-              <p className="orient-label">What it does not claim.</p>
-              <p className="orient-body">
+            <div className={styles.threeColItem}>
+              <p className={styles.threeColTitle}>What it does not claim.</p>
+              <p className={styles.threeColBody}>
                 TraceRank does not simulate any specific ATS vendor. Scores reflect lexical
                 and structural analysis only.
               </p>
             </div>
-            <div className="orient-item">
-              <p className="orient-label">Why that matters.</p>
-              <p className="orient-body">
+            <div className={styles.threeColItem}>
+              <p className={styles.threeColTitle}>Why that matters.</p>
+              <p className={styles.threeColBody}>
                 Automated screeners are deterministic. Understanding how they process
                 your résumé should not require guesswork.
               </p>
@@ -570,243 +251,209 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem panel */}
-      <section className="lp-section">
+      {/* ── Editorial break ───────────────────────────────────────────────── */}
+      <section
+        className={styles.editorial}
+        ref={editorial.ref}
+      >
+        <div className={styles.editorialAnnotLeft}>DETERMINISTIC</div>
+        <div className={styles.editorialText}>
+          <div className={styles.editorialLine}>BUILT FOR</div>
+          <div className={styles.editorialLine}>
+            PRECISION&nbsp;
+            <span className={styles.editorialInline}>
+              <span className={styles.editorialMiniCard}>73/100</span>
+            </span>
+          </div>
+          <div className={styles.editorialLine}>AND TRUST.</div>
+        </div>
+        <div className={styles.editorialAnnotRight}>TRANSPARENT</div>
+      </section>
+
+      {/* ── The problem ───────────────────────────────────────────────────── */}
+      <section className={styles.sectionWhite}>
         <div
           ref={problem.ref}
-          className={`fade-up${problem.visible ? ' visible' : ''}`}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${problem.visible ? styles.fadeUpVisible : ''}`}
         >
-          <div className="section-label">The problem</div>
-          <p className="problem-pullquote">
-            &ldquo;The résumé isn&apos;t the problem.<br />The reader is.&rdquo;
-          </p>
-          <p className="problem-body">
-            Automated screening systems parse your document as a structured data object — not as a
-            narrative. They tokenize your experience, match it against a keyword vocabulary, and
-            score it without reading a single sentence in context. By the time a human sees your
-            application, the algorithm has already ranked you.
-          </p>
-        </div>
-      </section>
-
-      {/* Score anatomy */}
-      <section className="lp-section-alt">
-        <div className="lp-section-alt-inner">
-          <div
-            ref={anatomy.ref}
-            className={`fade-up${anatomy.visible ? ' visible' : ''}`}
-          >
-            <div className="section-label">Score anatomy</div>
-            <div className="lp-card" style={{ maxWidth: '680px' }}>
-              <div className="card-mono-label">scan · sample_resume.pdf · backend-engineer-jd.txt</div>
-              <div className="card-divider" />
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Overall Score</div>
-                </div>
-                <div>
-                  <div className="score-row-value">64 <span style={{ fontFamily: 'var(--font-data)', fontSize: '0.75rem', color: 'var(--text-dim)' }}>/100</span></div>
-                </div>
-              </div>
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label">Keyword Match</div>
-                  <div className="score-row-note">12 of 18 recognized JD keywords found</div>
-                </div>
-                <div>
-                  <div className="score-row-value">38</div>
-                  <div className="score-row-weight">35% of total</div>
-                </div>
-              </div>
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label">Experience Alignment</div>
-                  <div className="score-row-note">Meets 3-year JD requirement</div>
-                </div>
-                <div>
-                  <div className="score-row-value">82</div>
-                  <div className="score-row-weight">25% of total</div>
-                </div>
-              </div>
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label">Parse Integrity</div>
-                  <div className="score-row-note">No significant parse issues detected</div>
-                </div>
-                <div>
-                  <div className="score-row-value">91</div>
-                  <div className="score-row-weight">20% of total</div>
-                </div>
-              </div>
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label">Structure</div>
-                  <div className="score-row-note">3 of 4 expected sections found</div>
-                </div>
-                <div>
-                  <div className="score-row-value">75</div>
-                  <div className="score-row-weight">10% of total</div>
-                </div>
-              </div>
-              <div className="score-row">
-                <div>
-                  <div className="score-row-label">Quantified Impact</div>
-                  <div className="score-row-note">Some bullets include measurable impact</div>
-                </div>
-                <div>
-                  <div className="score-row-value">37</div>
-                  <div className="score-row-weight">10% of total</div>
-                </div>
-              </div>
-            </div>
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> The problem
+          </div>
+          <div className={styles.problemGrid}>
+            <blockquote className={styles.problemQuote}>
+              &ldquo;The résumé isn&apos;t the problem.<br />The reader is.&rdquo;
+            </blockquote>
+            <p className={styles.problemBody}>
+              Automated screening systems parse your document as a structured data object — not as a
+              narrative. They tokenize your experience, match it against a keyword vocabulary, and
+              score it without reading a single sentence in context. By the time a human sees your
+              application, the algorithm has already ranked you.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Issue evidence */}
-      <section className="lp-section">
+      {/* ── Score anatomy ─────────────────────────────────────────────────── */}
+      <section className={styles.sectionAlt}>
+        <div
+          ref={anatomy.ref}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${anatomy.visible ? styles.fadeUpVisible : ''}`}
+        >
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> Score anatomy
+          </div>
+          <div className={styles.anatomyCard}>
+            <div className={styles.anatomyMeta}>scan · sample_resume.pdf · backend-engineer-jd.txt</div>
+            <div className={styles.anatomyDivider} />
+            {ANATOMY_ROWS.map(({ label, value, weight }) => (
+              <div key={label} className={styles.anatomyRow}>
+                <div className={styles.anatomyRowLeft}>
+                  <span className={styles.anatomyLabel}>{label}</span>
+                  {weight && <span className={styles.anatomyWeight}>· {weight}</span>}
+                </div>
+                <div className={styles.anatomyRowRight}>
+                  <span className={styles.anatomyValue}>{value}</span>
+                </div>
+                <div className={styles.anatomyBar}>
+                  <div
+                    className={styles.anatomyBarFill}
+                    style={{
+                      width: `${value}%`,
+                      background: value >= 70 ? '#0D0C0A' : value >= 40 ? '#858585' : '#B3B3B3',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Issue evidence ────────────────────────────────────────────────── */}
+      <section className={styles.sectionWhite}>
         <div
           ref={evidence.ref}
-          className={`fade-up${evidence.visible ? ' visible' : ''}`}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${evidence.visible ? styles.fadeUpVisible : ''}`}
         >
-          <div className="section-label">Issue evidence</div>
-          <div className="lp-card" style={{ maxWidth: '640px' }}>
-            <div className="card-mono-label">issue · keyword_gap</div>
-            <div className="severity-chip">high severity</div>
-            <div className="card-title">Missing keyword: kubernetes</div>
-            <div className="card-evidence">
-              &ldquo;kubernetes&rdquo; does not appear anywhere in your résumé text.
-              The JD lists it as a required skill under infrastructure qualifications.
-            </div>
-            <div className="card-divider" />
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.55rem' }}>
-              Fix pattern
-            </div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-primary)', lineHeight: 1.75 }}>
-              Add &ldquo;kubernetes&rdquo; in your Skills section or reference it in a relevant
-              experience bullet where you worked with container orchestration.
-            </div>
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> Issue evidence
+          </div>
+          <div className={styles.issueGrid}>
+            <IssueCard
+              severity="high"
+              title="Missing keyword: kubernetes"
+              description='"kubernetes" does not appear anywhere in your résumé. The JD lists it as required under infrastructure qualifications.'
+              fix='Add "kubernetes" in your Skills section or reference it in a relevant experience bullet.'
+            />
+            <IssueCard
+              severity="high"
+              title="Most bullets lack measurable impact"
+              description="4 of 4 experience bullets have no numbers, percentages, currency, or scale indicators."
+              fix="Rewrite 2–3 bullets with %, $, users, team size, latency ms, or cost saved."
+            />
+            <IssueCard
+              severity="medium"
+              title='Weak verb: "responsible for"'
+              description="Passive phrasing reduces impact score. Screeners weight active verbs more heavily."
+              fix="Start the bullet: Built / Led / Reduced / Delivered + [what] + [measurable result]."
+            />
           </div>
         </div>
       </section>
 
-      {/* Methodology bridge */}
-      <section className="lp-section-alt" style={{ background: 'var(--bg-accent-low)' }}>
-        <div className="lp-section-alt-inner">
-          <div
-            ref={methodology.ref}
-            className={`fade-up${methodology.visible ? ' visible' : ''}`}
-          >
-            <div className="method-grid">
-              <div>
-                <div className="accent-rule" />
-                <h2 className="method-heading">
-                  The scoring methodology<br />is public.
-                </h2>
-                <p className="method-body">
-                  Every signal is documented. Every weight is explicit. TraceRank produces
-                  deterministic scores — the same résumé against the same JD always produces
-                  the same result. No black box. No probabilistic inference.
-                </p>
-                <p className="method-body">
-                  The methodology page includes scoring weights, vocabulary lists, section
-                  detection heuristics, and explicit disclaimers about what the engine
-                  cannot measure.
-                </p>
-                <Link href="/methodology" className="link-accent">
-                  Read the full methodology →
-                </Link>
-              </div>
-              <div>
-                <div className="lp-card">
-                  <div className="card-mono-label" style={{ marginBottom: '1.5rem' }}>scoring weights</div>
-                  {([
-                    { label: 'Keyword / concept match',   pct: 35 },
-                    { label: 'Experience alignment',      pct: 25 },
-                    { label: 'Parse integrity',           pct: 20 },
-                    { label: 'Structure / readability',   pct: 10 },
-                    { label: 'Quantified impact',         pct: 10 },
-                  ] as const).map(({ label, pct }) => (
-                    <div key={label} className="weight-row">
-                      <span className="weight-label">{label}</span>
-                      <span className="weight-value">{pct}%</span>
-                      <div className="weight-bar-track">
-                        <div style={{
-                          height: '100%', width: `${pct * 2.5}%`,
-                          background: 'var(--accent)', opacity: 0.55, borderRadius: '1px',
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benchmark teaser */}
-      <section className="lp-section-sm">
+      {/* ── Pricing ───────────────────────────────────────────────────────── */}
+      <section className={styles.sectionAlt}>
         <div
-          ref={benchmark.ref}
-          className={`fade-up${benchmark.visible ? ' visible' : ''}`}
+          ref={pricingSec.ref}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${pricingSec.visible ? styles.fadeUpVisible : ''}`}
         >
-          <div className="section-label" style={{ marginBottom: '2.5rem' }}>Validation</div>
-          <div className="bench-grid">
-            <div className="bench-item">
-              <div className="bench-number">{benchmark.visible ? benchCount1 : 0}</div>
-              <div className="bench-label">résumé/JD pairs tested</div>
-              <div className="bench-note">internal synthetic validation set</div>
-            </div>
-            <div className="bench-item">
-              <div className="bench-number">30–95</div>
-              <div className="bench-label">score range across validation set</div>
-              <div className="bench-note">strong same-role matches to weak cross-role pairs</div>
-            </div>
-            <div className="bench-item">
-              <div className="bench-number">
-                {benchmark.visible ? benchCount3 : 0}
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: '1.3rem', color: 'var(--text-dim)' }}>/50</span>
-              </div>
-              <div className="bench-label">pairs with recognized JD vocabulary</div>
-              <div className="bench-note">6 sparse JDs confirmed neutral default behavior</div>
-            </div>
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> Pricing
           </div>
-          <p style={{ marginTop: '2.25rem', fontFamily: 'var(--font-body)', fontSize: '0.65rem', fontStyle: 'italic', color: 'var(--text-dim)', lineHeight: 1.6 }}>
-            Internal validation run only. All data is synthetic. Not a production accuracy claim.
+          <div className={styles.pricingGrid}>
+
+            {/* Free */}
+            <div className={styles.pricingCard}>
+              <div className={styles.pricingTier}>Free</div>
+              <div className={styles.pricingPrice}>
+                <span className={styles.pricingNum}>$0</span>
+                <span className={styles.pricingPer}>forever</span>
+              </div>
+              <div className={styles.pricingDivider} />
+              <ul className={styles.pricingFeatures}>
+                {['Unlimited scans', 'Full score breakdown', 'Issue evidence & fix patterns', 'Keyword gap analysis', 'ATS text preview'].map(f => (
+                  <li key={f} className={styles.pricingFeature}>
+                    <span className={styles.pricingCheck}>✓</span>{f}
+                  </li>
+                ))}
+                {['Scan history', 'PDF export', 'AI rewrite suggestions'].map(f => (
+                  <li key={f} className={styles.pricingFeatureOff}>
+                    <span>–</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/workspace" className={styles.btnOutlineDark}>Start scanning</Link>
+            </div>
+
+            {/* Pro */}
+            <div className={`${styles.pricingCard} ${styles.pricingCardPro}`}>
+              <div className={styles.pricingPopularBadge}>MOST POPULAR</div>
+              <div className={styles.pricingTier}>Pro</div>
+              <div className={styles.pricingPrice}>
+                <span className={styles.pricingNum}>$9</span>
+                <span className={styles.pricingPer}>/ month</span>
+              </div>
+              <div className={styles.pricingDivider} />
+              <ul className={styles.pricingFeatures}>
+                {['Everything in Free', 'Unlimited scan history', 'Compare mode', 'PDF export', 'AI rewrite suggestions'].map(f => (
+                  <li key={f} className={styles.pricingFeature}>
+                    <span className={styles.pricingCheck}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/account/billing" className={styles.btnDark}>Get Pro — coming soon →</Link>
+            </div>
+
+          </div>
+          <p className={styles.pricingDisclaimer}>
+            TraceRank does not predict hiring outcomes. Scores reflect structural and keyword analysis only.{' '}
+            <Link href="/methodology" className={styles.pricingMethodLink}>Read the methodology →</Link>
           </p>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section style={{ background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
+      {/* ── Final CTA (dark) ──────────────────────────────────────────────── */}
+      <section className={styles.ctaDark}>
         <div
           ref={cta.ref}
-          className={`cta-section fade-up${cta.visible ? ' visible' : ''}`}
+          className={`${styles.ctaInner} ${styles.fadeUp} ${cta.visible ? styles.fadeUpVisible : ''}`}
         >
-          <h2 className="cta-heading">
+          <h2 className={styles.ctaHeadline}>
             Know what the machine sees<br />before you apply.
           </h2>
-          <div className="cta-btn-row">
-            <Link href="/workspace" className="btn-primary">Scan your résumé</Link>
-            <Link href="/methodology" className="link-secondary">How scoring works →</Link>
+          <div className={styles.ctaBtns}>
+            <Link href="/workspace" className={styles.btnWhite}>Scan your résumé →</Link>
+            <Link href="/methodology" className={styles.btnWhiteOutline}>How scoring works</Link>
           </div>
-          <p className="cta-disclaimer">
-            TraceRank does not predict hiring outcomes. Scores reflect structural and lexical
-            signal analysis — not ATS vendor simulation.
+          <p className={styles.ctaDisclaimer}>
+            TraceRank does not predict hiring outcomes. Scores reflect structural and keyword criteria only.
           </p>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="lp-footer">
-        <span className="footer-copy">© 2026 TraceRank</span>
-        <div className="footer-links">
-          <Link href="/methodology" className="footer-link">Methodology</Link>
-          <Link href="/privacy" className="footer-link">Privacy</Link>
-          <Link href="/pricing" className="footer-link">Pricing</Link>
-          <Link href="/workspace" className="footer-link">Scanner</Link>
-          <ThemeToggle />
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerLeft}>
+            <span className={styles.footerWordmark}>TraceRank</span>
+            <span className={styles.footerCopy}>© 2026 TraceRank</span>
+          </div>
+          <div className={styles.footerLinks}>
+            <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
+            <Link href="/privacy"     className={styles.footerLink}>Privacy</Link>
+            <Link href="/pricing"     className={styles.footerLink}>Pricing</Link>
+            <ThemeToggle />
+          </div>
         </div>
       </footer>
 
