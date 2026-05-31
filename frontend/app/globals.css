@@ -31,6 +31,32 @@
   --font-data:    var(--font-mono, 'Courier New', monospace);
 }
 
+/* ── Light mode — intentional warm-paper palette, not an inversion ─────── */
+[data-theme="light"] {
+  --bg-base:       #f6f3ee;
+  --bg-surface:    #fbfaf7;
+  --bg-elevated:   #f1ede7;
+  --bg-muted:      #ece7e0;
+  --bg-accent-low: #eef2e8;
+  --border-subtle: #d9d3ca;
+  --border-mid:    #c9c2b8;
+  --text-primary:  #1f1d1a;
+  --text-secondary:#6f6b64;
+  --text-dim:      #a09990;
+  --accent:        #2c5f45;
+  --accent-hover:  #1f4a33;
+  --mineral:       #4a4640;
+
+  --sev-critical:  #8c2f4e;
+  --sev-high:      #9a4d22;
+  --sev-medium:    #7a6e28;
+  --sev-low:       #a09990;
+
+  --font-display: var(--font-cormorant, Georgia, 'Times New Roman', serif);
+  --font-body:    var(--font-figtree, system-ui, -apple-system, sans-serif);
+  --font-data:    var(--font-mono, 'Courier New', monospace);
+}
+
 /* ── Base ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 

@@ -9,10 +9,21 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     ats_simulation_enabled: bool = False
     analytics_enabled: bool = False
-    # Comma-separated list of allowed CORS origins.
-    # Local default covers both Next.js dev ports.
-    # Comma-separated origins, or "*" to allow all (default for easy deployment).
-    # Override in production by setting ALLOWED_ORIGINS env var explicitly.
+
+    # Clerk — JWKS endpoint for JWT verification
+    # Format: https://<your-clerk-frontend-api>/.well-known/jwks.json
+    # Find in: Clerk Dashboard → API Keys → Advanced
+    clerk_jwks_url: str = ""
+
+    # Stripe (Phase 2 — referenced in env now, used in Phase 2)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+
+    # Internal cron secret for /api/internal/purge-expired
+    internal_cron_secret: str = ""
+
+    # CORS — restrict to production frontend in production env
+    # Default "*" is fine for local dev. Set to https://tracerank.vercel.app in prod.
     allowed_origins: str = "*"
 
     model_config = SettingsConfigDict(

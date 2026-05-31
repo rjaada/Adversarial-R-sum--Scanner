@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
+import { ClerkProvider } from "@clerk/nextjs"
 import { Cormorant, Figtree, IBM_Plex_Mono } from "next/font/google"
+import { ThemeProvider } from "@/components/ThemeProvider"
 import "./globals.css"
 
 const cormorant = Cormorant({
@@ -30,8 +32,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`}>
-      <body>{children}<Analytics /></body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        data-theme="dark"
+        suppressHydrationWarning
+        className={`${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`}
+      >
+        <body>
+          <ThemeProvider initial="dark">
+            {children}
+          </ThemeProvider>
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

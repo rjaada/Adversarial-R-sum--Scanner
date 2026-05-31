@@ -719,6 +719,8 @@ export default function MethodologyPage() {
           >
             View changelog
           </a>
+          <span style={{ color: "#d9d3ca" }}>·</span>
+          <a href="/privacy" style={{ color: "#0f5c52", textDecoration: "none" }}>Privacy</a>
         </footer>
 
       </main>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ThemeToggle'
 // --- Hooks ---
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null)
@@ -783,7 +784,10 @@ export default function LandingPage() {
         <span className="footer-copy">© 2026 TraceRank</span>
         <div className="footer-links">
           <Link href="/methodology" className="footer-link">Methodology</Link>
+          <Link href="/privacy" className="footer-link">Privacy</Link>
+          <Link href="/pricing" className="footer-link">Pricing</Link>
           <Link href="/workspace" className="footer-link">Scanner</Link>
+          <ThemeToggle />
         </div>
       </footer>
 

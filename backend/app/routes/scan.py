@@ -1,18 +1,27 @@
 import logging
 import traceback
 import uuid
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from typing import Optional
 
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
+
+from app.auth import get_current_user_id, optional_user_id
 from app.config import settings
 from app.db import get_pool
-from app.schemas import ScanResult, ScanSummary
+from app.schemas import ScanResult, ScanSummary, ClaimScanRequest
 from app.services.extract_resume import extract_resume_text
 from app.services.fix_ranker import rank_fixes
 from app.services.jd_requirements import extract_jd_requirements
 from app.services.parse_sections import parse_resume_sections
-from app.services.persistence import get_recent_scans, get_scan_by_id, save_scan
+from app.services.persistence import (
+    get_recent_scans,
+    get_scan_by_id,
+    get_user_plan,
+    save_scan,
+    delete_scan,
+    upsert_user,
+)
 from app.services.rewrite_suggestions import generate_fix_suggestions
 from app.services.scoring import extract_raw_signals, scores_from_raw
 
@@ -24,6 +33,7 @@ router = APIRouter()
 async def scan_resume(
     file: UploadFile = File(...),
     jd_text: str = Form(...),
+    user_id: Optional[str] = Depends(optional_user_id),
 ):
     try:
         if not file.filename:
@@ -33,7 +43,6 @@ async def scan_resume(
             raise HTTPException(400, "Only PDF and DOCX files are supported")
 
         scan_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
 
         file_bytes = await file.read()
         extracted = extract_resume_text(file_bytes, file.filename)
@@ -54,18 +63,6 @@ async def scan_resume(
         matched_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() in extracted["text"].lower()]
         missing_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() not in extracted["text"].lower()]
 
-        summary = ScanSummary(
-            scan_id=scan_id,
-            source_id=file.filename,
-            scanned_at=now,
-            overall_score=scores.overall,
-            total_issues=len(sorted_issues),
-            critical_count=sum(1 for i in sorted_issues if i.severity == "critical"),
-            high_count=sum(1 for i in sorted_issues if i.severity == "high"),
-            medium_count=sum(1 for i in sorted_issues if i.severity == "medium"),
-            low_count=sum(1 for i in sorted_issues if i.severity == "low"),
-        )
-
         result = ScanResult(
             scan_id=scan_id,
             source_id=file.filename,
@@ -83,7 +80,11 @@ async def scan_resume(
         pool = get_pool()
         if pool is not None:
             try:
-                await save_scan(pool, result)
+                plan = "free"
+                if user_id:
+                    await upsert_user(pool, user_id)
+                    plan = await get_user_plan(pool, user_id)
+                await save_scan(pool, result, user_id=user_id, jd_text=jd_text, plan=plan)
             except Exception as db_err:
                 log.warning("save_scan failed (non-fatal): %s", db_err)
 
@@ -97,25 +98,60 @@ async def scan_resume(
         raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
-@router.get("/scans")
-async def list_scans():
+@router.post("/scans/claim", response_model=ScanSummary)
+async def claim_scan(
+    payload: ClaimScanRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Attach a guest scan (stored in browser) to an authenticated account."""
+    pool = get_pool()
+    if pool is None:
+        raise HTTPException(503, "Database not configured")
+
+    try:
+        result = ScanResult.model_validate(payload.result)
+    except Exception:
+        raise HTTPException(422, "Invalid scan result payload")
+
+    try:
+        await upsert_user(pool, user_id)
+        plan = await get_user_plan(pool, user_id)
+        # The jd_text is not available here — pass empty string, hash will be null
+        await save_scan(pool, result, user_id=user_id, jd_text="", plan=plan)
+    except Exception as exc:
+        log.error("claim_scan failed: %s", exc)
+        raise HTTPException(500, "Failed to claim scan")
+
+    return ScanSummary(
+        scan_id=result.scan_id,
+        source_id=result.source_id,
+        scanned_at=payload.scanned_at,
+        overall_score=result.scores.overall,
+    )
+
+
+@router.get("/scans", response_model=list[ScanSummary])
+async def list_scans(user_id: str = Depends(get_current_user_id)):
     pool = get_pool()
     if pool is None:
         return []
     try:
-        return await get_recent_scans(pool)
+        return await get_recent_scans(pool, user_id)
     except Exception as exc:
         log.error("list_scans error: %s", exc)
         return []
 
 
-@router.get("/scans/{scan_id}")
-async def get_scan(scan_id: str):
+@router.get("/scans/{scan_id}", response_model=ScanResult)
+async def get_scan(
+    scan_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
     pool = get_pool()
     if pool is None:
-        raise HTTPException(404, "Database not configured")
+        raise HTTPException(503, "Database not configured")
     try:
-        result = await get_scan_by_id(pool, scan_id)
+        result = await get_scan_by_id(pool, scan_id, user_id=user_id)
         if result is None:
             raise HTTPException(404, "Scan not found")
         return result
@@ -124,3 +160,16 @@ async def get_scan(scan_id: str):
     except Exception as exc:
         log.error("get_scan error: %s", exc)
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+@router.delete("/scans/{scan_id}", status_code=204)
+async def delete_scan_endpoint(
+    scan_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    pool = get_pool()
+    if pool is None:
+        raise HTTPException(503, "Database not configured")
+    deleted = await delete_scan(pool, scan_id, user_id)
+    if not deleted:
+        raise HTTPException(404, "Scan not found")

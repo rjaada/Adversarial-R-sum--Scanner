@@ -1,6 +1,6 @@
 from __future__ import annotations
-from pydantic import BaseModel, field_validator
-from typing import Literal, Union
+from pydantic import BaseModel, field_validator, EmailStr
+from typing import Literal, Union, Optional
 
 EventPropertyValue = Union[str, int, float, bool, None]
 
@@ -12,7 +12,6 @@ _ALLOWED_EVENTS = {
     "fix_clicked",
 }
 
-# Keys whose presence likely signals PII or sensitive content
 _BLOCKED_KEY_FRAGMENTS = {"resume", "jd_text", "jd", "email", "name", "phone", "text", "filename", "excerpt"}
 
 
@@ -100,19 +99,18 @@ class RewriteResponse(BaseModel):
 
 # ---------------------------------------------------------------------------
 # ATS Profile Simulation schemas
-# Labeled as profile simulations inspired by common ATS behavior patterns.
-# Sub-scores and semantic inference are heuristics, not exact ATS replicas.
+# These profiles are heuristic simulations, not replicas of any real ATS vendor.
 # ---------------------------------------------------------------------------
 
 class ProfileResult(BaseModel):
     id: str
     label: str
     description: str
-    score: int                                           # 0–100
-    parse_quality: int                                   # 0–100
-    keyword_match: int                                   # 0–100
-    adjacent_skills: int                                 # 0–100 (adjacent skill inference)
-    structure_confidence: int                            # 0–100
+    score: int
+    parse_quality: int
+    keyword_match: int
+    adjacent_skills: int
+    structure_confidence: int
     risk_level: Literal["LOW", "MEDIUM", "HIGH"]
     top_strengths: list[str]
     top_failures: list[str]
@@ -135,14 +133,14 @@ class ProfileSimulationResult(BaseModel):
 
 
 class RankedFix(BaseModel):
-    issue_index: int          # 0-based index into ScanResult.issues
+    issue_index: int
     issue_type: str
     title: str
     suggested_fix: str
     fix_pattern: str = ""
-    labels: list[str]         # e.g. ["Must-have gap", "Broad impact", "Fast win"]
+    labels: list[str]
     affects_profiles: list[str]
-    rank_score: float         # internal ranking value, exposed for transparency
+    rank_score: float
 
 
 class ScanResult(BaseModel):
@@ -157,3 +155,31 @@ class ScanResult(BaseModel):
     matched_keywords: list[str]
     top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None
+
+
+# ---------------------------------------------------------------------------
+# Account / user schemas
+# ---------------------------------------------------------------------------
+
+class UserProfile(BaseModel):
+    clerk_user_id: str
+    plan: str
+    theme_pref: Optional[str] = None
+    bench_opt_in: bool = False
+
+
+class ThemePrefUpdate(BaseModel):
+    theme_pref: Literal["dark", "light"]
+
+
+class WaitlistEntry(BaseModel):
+    email: str
+
+
+class PurgeResult(BaseModel):
+    deleted: int
+
+
+class ClaimScanRequest(BaseModel):
+    result: dict  # full ScanResult as dict — validated and stripped server-side
+    scanned_at: str

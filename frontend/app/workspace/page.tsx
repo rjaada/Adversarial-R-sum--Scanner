@@ -2,6 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { useAuth } from "@clerk/nextjs"
+import { NavUserButton } from "@/components/NavUserButton"
+import { IssueGate } from "@/components/IssueGate"
+import { UpgradePrompt } from "@/components/UpgradePrompt"
+
+const PENDING_SCAN_KEY = "tracerank_pending_scan"
+const PENDING_SCAN_TTL_MS = 30 * 60 * 1000 // 30 minutes
 
 interface Issue {
   issue_type: string
@@ -278,6 +285,7 @@ function scoreColor(p: number): string {
 }
 
 export default function WorkspacePage() {
+  const { isLoaded, isSignedIn, getToken } = useAuth()
   const [result, setResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -314,11 +322,46 @@ export default function WorkspacePage() {
   const display = result ?? MOCK
   const isMock = result === null
 
+  // Session promotion: when user signs in, claim any pending guest scan
   useEffect(() => {
-    fetch(`${API_BASE}/api/scans`)
-      .then((r) => r.json())
-      .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
-      .catch(() => {})
+    if (!isLoaded || !isSignedIn) return
+    const raw = localStorage.getItem(PENDING_SCAN_KEY)
+    if (!raw) return
+    try {
+      const pending = JSON.parse(raw) as { result: ScanResult; scanned_at: string }
+      const age = Date.now() - new Date(pending.scanned_at).getTime()
+      if (age > PENDING_SCAN_TTL_MS) {
+        localStorage.removeItem(PENDING_SCAN_KEY)
+        return
+      }
+      getToken().then(token => {
+        if (!token) return
+        fetch(`${API_BASE}/api/scans/claim`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ result: pending.result, scanned_at: pending.scanned_at }),
+        })
+          .then(() => localStorage.removeItem(PENDING_SCAN_KEY))
+          .catch(() => localStorage.removeItem(PENDING_SCAN_KEY))
+      })
+    } catch {
+      localStorage.removeItem(PENDING_SCAN_KEY)
+    }
+  }, [isLoaded, isSignedIn, getToken])
+
+  // Load scan history for signed-in users
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
+    getToken().then(token => {
+      if (!token) return
+      fetch(`${API_BASE}/api/scans`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data: unknown) => { if (Array.isArray(data)) setHistory(data) })
+        .catch(() => {})
+    })
+  }, [isLoaded, isSignedIn, getToken])
+
+  useEffect(() => {
     void refreshLlmStatus(true)
     const onFocus = () => { void refreshLlmStatus() }
     window.addEventListener("focus", onFocus)
@@ -348,6 +391,10 @@ export default function WorkspacePage() {
       const data = await res.json() as ScanResult
       setResult((prev) => { setPreviousResult(prev); return data })
       setSelectedIssue(null)
+      // Store scan in localStorage for session promotion (guest → account)
+      try {
+        localStorage.setItem(PENDING_SCAN_KEY, JSON.stringify({ result: data, scanned_at: new Date().toISOString() }))
+      } catch { /* localStorage may be full or unavailable */ }
       track("scan_completed", { overall_score: pct(data.scores.overall), issue_count: data.issues.length, has_simulation: data.simulation != null, keyword_match_count: data.matched_keywords.length })
       setHistory((prev) => [
         { scan_id: data.scan_id, source_id: data.source_id, scanned_at: new Date().toISOString(), overall_score: data.scores.overall },
@@ -362,14 +409,18 @@ export default function WorkspacePage() {
 
   async function loadScan(scanId: string) {
     try {
-      const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
+      const token = await getToken()
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_BASE}/api/scans/${scanId}`, { headers })
       if (res.ok) { setResult(await res.json() as ScanResult); setSelectedIssue(null); setCompareBase(null) }
     } catch (_) {}
   }
 
   async function loadScanForCompare(scanId: string) {
     try {
-      const res = await fetch(`${API_BASE}/api/scans/${scanId}`)
+      const token = await getToken()
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_BASE}/api/scans/${scanId}`, { headers })
       if (res.ok) { setCompareBase(await res.json() as ScanResult); track("compare_started", {}) }
     } catch (_) {}
   }
@@ -443,13 +494,16 @@ export default function WorkspacePage() {
           <Link href="/methodology" target="_blank" style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-dim)", letterSpacing: "0.02em" }}>
             Methodology
           </Link>
-          <button
-            onClick={() => void handleExport()}
-            disabled={exporting}
-            style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.2rem 0.6rem", background: "transparent", border: "1px solid var(--border-mid)", color: "var(--text-dim)", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1 }}
-          >
-            {exporting ? "Exporting…" : "Export"}
-          </button>
+          {isSignedIn && (
+            <button
+              onClick={() => void handleExport()}
+              disabled={exporting}
+              style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.2rem 0.6rem", background: "transparent", border: "1px solid var(--border-mid)", color: "var(--text-dim)", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1 }}
+            >
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+          )}
+          <NavUserButton />
         </div>
       </nav>
 
@@ -776,8 +830,10 @@ export default function WorkspacePage() {
             )
           })()}
 
-          {/* Fix priorities */}
-          {display.top_fixes.length > 0 && (() => {
+          {/* Fix priorities — gated for guests */}
+          {!isSignedIn ? (
+            <UpgradePrompt label="Fix priority ranking available after sign-in." />
+          ) : display.top_fixes.length > 0 && (() => {
             const LABEL_COLOR: Record<string, { bg: string; color: string }> = {
               "Must-have gap":    { bg: "rgba(140,47,78,0.1)",  color: "var(--sev-critical)" },
               "Critical section": { bg: "rgba(140,47,78,0.1)",  color: "var(--sev-critical)" },
@@ -825,8 +881,8 @@ export default function WorkspacePage() {
             )
           })()}
 
-          {/* ATS profile simulation */}
-          {display.simulation && (() => {
+          {/* ATS profile simulation — gated for guests */}
+          {display.simulation && isSignedIn && (() => {
             const sim = display.simulation!
             const VOL_COLOR: Record<string, string> = { LOW: "var(--accent)", MEDIUM: "var(--sev-high)", HIGH: "var(--sev-critical)" }
             const volColor = VOL_COLOR[sim.score_spread.volatility]
@@ -913,25 +969,29 @@ export default function WorkspacePage() {
             )
           })()}
 
-          {/* Keywords */}
-          <div style={{ padding: "1rem 2rem", borderBottom: "1px solid var(--border-subtle)" }}>
-            <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.65rem" }}>Keywords</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-              {display.matched_keywords.map((k) => (
-                <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(124,142,92,0.1)", color: "var(--accent)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(124,142,92,0.2)" }}>{k}</span>
-              ))}
-              {display.missing_keywords.map((k) => (
-                <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(140,47,78,0.08)", color: "var(--sev-critical)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(192,112,128,0.2)" }}>{"miss: " + k}</span>
-              ))}
+          {/* Keywords — gated for guests */}
+          {isSignedIn ? (
+            <div style={{ padding: "1rem 2rem", borderBottom: "1px solid var(--border-subtle)" }}>
+              <div style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.65rem" }}>Keywords</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                {display.matched_keywords.map((k) => (
+                  <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(124,142,92,0.1)", color: "var(--accent)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(124,142,92,0.2)" }}>{k}</span>
+                ))}
+                {display.missing_keywords.map((k) => (
+                  <span key={k} style={{ fontFamily: "var(--font-data)", fontSize: "0.68rem", background: "rgba(140,47,78,0.08)", color: "var(--sev-critical)", padding: "0.12rem 0.4rem", borderRadius: "2px", border: "1px solid rgba(192,112,128,0.2)" }}>{"miss: " + k}</span>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <UpgradePrompt label="Keyword gap analysis available after sign-in." />
+          )}
 
           {/* Issues */}
           <div ref={issuesSectionRef}>
             <div style={{ padding: "0.75rem 2rem", fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border-subtle)" }}>
               Issues — {display.issues.length} found
             </div>
-            {display.issues.map((issue, i) => {
+            {(isSignedIn ? display.issues : display.issues.slice(0, 3)).map((issue, i) => {
               const isSelected = selectedIssue === i
               return (
                 <div
@@ -1038,24 +1098,31 @@ export default function WorkspacePage() {
                 </div>
               )
             })}
+            {!isSignedIn && display.issues.length > 3 && (
+              <IssueGate remaining={display.issues.length - 3} />
+            )}
           </div>
 
-          {/* ATS text preview */}
-          <div style={{ padding: "1.25rem 2rem 2rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
-              <span style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-                What ATS sees
-              </span>
-              {isMock && (
-                <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--sev-medium)", padding: "0.12rem 0.4rem", border: "1px solid var(--border-mid)", borderRadius: "2px" }}>
-                  sample
+          {/* ATS text preview — gated for guests */}
+          {isSignedIn ? (
+            <div style={{ padding: "1.25rem 2rem 2rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
+                <span style={{ fontFamily: "var(--font-data)", fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
+                  What ATS sees
                 </span>
-              )}
+                {isMock && (
+                  <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--sev-medium)", padding: "0.12rem 0.4rem", border: "1px solid var(--border-mid)", borderRadius: "2px" }}>
+                    sample
+                  </span>
+                )}
+              </div>
+              <pre style={{ fontFamily: "var(--font-data)", fontSize: "0.75rem", lineHeight: 1.75, color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word", background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "2px", padding: "1.25rem", margin: 0 }}>
+                {display.ats_text_preview}
+              </pre>
             </div>
-            <pre style={{ fontFamily: "var(--font-data)", fontSize: "0.75rem", lineHeight: 1.75, color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word", background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "2px", padding: "1.25rem", margin: 0 }}>
-              {display.ats_text_preview}
-            </pre>
-          </div>
+          ) : (
+            <UpgradePrompt label="ATS text preview available after sign-in." />
+          )}
 
           </>}
 
