@@ -154,7 +154,7 @@ export default function SignUpPage() {
           flexDirection:  "column",
           justifyContent: "flex-start",
           alignItems:     "flex-start",
-          padding:        "48px 72px 0",
+          padding:        "48px 72px 260px",
           position:       "relative",
           overflow:       "hidden",
         }}
@@ -212,11 +212,11 @@ export default function SignUpPage() {
           {/* Subtext */}
           <p style={{
             fontFamily: fa,
-            fontSize:   "15px",
+            fontSize:   "16px",
             color:      "#5a5754",
             lineHeight: 1.7,
             margin:     "0 0 40px",
-            maxWidth:   400,
+            maxWidth:   420,
           }}>
             Score your résumé against any job description in 30 seconds.
           </p>
@@ -231,13 +231,13 @@ export default function SignUpPage() {
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <span style={{
                   color:      "#6b7a50",
-                  fontSize:   "12px",
-                  marginTop:  "1px",
+                  fontSize:   "13px",
+                  marginTop:  "2px",
                   flexShrink: 0,
                 }}>✓</span>
                 <span style={{
                   fontFamily: fa,
-                  fontSize:   "13px",
+                  fontSize:   "14px",
                   color:      "#4a4845",
                   lineHeight: 1.6,
                 }}>
@@ -253,16 +253,18 @@ export default function SignUpPage() {
       <div
         className="auth-right"
         style={{
-          flex:          1,
-          background:    "#F6F4F0",
-          minHeight:     "100vh",
-          display:       "flex",
-          flexDirection: "column",
-          alignItems:    "flex-start",
-          justifyContent:"flex-start",
-          paddingTop:    "72px",
-          paddingBottom: "80px",
-          position:      "relative",
+          flex:           1,
+          background:     "#F6F4F0",
+          minHeight:      "100vh",
+          display:        "flex",
+          flexDirection:  "column",
+          alignItems:     "center",
+          justifyContent: "flex-start",
+          paddingTop:     "72px",
+          paddingBottom:  "80px",
+          paddingLeft:    "40px",
+          paddingRight:   "40px",
+          position:       "relative",
         }}
       >
         {/* Mobile wordmark */}
@@ -290,9 +292,8 @@ export default function SignUpPage() {
         <div
           className="auth-form-rail"
           style={{
-            marginLeft: "14%",
-            width:      "100%",
-            maxWidth:   "360px",
+            width:    "100%",
+            maxWidth: "380px",
           }}
         >
           {/* Eyebrow */}
