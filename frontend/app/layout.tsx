@@ -64,6 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 
-  if (!clerkKey) return inner
-  return <ClerkProvider publishableKey={clerkKey}>{inner}</ClerkProvider>
+  return (
+    <ClerkProvider publishableKey={clerkKey ?? ""}>
+      {inner}
+    </ClerkProvider>
+  )
 }

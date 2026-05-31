@@ -6,18 +6,25 @@ const fu = "var(--font-unbounded, Unbounded, sans-serif)"
 
 const clerkAppearance = {
   variables: {
-    colorBackground:      "transparent",
-    colorInputBackground: "#FFFFFF",
+    colorBackground:      "#FFFFFF",
+    colorInputBackground: "#FAFAFA",
     colorInputText:       "#0D0C0A",
     colorText:            "#0D0C0A",
     colorTextSecondary:   "#858585",
     colorPrimary:         "#0D0C0A",
     colorDanger:          "#8c2f4e",
-    borderRadius:         "8px",
+    borderRadius:         "2px",
     fontFamily:           fa,
-    fontSize:             "15px",
+    fontSize:             "14px",
   },
   elements: {
+    cardBox: {
+      backgroundColor: "transparent",
+      boxShadow:       "none",
+      border:          "none",
+      borderRadius:    "0",
+      width:           "100%",
+    },
     card: {
       backgroundColor: "transparent",
       border:          "none",
@@ -25,67 +32,85 @@ const clerkAppearance = {
       borderRadius:    "0",
       padding:         "0",
       width:           "100%",
-      maxWidth:        "400px",
     },
     headerTitle: {
-      fontFamily: fa,
-      fontWeight: "600",
-      fontSize:   "24px",
-      color:      "#0D0C0A",
+      display: "none",
     },
     headerSubtitle: {
-      fontFamily: fa,
-      color:      "#858585",
-      fontSize:   "14px",
+      display: "none",
+    },
+    header: {
+      display: "none",
     },
     formFieldLabel: {
       fontFamily:    fa,
-      color:         "#0D0C0A",
-      fontSize:      "13px",
+      color:         "#474546",
+      fontSize:      "11px",
       fontWeight:    "500",
       textTransform: "uppercase" as const,
-      letterSpacing: "0.06em",
+      letterSpacing: "0.1em",
+      marginBottom:  "6px",
     },
     formFieldInput: {
-      backgroundColor: "#FFFFFF",
-      border:          "1px solid #EBEBEB",
-      borderRadius:    "8px",
+      backgroundColor: "#FAFAFA",
+      border:          "1px solid #E0E0E0",
+      borderRadius:    "2px",
       color:           "#0D0C0A",
       fontFamily:      fa,
-      fontSize:        "15px",
-      height:          "48px",
+      fontSize:        "14px",
+      height:          "44px",
+      padding:         "0 12px",
     },
     formButtonPrimary: {
       backgroundColor: "#0D0C0A",
       color:           "#FFFFFF",
       fontFamily:      fa,
       fontWeight:      "500",
-      fontSize:        "15px",
-      borderRadius:    "100px",
-      height:          "52px",
+      fontSize:        "14px",
+      borderRadius:    "2px",
+      height:          "46px",
+      letterSpacing:   "0.02em",
+      border:          "none",
     },
     socialButtonsBlockButton: {
-      backgroundColor: "#FFFFFF",
-      border:          "1px solid #EBEBEB",
-      borderRadius:    "8px",
+      backgroundColor: "#FAFAFA",
+      border:          "1px solid #E0E0E0",
+      borderRadius:    "2px",
       color:           "#0D0C0A",
       fontFamily:      fa,
-      height:          "44px",
+      height:          "42px",
+      fontSize:        "13px",
     },
     socialButtonsBlockButtonText: {
       color:      "#0D0C0A",
       fontFamily: fa,
-      fontSize:   "14px",
+      fontSize:   "13px",
     },
-    dividerLine: { backgroundColor: "#EBEBEB" },
-    dividerText: { color: "#B3B3B3", fontFamily: fa, fontSize: "12px" },
+    dividerLine: {
+      backgroundColor: "#E8E8E8",
+    },
+    dividerText: {
+      color:         "#B3B3B3",
+      fontFamily:    fa,
+      fontSize:      "11px",
+      letterSpacing: "0.06em",
+    },
     footerActionLink: {
       color:          "#0D0C0A",
       fontWeight:     "600",
+      fontFamily:     fa,
       textDecoration: "underline",
     },
-    footerActionText: { color: "#858585", fontFamily: fa },
+    footerActionText: {
+      color:      "#858585",
+      fontFamily: fa,
+      fontSize:   "13px",
+    },
+    footerAction: {
+      marginTop: "20px",
+    },
     rootBox: { width: "100%" },
+    formFieldInputShowPasswordButton: { color: "#858585" },
   },
 }
 
@@ -95,7 +120,7 @@ export default function SignInPage() {
       <style>{`
         @media (max-width: 767px) {
           .auth-left  { display: none !important; }
-          .auth-right { width: 100% !important; padding: 40px 24px !important; }
+          .auth-right { width: 100% !important; padding: 48px 24px !important; }
           .auth-mobile-wordmark { display: block !important; }
         }
       `}</style>
@@ -117,7 +142,7 @@ export default function SignInPage() {
           overflow: "hidden",
         }}
       >
-        {/* Faint background texture */}
+        {/* Ghost score texture */}
         <div
           aria-hidden
           style={{
@@ -203,15 +228,26 @@ export default function SignInPage() {
         className="auth-right"
         style={{
           flex: 1,
-          background: "#F4F4F4",
+          background: "#FFFFFF",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          padding: "60px 48px",
+          padding: "60px 40px",
+          position: "relative",
         }}
       >
+        {/* Thin olive top accent */}
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "2px",
+          background: "#7c8e5c",
+        }} />
+
         {/* Mobile-only wordmark */}
         <Link
           href="/"
@@ -230,7 +266,45 @@ export default function SignInPage() {
           TraceRank
         </Link>
 
-        <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ width: "100%", maxWidth: 380 }}>
+          {/* Form header */}
+          <div style={{ marginBottom: "28px" }}>
+            <p style={{
+              fontFamily: fa,
+              fontSize: "11px",
+              fontWeight: 500,
+              color: "#7c8e5c",
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              margin: "0 0 10px",
+            }}>
+              Sign in
+            </p>
+            <h2 style={{
+              fontFamily: fa,
+              fontSize: "22px",
+              fontWeight: 600,
+              color: "#0D0C0A",
+              margin: "0 0 6px",
+              lineHeight: 1.2,
+              letterSpacing: "-0.01em",
+            }}>
+              Welcome back
+            </h2>
+            <p style={{
+              fontFamily: fa,
+              fontSize: "14px",
+              color: "#858585",
+              margin: 0,
+              lineHeight: 1.5,
+            }}>
+              Continue to your résumé analysis.
+            </p>
+          </div>
+
+          {/* Thin divider */}
+          <div style={{ height: "1px", background: "#F0F0F0", marginBottom: "24px" }} />
+
           <SignIn appearance={clerkAppearance} />
         </div>
       </div>
