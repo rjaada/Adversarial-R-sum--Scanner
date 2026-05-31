@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Show } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NavUserButton } from '@/components/NavUserButton'
 // --- Hooks ---
@@ -99,6 +99,7 @@ function ScoreArtifact({ loaded }: { loaded: boolean }) {
 
 // --- Page ---
 export default function LandingPage() {
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -503,13 +504,13 @@ export default function LandingPage() {
         <div className="nav-links">
           <Link href="/methodology" className="nav-link hide-sm">Methodology</Link>
           <a href="#how-it-works" className="nav-link hide-sm">How it works</a>
-          <Show when="signed-out">
-            <Link href="/sign-in" className="nav-link">Sign in</Link>
-            <Link href="/sign-up" className="nav-btn-accent">Get started</Link>
-          </Show>
-          <Show when="signed-in">
-            <NavUserButton />
-          </Show>
+          {authLoaded && !isSignedIn && (
+            <>
+              <Link href="/sign-in" className="nav-link">Sign in</Link>
+              <Link href="/sign-up" className="nav-btn-accent">Get started</Link>
+            </>
+          )}
+          {authLoaded && isSignedIn && <NavUserButton />}
         </div>
       </nav>
 
