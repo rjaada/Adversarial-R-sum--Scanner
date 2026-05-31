@@ -23,7 +23,7 @@ export default function AccountPage() {
   const connectedProviders = user.externalAccounts.map(a => a.provider)
 
   async function handleSaveName() {
-    if (!displayName.trim()) return
+    if (!displayName.trim() || !user) return
     setSaving(true)
     try {
       const parts = displayName.trim().split(" ")
