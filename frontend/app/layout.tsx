@@ -30,22 +30,27 @@ export const metadata: Metadata = {
   description: "See exactly where ATS systems and LLM screeners will reject your résumé.",
 }
 
+const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ClerkProvider>
-      <html
-        lang="en"
-        data-theme="dark"
-        suppressHydrationWarning
-        className={`${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`}
-      >
-        <body>
-          <ThemeProvider initial="dark">
-            {children}
-          </ThemeProvider>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+  const htmlClass = `${cormorant.variable} ${figtree.variable} ${ibmPlexMono.variable}`
+
+  const inner = (
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={htmlClass}>
+      <body>
+        <ThemeProvider initial="dark">
+          {children}
+        </ThemeProvider>
+        <Analytics />
+      </body>
+    </html>
   )
+
+  // ClerkProvider throws at build time if the publishable key is missing.
+  // When NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set (e.g. during a build
+  // before env vars are configured), skip ClerkProvider so the build succeeds.
+  // Auth hooks will be no-ops until the key is present at runtime.
+  if (!clerkKey) return inner
+
+  return <ClerkProvider publishableKey={clerkKey}>{inner}</ClerkProvider>
 }
