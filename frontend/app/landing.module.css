@@ -172,10 +172,11 @@
   display: grid;
   grid-template-columns: 55fr 45fr;
   gap: 64px;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
 }
-.heroLeft { display: flex; flex-direction: column; gap: 0; }
+.heroLeft  { display: flex; flex-direction: column; gap: 0; }
+.heroRight { padding-top: 80px; }
 .heroEyebrow {
   font-family: var(--f-body);
   font-size: 11px;
@@ -421,11 +422,11 @@
 /* ── Section containers ──────────────────────────────────────────────────── */
 .sectionWhite {
   background: var(--c-white);
-  padding: 120px 0;
+  padding: 96px 0;
 }
 .sectionAlt {
   background: var(--c-alt);
-  padding: 120px 0;
+  padding: 96px 0;
 }
 .sectionInner {
   max-width: 1440px;
@@ -483,6 +484,46 @@
   font-weight: 400;
   color: var(--c-mid);
   line-height: 1.75;
+}
+
+/* ── How it works ───────────────────────────────────────────────────────── */
+.howSteps {
+  display: grid;
+  grid-template-columns: 1fr 40px 1fr 40px 1fr;
+  align-items: start;
+  gap: 0;
+}
+.howStep { display: flex; flex-direction: column; gap: 12px; }
+.howArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 24px;
+  font-size: 20px;
+  color: var(--c-silver);
+  user-select: none;
+}
+.howStepNum {
+  font-family: var(--f-body);
+  font-size: 48px;
+  font-weight: 600;
+  color: var(--c-border);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.howStepTitle {
+  font-family: var(--f-body);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--c-dark);
+  line-height: 1.3;
+}
+.howStepDesc {
+  font-family: var(--f-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--c-muted);
+  line-height: 1.7;
 }
 
 /* ── Editorial break ─────────────────────────────────────────────────────── */
@@ -564,18 +605,19 @@
 /* ── Problem section ────────────────────────────────────────────────────── */
 .problemGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 55fr 45fr;
   gap: 80px;
   align-items: start;
 }
 .problemQuote {
-  font-family: var(--f-display);
-  font-size: clamp(24px, 3vw, 40px);
-  font-weight: 400;
+  font-family: var(--f-body);
+  font-size: 32px;
+  font-weight: 600;
   color: var(--c-dark);
   line-height: 1.2;
   margin: 0;
-  letter-spacing: -0.015em;
+  font-style: italic;
+  letter-spacing: -0.01em;
 }
 .problemBody {
   font-family: var(--f-body);
@@ -592,6 +634,7 @@
   border-radius: 16px;
   padding: 32px;
   max-width: 680px;
+  margin: 0 auto;
   box-shadow: 0 2px 16px rgba(0,0,0,0.06);
 }
 .anatomyMeta {
@@ -926,7 +969,10 @@
   .editorialAnnotLeft, .editorialAnnotRight { display: none; }
   .editorialLine { font-size: clamp(32px, 10vw, 56px); }
 
-  .sectionWhite, .sectionAlt { padding: 72px 0; }
+  .sectionWhite, .sectionAlt { padding: 64px 0; }
+  .howSteps { grid-template-columns: 1fr; gap: 32px; }
+  .howArrow { display: none; }
+  .heroRight { padding-top: 0; }
   .sectionInner { padding: 0 24px; }
 
   .problemGrid { grid-template-columns: 1fr; gap: 40px; }

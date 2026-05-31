@@ -24,9 +24,10 @@ function MSection({
     <section id={id} style={{ paddingTop: "2.75rem" }}>
       <h2
         style={{
+          fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
           fontSize: "1.1rem",
           fontWeight: 600,
-          color: "#1f1d1a",
+          color: "#0D0C0A",
           margin: "0 0 1rem",
           letterSpacing: "-0.01em",
         }}
@@ -41,9 +42,10 @@ function MSection({
       </h2>
       <div
         style={{
+          fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
           fontSize: "0.925rem",
           lineHeight: 1.7,
-          color: "#1f1d1a",
+          color: "#474546",
         }}
       >
         {children}
@@ -81,9 +83,10 @@ function Callout({
         padding: "0.85rem 1.1rem",
         margin: "1.25rem 0",
         borderRadius: "0 4px 4px 0",
+        fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
         fontSize: "0.875rem",
         lineHeight: 1.7,
-        color: "#1f1d1a",
+        color: "#474546",
       }}
     >
       {title && (
@@ -112,12 +115,14 @@ function MTable({
   headers: string[]
   rows: (string | ReactNode)[][]
 }) {
+  const f = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
   return (
-    <div style={{ overflowX: "auto", margin: "1.25rem 0" }}>
+    <div style={{ overflowX: "auto", margin: "1.25rem 0", background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "8px", padding: "0 24px" }}>
       <table
         style={{
           width: "100%",
           borderCollapse: "collapse",
+          fontFamily: f,
           fontSize: "0.855rem",
           lineHeight: 1.55,
         }}
@@ -129,14 +134,15 @@ function MTable({
                 key={i}
                 style={{
                   textAlign: "left",
-                  padding: "0.4rem 0.8rem",
-                  borderBottom: "2px solid #d9d3ca",
-                  color: "#6f6b64",
-                  fontWeight: 500,
+                  padding: "12px 8px",
+                  borderBottom: "1px solid #EBEBEB",
+                  color: "#0D0C0A",
+                  fontWeight: 600,
                   fontSize: "0.7rem",
-                  letterSpacing: "0.06em",
+                  letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
+                  fontFamily: f,
                 }}
               >
                 {h}
@@ -146,16 +152,17 @@ function MTable({
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri}>
+            <tr key={ri} style={{ background: ri % 2 === 1 ? "#FAFAFA" : "#FFFFFF" }}>
               {row.map((cell, ci) => (
                 <td
                   key={ci}
                   style={{
-                    padding: "0.55rem 0.8rem",
+                    padding: "10px 8px",
                     verticalAlign: "top",
-                    borderBottom: "1px solid #d9d3ca",
-                    color: ci === 0 ? "#1f1d1a" : "#6f6b64",
+                    borderBottom: "1px solid #EBEBEB",
+                    color: ci === 0 ? "#0D0C0A" : "#474546",
                     fontWeight: ci === 0 ? 500 : 400,
+                    fontFamily: f,
                   }}
                 >
                   {cell}
@@ -184,90 +191,72 @@ const TOC = [
 ]
 
 export default function MethodologyPage() {
+  const albertSans = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
   return (
-    <div style={{ background: "#f6f3ee", minHeight: "100vh", color: "#1f1d1a" }}>
+    <div style={{ background: "#f6f3ee", minHeight: "100vh", color: "#1f1d1a", fontFamily: albertSans }}>
 
-      {/* Nav */}
+      {/* Nav — matches site-wide white nav */}
       <nav
         style={{
-          borderBottom: "1px solid #d9d3ca",
-          padding: "0 1.75rem",
-          height: 52,
+          borderBottom: "1px solid #EBEBEB",
+          padding: "0 80px",
+          height: 64,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "#fbfaf7",
+          background: "#FFFFFF",
           position: "sticky",
           top: 0,
           zIndex: 10,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
           <Link
             href="/"
             style={{
-              fontFamily: "Georgia, serif",
-              fontSize: "1.05rem",
+              fontFamily: albertSans,
+              fontSize: "1rem",
               fontWeight: 600,
-              color: "#1f1d1a",
+              color: "#0D0C0A",
               textDecoration: "none",
               letterSpacing: "-0.01em",
             }}
           >
             TraceRank
           </Link>
-          <span style={{ color: "#d9d3ca", fontSize: "0.9rem" }}>·</span>
-          <span style={{ fontSize: "0.8rem", color: "#6f6b64" }}>Methodology</span>
+          <span style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#474546" }}>Methodology</span>
         </div>
-        <Link
-          href="/workspace"
-          style={{
-            color: "#0f5c52",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            textDecoration: "none",
-          }}
-        >
-          Open scanner →
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <Link href="/pricing" style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#474546", textDecoration: "none" }}>Pricing</Link>
+          <Link
+            href="/workspace"
+            style={{
+              fontFamily: albertSans,
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              color: "#FFFFFF",
+              background: "#0D0C0A",
+              borderRadius: "100px",
+              padding: "8px 18px",
+              textDecoration: "none",
+            }}
+          >
+            Open scanner →
+          </Link>
+        </div>
       </nav>
 
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "3rem 1.5rem 6rem" }}>
 
         {/* Header */}
         <header style={{ marginBottom: "2.5rem" }}>
-          <p
-            style={{
-              fontSize: "0.68rem",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "#6f6b64",
-              margin: "0 0 0.75rem",
-            }}
-          >
-            Scoring methodology
+          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7c8e5c", margin: "0 0 0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span>«</span> Scoring methodology
           </p>
-          <h1
-            style={{
-              fontSize: "1.9rem",
-              fontWeight: 700,
-              color: "#1f1d1a",
-              margin: "0 0 0.8rem",
-              lineHeight: 1.2,
-              letterSpacing: "-0.02em",
-            }}
-          >
+          <h1 style={{ fontFamily: albertSans, fontSize: "1.9rem", fontWeight: 700, color: "#0D0C0A", margin: "0 0 0.8rem", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
             How scoring works
           </h1>
-          <p
-            style={{
-              color: "#6f6b64",
-              margin: 0,
-              fontSize: "0.975rem",
-              lineHeight: 1.7,
-              maxWidth: 620,
-            }}
-          >
+          <p style={{ fontFamily: albertSans, color: "#474546", margin: 0, fontSize: "1rem", lineHeight: 1.7, maxWidth: 620 }}>
             A complete, honest description of how TraceRank analyzes résumés, computes
             scores, and generates findings. No claims are made beyond what the
             rules-based heuristic model actually computes.
@@ -277,41 +266,15 @@ export default function MethodologyPage() {
         {/* Table of contents */}
         <nav
           aria-label="Contents"
-          style={{
-            background: "#fbfaf7",
-            border: "1px solid #d9d3ca",
-            borderRadius: 5,
-            padding: "1rem 1.25rem",
-            marginBottom: "2.25rem",
-            fontSize: "0.875rem",
-          }}
+          style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "2.25rem", fontFamily: albertSans, fontSize: "0.875rem" }}
         >
-          <p
-            style={{
-              fontSize: "0.68rem",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "#6f6b64",
-              margin: "0 0 0.6rem",
-              fontWeight: 500,
-            }}
-          >
+          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 0.6rem", fontWeight: 500 }}>
             Contents
           </p>
-          <ol
-            style={{
-              margin: 0,
-              paddingLeft: "1.25rem",
-              display: "grid",
-              gap: "0.3rem",
-            }}
-          >
+          <ol style={{ margin: 0, paddingLeft: "1.25rem", display: "grid", gap: "0.3rem" }}>
             {TOC.map(({ id, label }) => (
               <li key={id}>
-                <a
-                  href={`#${id}`}
-                  style={{ color: "#0f5c52", textDecoration: "none" }}
-                >
+                <a href={`#${id}`} style={{ fontFamily: albertSans, color: "#0D0C0A", textDecoration: "none" }}>
                   {label}
                 </a>
               </li>

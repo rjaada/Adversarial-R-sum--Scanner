@@ -1,201 +1,133 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
-const STYLES = `
-  .pricing-btn-free {
-    display: block; text-align: center;
-    font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
-    color: var(--text-primary);
-    border: 1px solid var(--border-mid);
-    border-radius: 2px; padding: 0.75rem;
-    text-decoration: none;
-    transition: background 0.2s ease, border-color 0.2s ease;
-  }
-  .pricing-btn-free:hover {
-    background: var(--bg-elevated);
-    border-color: var(--text-dim);
-  }
-  .pricing-btn-pro {
-    display: block; text-align: center;
-    font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
-    color: #0d0c0a;
-    background: #8fa85a;
-    border-radius: 2px; padding: 0.75rem;
-    text-decoration: none;
-    transition: background 0.2s ease;
-  }
-  .pricing-btn-pro:hover { background: #9db868; }
-`
-
 export const metadata: Metadata = {
   title: "Pricing — TraceRank",
   description: "Free and Pro plans for TraceRank. No scam pricing. No fake AI features.",
 }
 
-const FREE_FEATURES = [
-  "Unlimited scans",
-  "Full score breakdown — 5 weighted sub-scores",
-  "Issue evidence and fix patterns",
-  "Keyword gap analysis",
-  "ATS text preview",
-  "ATS profile simulation",
-]
+const f = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 
-const FREE_EXCLUDED = [
-  "Scan history",
-  "Compare mode",
-  "PDF export",
-  "AI rewrite suggestions",
-]
+const FREE_FEATURES    = ["Unlimited scans", "Full score breakdown", "Issue evidence & fix patterns", "Keyword gap analysis", "ATS text preview", "ATS profile simulation"]
+const FREE_EXCLUDED    = ["Scan history", "Compare mode", "PDF export", "AI rewrite suggestions"]
+const PRO_FEATURES     = ["Everything in Free", "Unlimited scan history", "Compare mode", "PDF export", "AI rewrite suggestions — per issue"]
 
-const PRO_FEATURES = [
-  "Everything in Free",
-  "Scan history — unlimited",
-  "Compare mode — track your progress",
-  "PDF export — shareable report",
-  "AI rewrite suggestions — per issue",
-]
+const STYLES = `
+  .pr-btn-free {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 52px;
+    font-family: ${f};
+    font-size: 15px; font-weight: 500;
+    color: #0D0C0A;
+    background: transparent;
+    border: 1.5px solid #0D0C0A;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+  }
+  .pr-btn-free:hover { background: #0D0C0A; color: #FFFFFF; }
+  .pr-btn-pro {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 52px;
+    font-family: ${f};
+    font-size: 15px; font-weight: 500;
+    color: #FFFFFF;
+    background: #0D0C0A;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: background 0.2s ease;
+    cursor: pointer;
+  }
+  .pr-btn-pro:hover { background: #474546; }
+`
 
 export default function PricingPage() {
   return (
-    <div style={{ background: "var(--bg-base)", minHeight: "100vh", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
+    <div style={{ background: "#F4F4F4", minHeight: "100vh", color: "#0D0C0A", fontFamily: f }}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
-      <nav style={{
-        position: "sticky", top: 0, zIndex: 50,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 2rem", height: 58,
-        background: "rgba(13,12,10,0.96)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid var(--border-subtle)",
-      }}>
-        <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 400, color: "var(--text-primary)", textDecoration: "none" }}>
+      {/* Nav */}
+      <nav style={{ height: 64, background: "#FFFFFF", borderBottom: "1px solid #EBEBEB", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 80px", position: "sticky", top: 0, zIndex: 100 }}>
+        <Link href="/" style={{ fontFamily: f, fontSize: "1rem", fontWeight: 600, color: "#0D0C0A", textDecoration: "none", letterSpacing: "-0.01em" }}>
           TraceRank
         </Link>
-        <Link href="/workspace" style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--accent)", textDecoration: "none" }}>
-          Scan résumé →
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
+          <Link href="/methodology" style={{ fontFamily: f, fontSize: "0.875rem", color: "#474546", textDecoration: "none" }}>Methodology</Link>
+          <Link href="/workspace" style={{ fontFamily: f, fontSize: "0.875rem", fontWeight: 500, color: "#FFFFFF", background: "#0D0C0A", borderRadius: "100px", padding: "8px 18px", textDecoration: "none" }}>
+            Scan résumé →
+          </Link>
+        </div>
       </nav>
 
-      <main style={{ maxWidth: 860, margin: "0 auto", padding: "7rem 2rem 8rem" }}>
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: "80px 24px 100px" }}>
 
-        <header style={{ textAlign: "center", marginBottom: "4rem" }}>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--accent)", margin: "0 0 1rem" }}>
-            Simple pricing
-          </p>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400, color: "var(--text-primary)", lineHeight: 1.1, margin: "0 0 1.25rem", letterSpacing: "-0.015em" }}>
-            No scam pricing.<br />No fake AI features.
-          </h1>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", fontWeight: 300, lineHeight: 1.75, maxWidth: 500, margin: "0 auto" }}>
-            The core scanner is free. Pro adds history, comparison, and export —
-            the features that make iteration useful.
-          </p>
-        </header>
+        {/* Section label */}
+        <p style={{ fontFamily: f, fontSize: "11px", fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 48px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ color: "#7c8e5c" }}>«</span> Pricing
+        </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", alignItems: "start" }}>
 
-          {/* Free */}
-          <div style={{
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "3px",
-            padding: "2rem",
-            background: "var(--bg-elevated)",
-          }}>
-            <div style={{ marginBottom: "1.75rem" }}>
-              <div style={{ fontFamily: "var(--font-data)", fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-                Free
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-                <span style={{ fontFamily: "var(--font-data)", fontSize: "2.5rem", fontWeight: 400, color: "var(--text-primary)", lineHeight: 1 }}>$0</span>
-                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--text-dim)" }}>forever</span>
-              </div>
+          {/* Free card */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: 16, padding: 32, display: "flex", flexDirection: "column", gap: 0 }}>
+            <p style={{ fontFamily: f, fontSize: "12px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 12px" }}>Free</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 20 }}>
+              <span style={{ fontFamily: f, fontSize: "56px", fontWeight: 600, color: "#0D0C0A", lineHeight: 1 }}>$0</span>
+              <span style={{ fontFamily: f, fontSize: "16px", color: "#858585" }}>forever</span>
             </div>
-
-            <div style={{ height: "1px", background: "var(--border-subtle)", margin: "0 0 1.5rem" }} />
-
-            <ul style={{ listStyle: "none", margin: "0 0 1.75rem", padding: 0, display: "grid", gap: "0.6rem" }}>
-              {FREE_FEATURES.map(f => (
-                <li key={f} style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", alignItems: "baseline", gap: "0.55rem" }}>
-                  <span style={{ color: "var(--accent)", fontSize: "0.7rem", flexShrink: 0 }}>✓</span>
-                  {f}
+            <div style={{ height: 1, background: "#EBEBEB", marginBottom: 20 }} />
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {FREE_FEATURES.map(f_ => (
+                <li key={f_} style={{ fontFamily: f, fontSize: "15px", color: "#0D0C0A", display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={{ color: "#7c8e5c", fontSize: "12px", flexShrink: 0 }}>✓</span>{f_}
                 </li>
               ))}
-              {FREE_EXCLUDED.map(f => (
-                <li key={f} style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--text-dim)", display: "flex", alignItems: "baseline", gap: "0.55rem" }}>
-                  <span style={{ fontSize: "0.7rem", flexShrink: 0, opacity: 0.4 }}>–</span>
-                  {f}
+              {FREE_EXCLUDED.map(f_ => (
+                <li key={f_} style={{ fontFamily: f, fontSize: "14px", color: "#B3B3B3", display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={{ flexShrink: 0 }}>–</span>{f_}
                 </li>
               ))}
             </ul>
-
-            <Link href="/workspace" className="pricing-btn-free">
-              Start scanning
-            </Link>
+            <Link href="/workspace" className="pr-btn-free">Start scanning</Link>
           </div>
 
-          {/* Pro */}
-          <div style={{
-            border: "1px solid #8fa85a",
-            borderRadius: "3px",
-            padding: "2rem",
-            background: "var(--bg-elevated)",
-            position: "relative",
-          }}>
-            <div style={{
-              position: "absolute", top: "-1px", right: "1.5rem",
-              fontFamily: "var(--font-data)", fontSize: "0.52rem", letterSpacing: "0.1em",
-              textTransform: "uppercase", color: "#0d0c0a",
-              background: "#8fa85a", padding: "0.2rem 0.55rem", borderRadius: "0 0 2px 2px",
-            }}>
-              Most popular
+          {/* Pro card */}
+          <div style={{ background: "#FFFFFF", border: "2px solid #0D0C0A", borderRadius: 16, padding: 32, display: "flex", flexDirection: "column", gap: 0, position: "relative", marginTop: 20 }}>
+            <div style={{ position: "absolute", top: -20, left: "50%", transform: "translateX(-50%)", background: "#0D0C0A", color: "#FFFFFF", fontFamily: f, fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", borderRadius: "100px", padding: "6px 16px", whiteSpace: "nowrap" }}>
+              MOST POPULAR
             </div>
-
-            <div style={{ marginBottom: "1.75rem" }}>
-              <div style={{ fontFamily: "var(--font-data)", fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.5rem" }}>
-                Pro
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-                <span style={{ fontFamily: "var(--font-data)", fontSize: "2.5rem", fontWeight: 400, color: "var(--text-primary)", lineHeight: 1 }}>$9</span>
-                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--text-dim)" }}>/ month</span>
-              </div>
+            <p style={{ fontFamily: f, fontSize: "12px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 12px" }}>Pro</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 20 }}>
+              <span style={{ fontFamily: f, fontSize: "56px", fontWeight: 600, color: "#0D0C0A", lineHeight: 1 }}>$9</span>
+              <span style={{ fontFamily: f, fontSize: "16px", color: "#858585" }}>/ month</span>
             </div>
-
-            <div style={{ height: "1px", background: "var(--border-subtle)", margin: "0 0 1.5rem" }} />
-
-            <ul style={{ listStyle: "none", margin: "0 0 1.75rem", padding: 0, display: "grid", gap: "0.6rem" }}>
-              {PRO_FEATURES.map(f => (
-                <li key={f} style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", alignItems: "baseline", gap: "0.55rem" }}>
-                  <span style={{ color: "var(--accent)", fontSize: "0.7rem", flexShrink: 0 }}>✓</span>
-                  {f}
+            <div style={{ height: 1, background: "#EBEBEB", marginBottom: 20 }} />
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {PRO_FEATURES.map(f_ => (
+                <li key={f_} style={{ fontFamily: f, fontSize: "15px", color: "#0D0C0A", display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={{ color: "#7c8e5c", fontSize: "12px", flexShrink: 0 }}>✓</span>{f_}
                 </li>
               ))}
             </ul>
-
-            <Link href="/account/billing" className="pricing-btn-pro">
-              Get Pro — coming soon
-            </Link>
+            <Link href="/account/billing" className="pr-btn-pro">Get Pro — coming soon →</Link>
           </div>
-
         </div>
 
-        <p style={{ marginTop: "2.5rem", textAlign: "center", fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-dim)", fontStyle: "italic", lineHeight: 1.65 }}>
-          Scores reflect structural and keyword analysis only. TraceRank does not predict hiring outcomes
-          and does not simulate any real ATS vendor.{" "}
-          <Link href="/methodology" style={{ color: "var(--text-dim)", borderBottom: "1px solid var(--border-mid)", paddingBottom: "1px" }}>
-            Read the methodology →
-          </Link>
+        <p style={{ fontFamily: f, fontSize: "13px", fontStyle: "italic", color: "#B3B3B3", textAlign: "center", marginTop: 28, lineHeight: 1.65 }}>
+          TraceRank does not predict hiring outcomes. Scores reflect structural and keyword analysis only.{" "}
+          <Link href="/methodology" style={{ color: "#B3B3B3", textDecoration: "underline", textUnderlineOffset: "2px" }}>Read the methodology →</Link>
         </p>
 
       </main>
 
-      <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "1.5rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--text-dim)" }}>© 2026 TraceRank</span>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
-          <Link href="/privacy" style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--text-dim)", textDecoration: "none" }}>Privacy</Link>
-          <Link href="/methodology" style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--text-dim)", textDecoration: "none" }}>Methodology</Link>
+      <footer style={{ borderTop: "1px solid #EBEBEB", padding: "24px 80px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F4F4F4" }}>
+        <span style={{ fontFamily: f, fontSize: "13px", color: "#858585" }}>© 2026 TraceRank</span>
+        <div style={{ display: "flex", gap: "24px" }}>
+          <Link href="/methodology" style={{ fontFamily: f, fontSize: "13px", color: "#474546", textDecoration: "none" }}>Methodology</Link>
+          <Link href="/privacy" style={{ fontFamily: f, fontSize: "13px", color: "#474546", textDecoration: "none" }}>Privacy</Link>
         </div>
       </footer>
-
     </div>
   )
 }

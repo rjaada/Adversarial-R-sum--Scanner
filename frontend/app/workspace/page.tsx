@@ -323,6 +323,13 @@ export default function WorkspacePage() {
   const isMock = result === null
 
   // Session promotion: when user signs in, claim any pending guest scan
+  // light body background while in workspace
+  useEffect(() => {
+    const prev = document.body.style.background
+    document.body.style.background = '#F4F4F4'
+    return () => { document.body.style.background = prev }
+  }, [])
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     const raw = localStorage.getItem(PENDING_SCAN_KEY)
@@ -472,33 +479,59 @@ export default function WorkspacePage() {
     if (f) setFile(f)
   }
 
-  return (
-    <div style={{ background: "var(--bg-base)", minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>
+  // Light theme CSS variable overrides — all existing var(--*) inline styles
+  // resolve to these values instead of the dark globals.css defaults.
+  const lightVars = {
+    '--bg-base':       '#F4F4F4',
+    '--bg-surface':    '#FFFFFF',
+    '--bg-elevated':   '#FAFAFA',
+    '--bg-muted':      '#F4F4F4',
+    '--bg-accent-low': '#F0F4EC',
+    '--border-subtle': '#EBEBEB',
+    '--border-mid':    '#DCDCDC',
+    '--text-primary':  '#0D0C0A',
+    '--text-secondary':'#474546',
+    '--text-dim':      '#858585',
+    '--accent':        '#7c8e5c',
+    '--accent-hover':  '#8fa85a',
+    '--sev-critical':  '#8c2f4e',
+    '--sev-high':      '#9a4d22',
+    '--sev-medium':    '#7a6e28',
+    '--sev-low':       '#858585',
+    '--mineral':       '#4a4640',
+    '--font-body':     "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
+    '--font-display':  "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
+    '--font-data':     "var(--font-mono, 'IBM Plex Mono', monospace)",
+  } as React.CSSProperties
 
-      {/* Nav */}
-      <nav className="ws-nav">
-        <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 400, color: "var(--text-primary)", letterSpacing: "0.01em" }}>
+  return (
+    <div style={{ ...lightVars, background: '#F4F4F4', minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)" }}>
+
+      {/* Nav — matches landing page white nav */}
+      <nav className="ws-nav" style={{ background: '#FFFFFF', borderBottom: '1px solid #EBEBEB', backdropFilter: 'none' }}>
+        <Link href="/" style={{ fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)", fontSize: "1rem", fontWeight: 600, color: "#0D0C0A", letterSpacing: "-0.01em", textDecoration: "none" }}>
           TraceRank
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <Link href="/methodology" style={{ fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)", fontSize: "0.875rem", color: "#474546", textDecoration: "none" }}>Methodology</Link>
+          <Link href="/pricing" style={{ fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)", fontSize: "0.875rem", color: "#474546", textDecoration: "none" }}>Pricing</Link>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginLeft: "auto" }}>
           {result && (
-            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.65rem", color: "var(--text-dim)", letterSpacing: "0.06em", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.65rem", color: "#858585", letterSpacing: "0.06em", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {display.source_id}
             </span>
           )}
           {isMock && (
-            <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", color: "var(--sev-medium)", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.12rem 0.4rem", border: "1px solid var(--border-mid)", borderRadius: "2px" }}>
+            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.56rem", color: "#7a6e28", letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.12rem 0.4rem", border: "1px solid #DCDCDC", borderRadius: "4px", background: "#FFFDE8" }}>
               sample
             </span>
           )}
-          <Link href="/methodology" target="_blank" style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-dim)", letterSpacing: "0.02em" }}>
-            Methodology
-          </Link>
           {isSignedIn && (
             <button
               onClick={() => void handleExport()}
               disabled={exporting}
-              style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", padding: "0.2rem 0.6rem", background: "transparent", border: "1px solid var(--border-mid)", color: "var(--text-dim)", borderRadius: "2px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1 }}
+              style={{ fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)", fontSize: "0.78rem", padding: "6px 14px", background: "transparent", border: "1px solid #DCDCDC", color: "#474546", borderRadius: "100px", cursor: exporting ? "default" : "pointer", opacity: exporting ? 0.5 : 1 }}
             >
               {exporting ? "Exporting…" : "Export"}
             </button>
@@ -520,7 +553,7 @@ export default function WorkspacePage() {
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              style={{ border: `1px ${file ? "solid" : "dashed"} ${file ? "var(--accent)" : "var(--border-mid)"}`, borderRadius: "3px", padding: "1.125rem 1rem", textAlign: "center", cursor: "pointer", background: file ? "var(--bg-accent-low)" : "transparent", transition: "border-color 0.2s, background 0.2s" }}
+              style={{ border: `1.5px ${file ? "solid" : "dashed"} ${file ? "#7c8e5c" : "#B3B3B3"}`, borderRadius: "8px", padding: "1.25rem 1rem", textAlign: "center", cursor: "pointer", background: file ? "#F0F4EC" : "#FAFAFA", transition: "border-color 0.2s, background 0.2s" }}
             >
               <input ref={fileInputRef} type="file" accept=".pdf,.docx" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
               <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: file ? "var(--accent)" : "var(--text-dim)", fontWeight: file ? 500 : undefined, lineHeight: 1.4, display: "block" }}>

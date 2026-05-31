@@ -130,6 +130,7 @@ export default function LandingPage() {
 
   // fade-in observers
   const orient    = useFadeIn()
+  const howItWorks = useFadeIn()
   const editorial = useFadeIn()
   const problem   = useFadeIn()
   const anatomy   = useFadeIn()
@@ -246,6 +247,43 @@ export default function LandingPage() {
                 Automated screeners are deterministic. Understanding how they process
                 your résumé should not require guesswork.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ──────────────────────────────────────────────────── */}
+      <section className={styles.sectionWhite}>
+        <div
+          ref={howItWorks.ref}
+          className={`${styles.sectionInner} ${styles.fadeUp} ${howItWorks.visible ? styles.fadeUpVisible : ''}`}
+        >
+          <div className={styles.sectionLabel}>
+            <span className={styles.labelPrefix}>«</span> How it works
+          </div>
+          <div className={styles.howSteps}>
+            <div className={styles.howStep}>
+              <div className={styles.howStepNum}>01</div>
+              <div className={styles.howStepTitle}>Upload your résumé</div>
+              <div className={styles.howStepDesc}>
+                PDF or DOCX. Parsed as plain text — exactly how an ATS reads it.
+              </div>
+            </div>
+            <div className={styles.howArrow}>→</div>
+            <div className={styles.howStep}>
+              <div className={styles.howStepNum}>02</div>
+              <div className={styles.howStepTitle}>Paste the job description</div>
+              <div className={styles.howStepDesc}>
+                The JD vocabulary becomes the scoring target. Keywords, requirements, experience thresholds.
+              </div>
+            </div>
+            <div className={styles.howArrow}>→</div>
+            <div className={styles.howStep}>
+              <div className={styles.howStepNum}>03</div>
+              <div className={styles.howStepTitle}>Get your score</div>
+              <div className={styles.howStepDesc}>
+                Overall score plus 5 sub-scores with specific evidence. Not a rating — a diagnostic.
+              </div>
             </div>
           </div>
         </div>
