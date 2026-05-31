@@ -1,6 +1,32 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
+const STYLES = `
+  .pricing-btn-free {
+    display: block; text-align: center;
+    font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
+    color: var(--text-primary);
+    border: 1px solid var(--border-mid);
+    border-radius: 2px; padding: 0.75rem;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .pricing-btn-free:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-dim);
+  }
+  .pricing-btn-pro {
+    display: block; text-align: center;
+    font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
+    color: #0d0c0a;
+    background: #8fa85a;
+    border-radius: 2px; padding: 0.75rem;
+    text-decoration: none;
+    transition: background 0.2s ease;
+  }
+  .pricing-btn-pro:hover { background: #9db868; }
+`
+
 export const metadata: Metadata = {
   title: "Pricing — TraceRank",
   description: "Free and Pro plans for TraceRank. No scam pricing. No fake AI features.",
@@ -33,6 +59,7 @@ const PRO_FEATURES = [
 export default function PricingPage() {
   return (
     <div style={{ background: "var(--bg-base)", minHeight: "100vh", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       <nav style={{
         position: "sticky", top: 0, zIndex: 50,
@@ -101,25 +128,14 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <Link
-              href="/workspace"
-              style={{
-                display: "block", textAlign: "center",
-                fontFamily: "var(--font-body)", fontSize: "0.85rem", fontWeight: 500,
-                color: "var(--text-primary)",
-                border: "1px solid var(--border-mid)",
-                borderRadius: "2px", padding: "0.75rem",
-                textDecoration: "none",
-                transition: "border-color 0.2s ease",
-              }}
-            >
+            <Link href="/workspace" className="pricing-btn-free">
               Start scanning
             </Link>
           </div>
 
           {/* Pro */}
           <div style={{
-            border: "1px solid #7c8e5c",
+            border: "1px solid #8fa85a",
             borderRadius: "3px",
             padding: "2rem",
             background: "var(--bg-elevated)",
@@ -129,7 +145,7 @@ export default function PricingPage() {
               position: "absolute", top: "-1px", right: "1.5rem",
               fontFamily: "var(--font-data)", fontSize: "0.52rem", letterSpacing: "0.1em",
               textTransform: "uppercase", color: "#0d0c0a",
-              background: "#7c8e5c", padding: "0.2rem 0.55rem", borderRadius: "0 0 2px 2px",
+              background: "#8fa85a", padding: "0.2rem 0.55rem", borderRadius: "0 0 2px 2px",
             }}>
               Most popular
             </div>
@@ -155,18 +171,7 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <Link
-              href="/account/billing"
-              style={{
-                display: "block", textAlign: "center",
-                fontFamily: "var(--font-body)", fontSize: "0.85rem", fontWeight: 500,
-                color: "#0d0c0a",
-                background: "#7c8e5c",
-                borderRadius: "2px", padding: "0.75rem",
-                textDecoration: "none",
-                transition: "background 0.2s ease",
-              }}
-            >
+            <Link href="/account/billing" className="pricing-btn-pro">
               Get Pro — coming soon
             </Link>
           </div>

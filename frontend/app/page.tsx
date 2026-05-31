@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { Show } from '@clerk/nextjs'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { NavUserButton } from '@/components/NavUserButton'
 // --- Hooks ---
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null)
@@ -206,16 +208,26 @@ export default function LandingPage() {
         .btn-primary {
           font-family: var(--font-body);
           font-size: 0.85rem; font-weight: 500; letter-spacing: 0.01em;
-          color: #0d0c0a; background: var(--accent);
+          color: #0d0c0a; background: #8fa85a;
           border: none; border-radius: 2px;
           padding: 0.8rem 1.875rem;
           text-decoration: none; display: inline-block; cursor: pointer;
           transition: background 0.25s ease, box-shadow 0.3s ease;
         }
         .btn-primary:hover {
-          background: var(--accent-hover);
-          box-shadow: 0 0 28px rgba(124,142,92,0.22);
+          background: #9db868;
+          box-shadow: 0 0 28px rgba(143,168,90,0.28);
         }
+        .nav-btn-accent {
+          font-family: var(--font-body);
+          font-size: 0.78rem; font-weight: 500; letter-spacing: 0.01em;
+          color: #0d0c0a; background: #8fa85a;
+          border: none; border-radius: 2px;
+          padding: 0.35rem 0.9rem;
+          text-decoration: none; display: inline-block; cursor: pointer;
+          transition: background 0.2s ease;
+        }
+        .nav-btn-accent:hover { background: #9db868; }
         .link-secondary {
           font-family: var(--font-body);
           font-size: 0.83rem; font-weight: 400;
@@ -491,7 +503,13 @@ export default function LandingPage() {
         <div className="nav-links">
           <Link href="/methodology" className="nav-link hide-sm">Methodology</Link>
           <a href="#how-it-works" className="nav-link hide-sm">How it works</a>
-          <Link href="/workspace" className="nav-cta">Scan résumé →</Link>
+          <Show when="signed-out">
+            <Link href="/sign-in" className="nav-link">Sign in</Link>
+            <Link href="/sign-up" className="nav-btn-accent">Get started</Link>
+          </Show>
+          <Show when="signed-in">
+            <NavUserButton />
+          </Show>
         </div>
       </nav>
 
