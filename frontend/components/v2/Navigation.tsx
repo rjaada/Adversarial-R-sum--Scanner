@@ -40,7 +40,7 @@ export function Navigation() {
           }`}
         >
           {/* Logo */}
-          <a href="/v2" className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2">
             <span className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-xl" : "text-2xl"}`}>
               TraceRank
             </span>

@@ -1,9 +1,11 @@
 /* ── v2 Landing Page — Isolated Design System ───────────────────────────── */
 /* These variables are scoped to .v2-page so they never affect other routes. */
 
-/* Smooth scroll when navigating to anchor sections */
-html:has(.v2-page) {
+/* Smooth scroll + body background reset when v2 page is active */
+html:has(.v2-page),
+body:has(.v2-page) {
   scroll-behavior: smooth;
+  background: #FDFCF9;
 }
 
 .v2-page {

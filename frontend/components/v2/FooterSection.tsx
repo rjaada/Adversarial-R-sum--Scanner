@@ -35,7 +35,7 @@ export function FooterSection() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-12 lg:gap-8">
             {/* Brand */}
             <div className="col-span-2">
-              <a href="/v2" className="inline-flex items-center gap-2 mb-6">
+              <a href="/" className="inline-flex items-center gap-2 mb-6">
                 <span className="text-2xl font-display">TraceRank</span>
                 <span className="text-xs text-muted-foreground font-mono">TM</span>
               </a>
