@@ -13,7 +13,7 @@ export default function AccountPage() {
   const [saved, setSaved]             = useState(false)
 
   if (!isLoaded || !user) {
-    return <div style={{ fontFamily: fa, fontSize: "0.85rem", color: "#858585", padding: "48px 0" }}>Loading…</div>
+    return <div style={{ fontFamily: fa, fontSize: "0.85rem", color: "#a09890", padding: "48px 0" }}>Loading…</div>
   }
 
   const currentName = user.fullName ?? user.firstName ?? ""
@@ -53,14 +53,14 @@ export default function AccountPage() {
         </FieldRow>
 
         <FieldRow label="Email">
-          <span style={{ fontFamily: fa, fontSize: "0.875rem", color: "#474546" }}>{email}</span>
+          <span style={{ fontFamily: fa, fontSize: "0.875rem", color: "#6e6b66" }}>{email}</span>
         </FieldRow>
 
         <FieldRow label="Connected accounts">
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {providers.length > 0
               ? providers.map(p => <span key={p} style={chipStyle}>{p}</span>)
-              : <span style={{ fontFamily: fa, fontSize: "0.85rem", color: "#858585" }}>Email only</span>}
+              : <span style={{ fontFamily: fa, fontSize: "0.85rem", color: "#a09890" }}>Email only</span>}
           </div>
         </FieldRow>
 
@@ -85,13 +85,13 @@ function PageHeader({ label, title, subtitle }: { label: string; title: string; 
   const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
   return (
     <header style={{ marginBottom: "36px" }}>
-      <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#858585", margin: "0 0 10px" }}>
+      <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#a09890", margin: "0 0 10px" }}>
         {label}
       </p>
-      <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+      <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#1a1917", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
         {title}
       </h1>
-      <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585", margin: 0, lineHeight: 1.65 }}>
+      <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#a09890", margin: 0, lineHeight: 1.65 }}>
         {subtitle}
       </p>
     </header>
@@ -102,10 +102,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
   return (
     <section style={{ marginBottom: "32px" }}>
-      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 12px" }}>
+      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a09890", margin: "0 0 12px" }}>
         {title}
       </h2>
-      <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", overflow: "hidden" }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid rgba(26,25,23,0.08)", borderRadius: "6px", overflow: "hidden" }}>
         {children}
       </div>
     </section>
@@ -120,9 +120,9 @@ function FieldRow({ label, children, last }: { label: string; children: React.Re
       alignItems:          "center",
       gap:                 "16px",
       padding:             "16px 20px",
-      borderBottom:        last ? "none" : "1px solid #EBEBEB",
+      borderBottom:        last ? "none" : "1px solid rgba(26,25,23,0.08)",
     }}>
-      <span style={{ fontFamily: fa, fontSize: "0.875rem", color: "#858585" }}>{label}</span>
+      <span style={{ fontFamily: fa, fontSize: "0.875rem", color: "#a09890" }}>{label}</span>
       <div>{children}</div>
     </div>
   )
@@ -131,8 +131,8 @@ function FieldRow({ label, children, last }: { label: string; children: React.Re
 const inputStyle: React.CSSProperties = {
   fontFamily:   fa,
   fontSize:     "0.875rem",
-  color:        "#0D0C0A",
-  background:   "#F4F4F4",
+  color:        "#1a1917",
+  background:   "#F8F7F5",
   border:       "1px solid #DCDCDC",
   borderRadius: "8px",
   padding:      "8px 12px",
@@ -146,7 +146,7 @@ function btnStyle(disabled: boolean): React.CSSProperties {
     fontSize:      "0.875rem",
     fontWeight:    500,
     color:         disabled ? "#B3B3B3" : "#FFFFFF",
-    background:    disabled ? "#EBEBEB" : "#0D0C0A",
+    background:    disabled ? "#EBEBEB" : "#1a1917",
     border:        "none",
     borderRadius:  "8px",
     padding:       "8px 16px",
@@ -160,9 +160,9 @@ const chipStyle: React.CSSProperties = {
   fontFamily:    fa,
   fontSize:      "0.8rem",
   textTransform: "capitalize",
-  color:         "#474546",
-  background:    "#F4F4F4",
-  border:        "1px solid #EBEBEB",
+  color:         "#6e6b66",
+  background:    "#F8F7F5",
+  border:        "1px solid rgba(26,25,23,0.08)",
   borderRadius:  "100px",
   padding:       "3px 10px",
 }

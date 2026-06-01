@@ -43,12 +43,12 @@ const STATUS_TTL_MS       = 30_000
 // Edit color tokens here; they cascade to all workspace child elements.
 
 const LIGHT_VARS = {
-  "--bg-base":       "#F4F4F4",
+  "--bg-base":       "#FDFCF9",
   "--bg-surface":    "#FFFFFF",
-  "--bg-elevated":   "#FAFAFA",
-  "--bg-muted":      "#F4F4F4",
+  "--bg-elevated":   "#F8F7F5",
+  "--bg-muted":      "#F4F3F0",
   "--bg-accent-low": "#F0F4EC",
-  "--border-subtle": "#EBEBEB",
+  "--border-subtle": "rgba(26,25,23,0.08)",
   "--border-mid":    "#DCDCDC",
   "--text-primary":  "#0D0C0A",
   "--text-secondary":"#474546",

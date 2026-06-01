@@ -71,15 +71,15 @@ export default function DataPage() {
     <div>
       {/* Page header */}
       <header style={{ marginBottom: "36px" }}>
-        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#858585", margin: "0 0 10px" }}>
+        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#a09890", margin: "0 0 10px" }}>
           Data & Privacy
         </p>
-        <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#1a1917", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
           Your data.
         </h1>
-        <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585", margin: 0, lineHeight: 1.65 }}>
+        <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#a09890", margin: 0, lineHeight: 1.65 }}>
           Download, delete, or leave. Full details in{" "}
-          <Link href="/privacy" target="_blank" style={{ color: "#7c8e5c", textDecoration: "none", borderBottom: "1px solid #7c8e5c", paddingBottom: "1px" }}>
+          <Link href="/privacy" target="_blank" style={{ color: "#1a1917", textDecoration: "none", borderBottom: "1px solid #7c8e5c", paddingBottom: "1px" }}>
             our privacy policy
           </Link>.
         </p>
@@ -87,7 +87,7 @@ export default function DataPage() {
 
       {/* Feedback */}
       {feedback && (
-        <div style={{ marginBottom: "16px", padding: "12px 16px", border: "1px solid #DCDCDC", borderRadius: "8px", fontFamily: fa, fontSize: "0.875rem", color: "#474546", background: "#FFFFFF" }}>
+        <div style={{ marginBottom: "16px", padding: "12px 16px", border: "1px solid #DCDCDC", borderRadius: "8px", fontFamily: fa, fontSize: "0.875rem", color: "#6e6b66", background: "#FFFFFF" }}>
           {feedback}
         </div>
       )}
@@ -166,8 +166,8 @@ export default function DataPage() {
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", padding: "20px 24px", marginBottom: "12px" }}>
-      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 12px" }}>
+    <div style={{ background: "#FFFFFF", border: "1px solid rgba(26,25,23,0.08)", borderRadius: "6px", padding: "20px 24px", marginBottom: "12px" }}>
+      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a09890", margin: "0 0 12px" }}>
         {title}
       </h2>
       {children}
@@ -180,9 +180,9 @@ function ActionCard({ title, children, danger }: { title: string; children: Reac
     <div style={{
       background:   danger ? "rgba(140,47,78,0.04)" : "#FFFFFF",
       border:       `1px solid ${danger ? "rgba(140,47,78,0.2)" : "#EBEBEB"}`,
-      borderRadius: "12px", padding: "20px 24px", marginBottom: "12px",
+      borderRadius: "6px", padding: "20px 24px", marginBottom: "12px",
     }}>
-      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: danger ? "#8c2f4e" : "#858585", margin: "0 0 12px" }}>
+      <h2 style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: danger ? "#8c2f4e" : "#a09890", margin: "0 0 12px" }}>
         {title}
       </h2>
       {children}
@@ -192,24 +192,24 @@ function ActionCard({ title, children, danger }: { title: string; children: Reac
 
 const listStyle: React.CSSProperties = {
   margin: 0, paddingLeft: "20px", display: "grid", gap: "6px",
-  fontFamily: fa, fontSize: "0.875rem", color: "#474546", lineHeight: 1.65,
+  fontFamily: fa, fontSize: "0.875rem", color: "#6e6b66", lineHeight: 1.65,
 }
 
 const bodyStyle: React.CSSProperties = {
-  fontFamily: fa, fontSize: "0.875rem", color: "#858585",
+  fontFamily: fa, fontSize: "0.875rem", color: "#a09890",
   margin: "0 0 12px", lineHeight: 1.65,
 }
 
 const inputStyle: React.CSSProperties = {
   fontFamily: fa, fontSize: "0.875rem",
-  color: "#0D0C0A", background: "#F4F4F4",
+  color: "#1a1917", background: "#F8F7F5",
   border: "1px solid #DCDCDC", borderRadius: "8px",
   padding: "10px 14px", outline: "none",
 }
 
 const codeStyle: React.CSSProperties = {
   fontFamily: mono, fontSize: "0.8rem",
-  color: "#0D0C0A", background: "#F4F4F4",
+  color: "#1a1917", background: "#F8F7F5",
   padding: "2px 6px", borderRadius: "4px",
 }
 
@@ -217,7 +217,7 @@ function primaryBtnStyle(disabled: boolean): React.CSSProperties {
   return {
     fontFamily: fa, fontSize: "0.875rem", fontWeight: 500,
     color:      disabled ? "#B3B3B3" : "#FFFFFF",
-    background: disabled ? "#EBEBEB"  : "#0D0C0A",
+    background: disabled ? "#EBEBEB"  : "#1a1917",
     border:     "none", borderRadius: "8px",
     padding:    "10px 16px",
     cursor:     disabled ? "not-allowed" : "pointer",

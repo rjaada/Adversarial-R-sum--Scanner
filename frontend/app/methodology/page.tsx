@@ -32,12 +32,11 @@ const TOC = [
 export default function MethodologyPage() {
   const albertSans = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
   return (
-    <div style={{ background: "#f6f3ee", minHeight: "100vh", color: "#1f1d1a", fontFamily: albertSans }}>
+    <div style={{ background: "#FDFCF9", minHeight: "100vh", color: "#1a1917", fontFamily: albertSans }}>
 
-      {/* Nav — matches site-wide white nav */}
       <nav
         style={{
-          borderBottom: "1px solid #EBEBEB",
+          borderBottom: "1px solid rgba(26,25,23,0.08)",
           padding: "0 80px",
           height: 64,
           display: "flex",
@@ -56,25 +55,25 @@ export default function MethodologyPage() {
               fontFamily: albertSans,
               fontSize: "1rem",
               fontWeight: 600,
-              color: "#0D0C0A",
+              color: "#1a1917",
               textDecoration: "none",
               letterSpacing: "-0.01em",
             }}
           >
             TraceRank
           </Link>
-          <span style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#474546" }}>Methodology</span>
+          <span style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#6e6b66" }}>Methodology</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-          <Link href="/pricing" style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#474546", textDecoration: "none" }}>Pricing</Link>
+          <Link href="/pricing" style={{ fontFamily: albertSans, fontSize: "0.875rem", color: "#6e6b66", textDecoration: "none" }}>Pricing</Link>
           <Link
             href="/workspace"
             style={{
               fontFamily: albertSans,
               fontSize: "0.875rem",
               fontWeight: 500,
-              color: "#FFFFFF",
-              background: "#0D0C0A",
+              color: "#FDFCF9",
+              background: "#1a1917",
               borderRadius: "100px",
               padding: "8px 18px",
               textDecoration: "none",
@@ -89,13 +88,13 @@ export default function MethodologyPage() {
 
         {/* Header */}
         <header style={{ marginBottom: "2rem" }}>
-          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7c8e5c", margin: "0 0 0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
+          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a09890", margin: "0 0 0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
             <span>«</span> Scoring methodology
           </p>
-          <h1 style={{ fontFamily: albertSans, fontSize: "1.9rem", fontWeight: 700, color: "#0D0C0A", margin: "0 0 0.8rem", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+          <h1 style={{ fontFamily: albertSans, fontSize: "1.9rem", fontWeight: 700, color: "#1a1917", margin: "0 0 0.8rem", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
             How scoring works
           </h1>
-          <p style={{ fontFamily: albertSans, color: "#474546", margin: 0, fontSize: "1rem", lineHeight: 1.7, maxWidth: 620 }}>
+          <p style={{ fontFamily: albertSans, color: "#6e6b66", margin: 0, fontSize: "1rem", lineHeight: 1.7, maxWidth: 620 }}>
             A complete, honest description of how TraceRank analyzes résumés, computes
             scores, and generates findings. No claims are made beyond what the
             rules-based heuristic model actually computes.
@@ -105,15 +104,15 @@ export default function MethodologyPage() {
         {/* Table of contents */}
         <nav
           aria-label="Contents"
-          style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.5rem", fontFamily: albertSans, fontSize: "0.875rem" }}
+          style={{ background: "#FFFFFF", border: "1px solid rgba(26,25,23,0.08)", borderRadius: 4, padding: "1rem 1.25rem", marginBottom: "1.5rem", fontFamily: albertSans, fontSize: "0.875rem" }}
         >
-          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 0.6rem", fontWeight: 500 }}>
+          <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#a09890", margin: "0 0 0.6rem", fontWeight: 500 }}>
             Contents
           </p>
           <ol style={{ margin: 0, paddingLeft: "1.25rem", display: "grid", gap: "0.3rem" }}>
             {TOC.map(({ id, label }) => (
               <li key={id}>
-                <a href={`#${id}`} style={{ fontFamily: albertSans, color: "#0D0C0A", textDecoration: "none" }}>
+                <a href={`#${id}`} style={{ fontFamily: albertSans, color: "#1a1917", textDecoration: "none" }}>
                   {label}
                 </a>
               </li>
@@ -133,7 +132,7 @@ export default function MethodologyPage() {
             ATS vendor logic. Scoring is fully reproducible: the same résumé and job
             description will always produce the same score.
           </p>
-          <p style={{ margin: 0, color: "#6f6b64" }}>
+          <p style={{ margin: 0, color: "#6e6b66" }}>
             TraceRank does not predict hiring outcomes. It does not replicate Greenhouse,
             Lever, Workday, iCIMS, or any other real ATS system. It does not assess
             writing quality, career narrative, cultural fit, or any criterion that requires
@@ -418,7 +417,7 @@ export default function MethodologyPage() {
             style={{
               fontSize: "1.1rem",
               fontWeight: 600,
-              color: "#1f1d1a",
+              color: "#1a1917",
               margin: "0 0 1rem",
               letterSpacing: "-0.01em",
               display: "flex",
@@ -454,41 +453,41 @@ export default function MethodologyPage() {
               gap: "0.7rem",
               fontSize: "0.875rem",
               lineHeight: 1.7,
-              color: "#6f6b64",
+              color: "#6e6b66",
             }}
           >
             <li>
-              <strong style={{ color: "#1f1d1a" }}>JD vocabulary:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>JD vocabulary:</strong>{" "}
               Approximately 65 single-term keywords and 18 phrases are recognized. JDs
               outside this vocabulary produce a neutral keyword score with a notice.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>Section detection:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>Section detection:</strong>{" "}
               Uses pattern matching. Non-English résumés, highly creative headers, or
               novel section names may not be recognized.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>Experience inference:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>Experience inference:</strong>{" "}
               Year-granularity only. Part-time, freelance, and concurrent roles may be
               undercounted or merged incorrectly.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>Parseability signals:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>Parseability signals:</strong>{" "}
               Detecting multi-column layout or tables is a risk signal, not a guarantee
               of ATS parsing failure. Some parsers handle these formats.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>No ATS vendor replication:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>No ATS vendor replication:</strong>{" "}
               TraceRank does not emulate any specific hiring software. Scores reflect
               the TraceRank heuristic model only.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>No outcome prediction:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>No outcome prediction:</strong>{" "}
               A high score does not mean you will pass screening. A low score does not
               mean you will fail. Scores reflect structural and keyword criteria only.
             </li>
             <li>
-              <strong style={{ color: "#1f1d1a" }}>Adjacent skill inference:</strong>{" "}
+              <strong style={{ color: "#1a1917" }}>Adjacent skill inference:</strong>{" "}
               The lookup table covers approximately 50 term relationships. It does not
               understand meaning — it matches against a static list.
             </li>
@@ -502,7 +501,7 @@ export default function MethodologyPage() {
             paddingTop: "1.25rem",
             borderTop: "1px solid #d9d3ca",
             fontSize: "0.78rem",
-            color: "#6f6b64",
+            color: "#6e6b66",
             display: "flex",
             flexWrap: "wrap",
             gap: "0.35rem 0.75rem",
@@ -510,19 +509,19 @@ export default function MethodologyPage() {
           }}
         >
           <span>Methodology version: 1.1</span>
-          <span style={{ color: "#d9d3ca" }}>·</span>
+          <span style={{ color: "rgba(26,25,23,0.08)" }}>·</span>
           <span>Engine frozen 2026-05-30</span>
-          <span style={{ color: "#d9d3ca" }}>·</span>
+          <span style={{ color: "rgba(26,25,23,0.08)" }}>·</span>
           <a
             href="https://github.com/rjaada/Adversarial-R-sum--Scanner/commits/main"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#0f5c52", textDecoration: "none" }}
+            style={{ color: "#1a1917", textDecoration: "none" }}
           >
             View changelog
           </a>
-          <span style={{ color: "#d9d3ca" }}>·</span>
-          <a href="/privacy" style={{ color: "#0f5c52", textDecoration: "none" }}>Privacy</a>
+          <span style={{ color: "rgba(26,25,23,0.08)" }}>·</span>
+          <a href="/privacy" style={{ color: "#1a1917", textDecoration: "none" }}>Privacy</a>
         </footer>
 
       </main>

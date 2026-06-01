@@ -45,35 +45,35 @@ export default function BillingPage() {
     <div>
       {/* Page header */}
       <header style={{ marginBottom: "36px" }}>
-        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#858585", margin: "0 0 10px" }}>
+        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#a09890", margin: "0 0 10px" }}>
           Billing
         </p>
-        <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#1a1917", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
           Pro plan
         </h1>
-        <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585", margin: 0, lineHeight: 1.65 }}>
+        <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#a09890", margin: 0, lineHeight: 1.65 }}>
           Pro is in active development.
         </p>
       </header>
 
       {/* Current plan */}
-      <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", padding: "20px 24px", marginBottom: "16px" }}>
-        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 6px" }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid rgba(26,25,23,0.08)", borderRadius: "6px", padding: "20px 24px", marginBottom: "16px" }}>
+        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a09890", margin: "0 0 6px" }}>
           Current plan
         </p>
-        <p style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 500, color: "#0D0C0A", margin: 0 }}>
+        <p style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 500, color: "#1a1917", margin: 0 }}>
           Free
         </p>
       </div>
 
       {/* Pro card */}
-      <div style={{ background: "#FFFFFF", border: "2px solid #0D0C0A", borderRadius: "12px", padding: "24px", marginBottom: "16px" }}>
+      <div style={{ background: "#FFFFFF", border: "2px solid #0D0C0A", borderRadius: "6px", padding: "24px", marginBottom: "16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
           <div>
-            <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 8px" }}>Pro</p>
+            <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a09890", margin: "0 0 8px" }}>Pro</p>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-              <span style={{ fontFamily: fa, fontSize: "2.25rem", fontWeight: 600, color: "#0D0C0A", lineHeight: 1 }}>$9</span>
-              <span style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585" }}>/ month</span>
+              <span style={{ fontFamily: fa, fontSize: "2.25rem", fontWeight: 600, color: "#1a1917", lineHeight: 1 }}>$9</span>
+              <span style={{ fontFamily: fa, fontSize: "0.9rem", color: "#a09890" }}>/ month</span>
             </div>
           </div>
           <span style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9a4d22", padding: "4px 10px", border: "1px solid #9a4d22", borderRadius: "100px" }}>
@@ -85,7 +85,7 @@ export default function BillingPage() {
 
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
           {PRO_FEATURES.map(feat => (
-            <li key={feat} style={{ fontFamily: fa, fontSize: "0.9rem", color: "#0D0C0A", display: "flex", alignItems: "baseline", gap: "10px" }}>
+            <li key={feat} style={{ fontFamily: fa, fontSize: "0.9rem", color: "#1a1917", display: "flex", alignItems: "baseline", gap: "10px" }}>
               <span style={{ color: "#7c8e5c", fontSize: "0.75rem", flexShrink: 0 }}>✓</span>
               {feat}
             </li>
@@ -95,11 +95,11 @@ export default function BillingPage() {
 
       {/* Waitlist */}
       {!submitted ? (
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", padding: "24px" }}>
-          <h2 style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 6px" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(26,25,23,0.08)", borderRadius: "6px", padding: "24px" }}>
+          <h2 style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: "#1a1917", margin: "0 0 6px" }}>
             Notify me at launch
           </h2>
-          <p style={{ fontFamily: fa, fontSize: "0.875rem", color: "#858585", margin: "0 0 16px", lineHeight: 1.65 }}>
+          <p style={{ fontFamily: fa, fontSize: "0.875rem", color: "#a09890", margin: "0 0 16px", lineHeight: 1.65 }}>
             We&apos;ll send one email when Pro launches. No marketing. No lists.
           </p>
           <form onSubmit={handleWaitlist} style={{ display: "flex", gap: "10px" }}>
@@ -111,7 +111,7 @@ export default function BillingPage() {
               required
               style={{
                 fontFamily: fa, fontSize: "0.875rem",
-                color: "#0D0C0A", background: "#F4F4F4",
+                color: "#1a1917", background: "#F8F7F5",
                 border: "1px solid #DCDCDC", borderRadius: "8px",
                 padding: "10px 14px", outline: "none", flex: 1,
               }}
@@ -122,7 +122,7 @@ export default function BillingPage() {
               style={{
                 fontFamily: fa, fontSize: "0.875rem", fontWeight: 500,
                 color:      submitting ? "#B3B3B3" : "#FFFFFF",
-                background: submitting ? "#EBEBEB"  : "#0D0C0A",
+                background: submitting ? "#EBEBEB"  : "#1a1917",
                 border: "none", borderRadius: "8px",
                 padding: "10px 20px",
                 cursor: submitting ? "default" : "pointer",
@@ -135,7 +135,7 @@ export default function BillingPage() {
           </form>
         </div>
       ) : (
-        <div style={{ background: "rgba(124,142,92,0.08)", border: "1px solid rgba(124,142,92,0.25)", borderRadius: "12px", padding: "16px 20px", fontFamily: fa, fontSize: "0.9rem", color: "#7c8e5c" }}>
+        <div style={{ background: "rgba(124,142,92,0.08)", border: "1px solid rgba(124,142,92,0.25)", borderRadius: "6px", padding: "16px 20px", fontFamily: fa, fontSize: "0.9rem", color: "#7c8e5c" }}>
           You&apos;re on the list. We&apos;ll email you when Pro launches.
         </div>
       )}

@@ -158,7 +158,7 @@ export default function SignInPage() {
         className="auth-right"
         style={{
           flex:           1,
-          background:     "#F6F4F0",
+          background:     "#FDFCF9",
           minHeight:      "100vh",
           overflowY:      "auto",
           display:        "flex",
@@ -209,7 +209,7 @@ export default function SignInPage() {
             fontFamily:    fa,
             fontSize:      "11px",
             fontWeight:    500,
-            color:         "#7c8e5c",
+            color:         "#a09890",
             textTransform: "uppercase",
             letterSpacing: "0.18em",
             margin:        "0 0 12px",
