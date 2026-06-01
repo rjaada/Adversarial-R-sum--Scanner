@@ -223,6 +223,7 @@ export default function WorkspacePage() {
   const [jdText, setJdText]                   = useState("")
   const [file, setFile]                       = useState<File | null>(null)
   const [dragOver, setDragOver]               = useState(false)
+  const [jdFocused, setJdFocused]             = useState(false)
   const [selectedIssue, setSelectedIssue]     = useState<number | null>(null)
   const [history, setHistory]                 = useState<ScanSummary[]>([])
   const [rewriteVariants, setRewriteVariants] = useState<Record<number, string[]>>({})
@@ -463,7 +464,7 @@ export default function WorkspacePage() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F4F4F4", padding: "48px 24px" }}>
 
           <p style={{ fontFamily: fa, fontSize: "12px", fontWeight: 500, color: "#858585", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 16px" }}>
-            Adversarial Résumé Scanner
+            Résumé Intelligence
           </p>
 
           <h2 style={{ fontFamily: fa, fontSize: "28px", fontWeight: 600, color: "#0D0C0A", margin: "0 0 48px", textAlign: "center", maxWidth: 560, lineHeight: 1.3 }}>
@@ -482,6 +483,7 @@ export default function WorkspacePage() {
               onClick={() => fileInputRef.current?.click()}
               style={{
                 width: "340px",
+                minHeight: "220px",
                 background: dragOver ? "#FAFAF8" : "#FFFFFF",
                 border: `1.5px dashed ${dragOver ? "#0D0C0A" : "#C8C4BE"}`,
                 borderRadius: "12px",
@@ -530,26 +532,31 @@ export default function WorkspacePage() {
             {/* Card 2 — Job description */}
             <div style={{
               width: "340px",
+              minHeight: "220px",
               background: "#FFFFFF",
-              border: `1px solid ${jdText ? "#C8C4BE" : "#EBEBEB"}`,
+              border: `1.5px dashed ${jdFocused ? "#0D0C0A" : "#C8C4BE"}`,
               borderRadius: "12px",
-              padding: "24px",
+              padding: "40px 32px",
               transition: "border-color 0.2s",
               boxSizing: "border-box",
               display: "flex",
               flexDirection: "column",
+              alignItems: "center",
+              gap: "4px",
             }}>
-              <div style={{ fontFamily: fa, fontSize: "15px", fontWeight: 600, color: "#0D0C0A", marginBottom: "4px" }}>
+              <span style={{ fontFamily: fa, fontSize: "15px", fontWeight: 600, color: "#0D0C0A", alignSelf: "flex-start" }}>
                 Job Description
-              </div>
-              <div style={{ fontFamily: fa, fontSize: "13px", color: "#858585", marginBottom: "12px" }}>
+              </span>
+              <span style={{ fontFamily: fa, fontSize: "13px", color: "#858585", alignSelf: "flex-start", marginBottom: "8px" }}>
                 Paste the full job posting
-              </div>
+              </span>
               <textarea
                 value={jdText}
                 onChange={e => setJdText(e.target.value)}
+                onFocus={() => setJdFocused(true)}
+                onBlur={() => setJdFocused(false)}
                 placeholder="Paste the job description here..."
-                style={{ flex: 1, height: "160px", border: "none", outline: "none", background: "transparent", fontFamily: fa, fontSize: "14px", color: "#474546", lineHeight: 1.6, resize: "none", width: "100%", boxSizing: "border-box" }}
+                style={{ width: "100%", height: "140px", border: "none", outline: "none", background: "transparent", fontFamily: fa, fontSize: "14px", color: "#474546", lineHeight: 1.6, resize: "none", boxSizing: "border-box" }}
               />
             </div>
           </div>
@@ -596,6 +603,9 @@ export default function WorkspacePage() {
       ══════════════════════════════════════════════════════════════ */}
       {showScanning && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F4F4F4", gap: "20px" }}>
+          {/* TODO: Replace with animated scanner visualization — e.g. document scan line,
+               keyword extraction pulse, or score counter animation.
+               Current: simple CSS progress bar. Upgrade in next UI pass. */}
           {/* Progress bar */}
           <div style={{ width: "280px", height: "2px", background: "#EBEBEB", borderRadius: "2px", overflow: "hidden" }}>
             <div className="tr-scan-bar" style={{ height: "100%", background: "#0D0C0A", borderRadius: "2px", width: "0%" }} />
