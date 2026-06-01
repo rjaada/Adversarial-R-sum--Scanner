@@ -93,7 +93,7 @@ export default function PricingPage() {
         <div style={{ display: "flex", alignItems: "stretch", gap: "24px", marginTop: "48px", flexWrap: "wrap" }}>
 
           {/* Free card */}
-          <div style={{ flex: "1 1 340px", maxWidth: "420px" }}>
+          <div style={{ flex: "1 1 340px", maxWidth: "420px", paddingTop: "20px" }}>
             {/* Fix 5: Free card — lighter border */}
             <div style={{ background: "#FFFFFF", border: "1px solid #E0DDD9", borderRadius: 16, padding: 32, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
               <p style={{ fontFamily: f, fontSize: "12px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 12px" }}>Free</p>

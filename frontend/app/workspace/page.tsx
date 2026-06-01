@@ -472,7 +472,7 @@ export default function WorkspacePage() {
           </h2>
 
           {/* Cards row */}
-          <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: "24px", alignItems: "stretch", flexWrap: "wrap", justifyContent: "center" }}>
 
             {/* Card 1 — Résumé upload */}
             <div
@@ -483,7 +483,7 @@ export default function WorkspacePage() {
               onClick={() => fileInputRef.current?.click()}
               style={{
                 width: "340px",
-                minHeight: "220px",
+                height: "100%",
                 background: dragOver ? "#FAFAF8" : "#FFFFFF",
                 border: `1.5px dashed ${dragOver ? "#0D0C0A" : "#C8C4BE"}`,
                 borderRadius: "12px",
@@ -492,6 +492,7 @@ export default function WorkspacePage() {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "10px",
                 transition: "border-color 0.2s, background 0.2s",
                 boxSizing: "border-box",
@@ -532,7 +533,7 @@ export default function WorkspacePage() {
             {/* Card 2 — Job description */}
             <div style={{
               width: "340px",
-              minHeight: "220px",
+              height: "100%",
               background: "#FFFFFF",
               border: `1.5px dashed ${jdFocused ? "#0D0C0A" : "#C8C4BE"}`,
               borderRadius: "12px",
@@ -541,13 +542,12 @@ export default function WorkspacePage() {
               boxSizing: "border-box",
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
               gap: "4px",
             }}>
-              <span style={{ fontFamily: fa, fontSize: "15px", fontWeight: 600, color: "#0D0C0A", alignSelf: "flex-start" }}>
+              <span style={{ fontFamily: fa, fontSize: "15px", fontWeight: 600, color: "#0D0C0A" }}>
                 Job Description
               </span>
-              <span style={{ fontFamily: fa, fontSize: "13px", color: "#858585", alignSelf: "flex-start", marginBottom: "8px" }}>
+              <span style={{ fontFamily: fa, fontSize: "13px", color: "#858585", marginBottom: "8px" }}>
                 Paste the full job posting
               </span>
               <textarea
@@ -556,7 +556,7 @@ export default function WorkspacePage() {
                 onFocus={() => setJdFocused(true)}
                 onBlur={() => setJdFocused(false)}
                 placeholder="Paste the job description here..."
-                style={{ width: "100%", height: "140px", border: "none", outline: "none", background: "transparent", fontFamily: fa, fontSize: "14px", color: "#474546", lineHeight: 1.6, resize: "none", boxSizing: "border-box" }}
+                style={{ flex: 1, minHeight: "120px", border: "none", outline: "none", background: "transparent", fontFamily: fa, fontSize: "14px", color: "#474546", lineHeight: 1.6, resize: "none", width: "100%", boxSizing: "border-box" }}
               />
             </div>
           </div>
