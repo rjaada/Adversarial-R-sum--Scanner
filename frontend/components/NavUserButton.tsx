@@ -64,7 +64,12 @@ export function NavUserButton() {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <ThemeToggle />
-        <UserButton appearance={clerkUserButtonAppearance} />
+        <UserButton
+          appearance={clerkUserButtonAppearance}
+          userProfileUrl="/account"
+          userProfileMode="navigation"
+          afterSignOutUrl="/"
+        />
       </div>
     )
   }

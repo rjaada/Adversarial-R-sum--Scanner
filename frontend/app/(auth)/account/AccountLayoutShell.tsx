@@ -119,7 +119,12 @@ export default function AccountLayoutShell({ children }: { children: React.React
         </div>
 
         {/* User button */}
-        <UserButton appearance={clerkUserButtonAppearance} />
+        <UserButton
+          appearance={clerkUserButtonAppearance}
+          userProfileUrl="/account"
+          userProfileMode="navigation"
+          afterSignOutUrl="/"
+        />
       </nav>
 
       {/* Page content */}
