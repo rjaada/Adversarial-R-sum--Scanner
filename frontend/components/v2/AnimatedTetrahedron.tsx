@@ -1,0 +1,99 @@
+"use client"
+
+import { useEffect, useRef } from "react"
+
+export function AnimatedTetrahedron() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const frameRef = useRef(0)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const chars = "░▒▓█▀▄▌▐│─┤├┴┬╭╮╰╯"
+    let time = 0
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1
+      const rect = canvas.getBoundingClientRect()
+      canvas.width = rect.width * dpr
+      canvas.height = rect.height * dpr
+      ctx.scale(dpr, dpr)
+    }
+    resize()
+    window.addEventListener("resize", resize)
+
+    const vertices = [
+      { x: 0, y: 1, z: 0 },
+      { x: -0.943, y: -0.333, z: -0.5 },
+      { x: 0.943, y: -0.333, z: -0.5 },
+      { x: 0, y: -0.333, z: 1 },
+    ]
+    const edges = [[0,1],[0,2],[0,3],[1,2],[2,3],[3,1]]
+    const faces = [[0,1,2],[0,2,3],[0,3,1],[1,3,2]]
+
+    type Vec3 = { x: number; y: number; z: number }
+    const rotY = (p: Vec3, a: number): Vec3 => ({ x: p.x*Math.cos(a)-p.z*Math.sin(a), y: p.y, z: p.x*Math.sin(a)+p.z*Math.cos(a) })
+    const rotX = (p: Vec3, a: number): Vec3 => ({ x: p.x, y: p.y*Math.cos(a)-p.z*Math.sin(a), z: p.y*Math.sin(a)+p.z*Math.cos(a) })
+    const rotZ = (p: Vec3, a: number): Vec3 => ({ x: p.x*Math.cos(a)-p.y*Math.sin(a), y: p.x*Math.sin(a)+p.y*Math.cos(a), z: p.z })
+
+    const render = () => {
+      const rect = canvas.getBoundingClientRect()
+      ctx.clearRect(0, 0, rect.width, rect.height)
+      const cx = rect.width / 2
+      const cy = rect.height / 2
+      const scale = Math.min(rect.width, rect.height) * 0.7
+
+      ctx.font = "18px monospace"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+
+      const points: { x: number; y: number; z: number; char: string }[] = []
+
+      edges.forEach(([i, j]) => {
+        const v1 = vertices[i], v2 = vertices[j]
+        for (let t = 0; t <= 1; t += 0.05) {
+          let p: Vec3 = { x: v1.x+(v2.x-v1.x)*t, y: v1.y+(v2.y-v1.y)*t, z: v1.z+(v2.z-v1.z)*t }
+          p = rotY(p, time*0.4); p = rotX(p, time*0.3); p = rotZ(p, time*0.2)
+          const depth = (p.z+1.5)/3
+          const ci = Math.min(Math.floor(depth*(chars.length-1)), chars.length-1)
+          points.push({ x: cx+p.x*scale, y: cy-p.y*scale, z: p.z, char: chars[ci] })
+        }
+      })
+
+      faces.forEach(([i, j, k]) => {
+        const v1=vertices[i], v2=vertices[j], v3=vertices[k]
+        for (let u=0; u<=1; u+=0.12) {
+          for (let v=0; v<=1-u; v+=0.12) {
+            const w=1-u-v
+            let p: Vec3 = { x: v1.x*u+v2.x*v+v3.x*w, y: v1.y*u+v2.y*v+v3.y*w, z: v1.z*u+v2.z*v+v3.z*w }
+            p = rotY(p, time*0.4); p = rotX(p, time*0.3); p = rotZ(p, time*0.2)
+            const depth = (p.z+1.5)/3
+            const ci = Math.min(Math.floor(depth*(chars.length-1)), chars.length-1)
+            points.push({ x: cx+p.x*scale, y: cy-p.y*scale, z: p.z, char: chars[ci] })
+          }
+        }
+      })
+
+      points.sort((a,b) => a.z-b.z)
+      points.forEach((p) => {
+        const alpha = Math.min(0.15+(p.z+1.5)*0.25, 0.9)
+        ctx.fillStyle = `rgba(26, 25, 23, ${alpha})`
+        ctx.fillText(p.char, p.x, p.y)
+      })
+
+      time += 0.015
+      frameRef.current = requestAnimationFrame(render)
+    }
+
+    render()
+    return () => {
+      window.removeEventListener("resize", resize)
+      cancelAnimationFrame(frameRef.current)
+    }
+  }, [])
+
+  return <canvas ref={canvasRef} className="w-full h-full" style={{ display: "block" }} />
+}

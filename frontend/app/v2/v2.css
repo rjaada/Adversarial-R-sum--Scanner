@@ -1,0 +1,107 @@
+/* ── v2 Landing Page — Isolated Design System ───────────────────────────── */
+/* These variables are scoped to .v2-page so they never affect other routes. */
+
+/* Smooth scroll when navigating to anchor sections */
+html:has(.v2-page) {
+  scroll-behavior: smooth;
+}
+
+.v2-page {
+  /* RGB channel values for Tailwind v3 opacity-modifier support */
+  --v2-fg:       26 25 23;        /* near-black #1a1917 */
+  --v2-bg:       253 252 249;     /* warm white #fdfcf9 */
+  --v2-muted-fg: 110 107 102;     /* warm gray  #6e6b66 */
+  --v2-muted:    242 241 238;     /* soft gray  #f2f1ee */
+
+  background: rgb(var(--v2-bg));
+  color: rgb(var(--v2-fg));
+  min-height: 100vh;
+}
+
+/* Fix anchor color — globals.css sets a { color: var(--accent) } (green) globally */
+.v2-page a {
+  color: inherit;
+}
+
+/* Use Albert Sans for display text in v2 — cleaner and more professional
+   than Cormorant Garamond (which is the global font-display mapping) */
+.v2-page .font-display {
+  font-family: var(--font-albert), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── Marquee animations ─────────────────────────────────────────────────── */
+.v2-marquee {
+  animation: v2-marquee 30s linear infinite;
+}
+.v2-marquee-reverse {
+  animation: v2-marquee-reverse 25s linear infinite;
+}
+
+@keyframes v2-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes v2-marquee-reverse {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+/* ── Character entrance animation (hero rotating word) ──────────────────── */
+.v2-char-in {
+  animation: v2-char-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+  filter: blur(40px);
+  transform: translateY(100%);
+}
+
+@keyframes v2-char-in {
+  0%   { opacity: 0; filter: blur(40px); transform: translateY(100%); }
+  100% { opacity: 1; filter: blur(0);    transform: translateY(0); }
+}
+
+/* ── Text stroke (pricing outline text) ─────────────────────────────────── */
+.v2-text-stroke {
+  -webkit-text-stroke: 1.5px currentColor;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Noise overlay (hero background texture) ────────────────────────────── */
+.v2-noise-overlay {
+  position: relative;
+}
+.v2-noise-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Code animation (how-it-works section) ──────────────────────────────── */
+.v2-code-line {
+  opacity: 0;
+  transform: translateX(-8px);
+  animation: v2-line-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.v2-code-char {
+  opacity: 0;
+  filter: blur(8px);
+  animation: v2-char-reveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes v2-line-reveal {
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes v2-char-reveal {
+  to { opacity: 1; filter: blur(0); }
+}
+
+/* ── Step progress bar ──────────────────────────────────────────────────── */
+@keyframes v2-progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}

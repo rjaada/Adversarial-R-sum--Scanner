@@ -21,6 +21,12 @@ const config: Config = {
         "sev-critical":  "var(--sev-critical)",
         "sev-high":      "var(--sev-high)",
         "sev-medium":    "var(--sev-medium)",
+        // v2 semantic tokens — used only by the /v2 isolated landing page
+        foreground:           "rgb(var(--v2-fg) / <alpha-value>)",
+        background:           "rgb(var(--v2-bg) / <alpha-value>)",
+        "muted-foreground":   "rgb(var(--v2-muted-fg) / <alpha-value>)",
+        muted:                "rgb(var(--v2-muted) / <alpha-value>)",
+        "primary-foreground": "rgb(var(--v2-bg) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-cormorant)", "Georgia", "serif"],
