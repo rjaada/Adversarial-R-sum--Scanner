@@ -1,29 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NavUserButton } from '@/components/NavUserButton'
+import { useFadeIn } from '@/hooks/useFadeIn'
 import styles from './landing.module.css'
-
-// ── Hooks ────────────────────────────────────────────────────────────────────
-
-function useFadeIn() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.07 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-  return { ref, visible }
-}
 
 // ── Score bar (light theme) ──────────────────────────────────────────────────
 
