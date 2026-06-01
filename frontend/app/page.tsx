@@ -443,7 +443,7 @@ export default function LandingPage() {
               </div>
               <div className={styles.pricingDivider} />
               <ul className={styles.pricingFeatures}>
-                {['Everything in Free', 'Unlimited scan history', 'Compare mode', 'PDF export', 'AI rewrite suggestions'].map(f => (
+                {['Everything in Free', 'Unlimited scans', 'Unlimited scan history', 'Compare mode', 'PDF export', 'AI rewrite suggestions — per issue'].map(f => (
                   <li key={f} className={styles.pricingFeature}>
                     <span className={styles.pricingCheck}>✓</span>{f}
                   </li>

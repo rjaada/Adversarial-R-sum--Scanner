@@ -21,7 +21,7 @@ function MSection({
   children: ReactNode
 }) {
   return (
-    <section id={id} style={{ paddingTop: "2.75rem" }}>
+    <section id={id} style={{ paddingTop: "2rem" }}>
       <h2
         style={{
           fontFamily: "var(--font-albert, 'Albert Sans', system-ui, sans-serif)",
@@ -246,10 +246,10 @@ export default function MethodologyPage() {
         </div>
       </nav>
 
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "3rem 1.5rem 6rem" }}>
+      <main style={{ maxWidth: 760, margin: "0 auto", padding: "2.5rem 1.5rem 3.5rem" }}>
 
         {/* Header */}
-        <header style={{ marginBottom: "2.5rem" }}>
+        <header style={{ marginBottom: "2rem" }}>
           <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7c8e5c", margin: "0 0 0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
             <span>«</span> Scoring methodology
           </p>
@@ -266,7 +266,7 @@ export default function MethodologyPage() {
         {/* Table of contents */}
         <nav
           aria-label="Contents"
-          style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "2.25rem", fontFamily: albertSans, fontSize: "0.875rem" }}
+          style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.5rem", fontFamily: albertSans, fontSize: "0.875rem" }}
         >
           <p style={{ fontFamily: albertSans, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#858585", margin: "0 0 0.6rem", fontWeight: 500 }}>
             Contents
@@ -568,7 +568,7 @@ export default function MethodologyPage() {
         <section
           id="limitations"
           style={{
-            marginTop: "2.75rem",
+            marginTop: "2rem",
             border: "1px solid #d9d3ca",
             borderRadius: 6,
             padding: "1.5rem 1.6rem",
@@ -659,7 +659,7 @@ export default function MethodologyPage() {
         {/* Footer */}
         <footer
           style={{
-            marginTop: "3.5rem",
+            marginTop: "2.5rem",
             paddingTop: "1.25rem",
             borderTop: "1px solid #d9d3ca",
             fontSize: "0.78rem",

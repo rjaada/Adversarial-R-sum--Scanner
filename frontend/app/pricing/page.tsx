@@ -82,7 +82,7 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "80px 24px 100px" }}>
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: "60px 24px 72px" }}>
 
         {/* Section label */}
         <p style={{ fontFamily: f, fontSize: "11px", fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 16px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -90,7 +90,7 @@ export default function PricingPage() {
         </p>
 
         {/* Fix 1 & 2: flex layout, both cards same baseline, badge above card */}
-        <div style={{ display: "flex", alignItems: "stretch", gap: "24px", marginTop: "48px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "stretch", gap: "24px", marginTop: "32px", flexWrap: "wrap" }}>
 
           {/* Free card */}
           <div style={{ flex: "1 1 340px", maxWidth: "420px", paddingTop: "20px" }}>

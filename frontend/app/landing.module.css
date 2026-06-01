@@ -159,11 +159,10 @@
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 .hero {
-  min-height: calc(100vh - 64px);
   background: var(--c-bg);
   display: flex;
   align-items: center;
-  padding: 80px 0 80px;
+  padding: 72px 0 80px;
 }
 .heroInner {
   max-width: 1440px;
@@ -176,7 +175,7 @@
   width: 100%;
 }
 .heroLeft  { display: flex; flex-direction: column; gap: 0; }
-.heroRight { padding-top: 80px; }
+.heroRight { padding-top: 48px; }
 .heroEyebrow {
   font-family: var(--f-body);
   font-size: 11px;
@@ -422,11 +421,11 @@
 /* ── Section containers ──────────────────────────────────────────────────── */
 .sectionWhite {
   background: var(--c-white);
-  padding: 96px 0;
+  padding: 72px 0;
 }
 .sectionAlt {
   background: var(--c-alt);
-  padding: 96px 0;
+  padding: 72px 0;
 }
 .sectionInner {
   max-width: 1440px;
@@ -440,7 +439,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--c-muted);
-  margin-bottom: 48px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -529,7 +528,7 @@
 /* ── Editorial break ─────────────────────────────────────────────────────── */
 .editorial {
   background: var(--c-alt);
-  padding: 100px 80px;
+  padding: 72px 80px;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -867,7 +866,7 @@
 /* ── CTA dark section ────────────────────────────────────────────────────── */
 .ctaDark {
   background: var(--c-dark);
-  padding: 140px 0;
+  padding: 88px 0;
 }
 .ctaInner {
   max-width: 1440px;
@@ -948,7 +947,7 @@
   .navRight  { display: none; }
   .hamburger { display: flex; }
 
-  .hero { padding: 48px 0 64px; min-height: auto; }
+  .hero { padding: 40px 0 48px; }
   .heroInner {
     padding: 0 24px;
     grid-template-columns: 1fr;
@@ -965,11 +964,11 @@
   .threeColItem:last-child  { border-bottom: none; padding-left: 0; padding-bottom: 0; }
   .threeColItem:nth-child(2) { padding-left: 0; }
 
-  .editorial { padding: 72px 24px; }
+  .editorial { padding: 56px 24px; }
   .editorialAnnotLeft, .editorialAnnotRight { display: none; }
   .editorialLine { font-size: clamp(32px, 10vw, 56px); }
 
-  .sectionWhite, .sectionAlt { padding: 64px 0; }
+  .sectionWhite, .sectionAlt { padding: 48px 0; }
   .howSteps { grid-template-columns: 1fr; gap: 32px; }
   .howArrow { display: none; }
   .heroRight { padding-top: 0; }
@@ -981,7 +980,7 @@
 
   .pricingGrid { grid-template-columns: 1fr; max-width: 100%; }
 
-  .ctaDark { padding: 80px 0; }
+  .ctaDark { padding: 56px 0; }
   .ctaInner { padding: 0 24px; }
   .ctaBtns { flex-direction: column; align-items: stretch; }
   .btnWhite, .btnWhiteOutline { text-align: center; }
