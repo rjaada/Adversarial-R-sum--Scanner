@@ -3,18 +3,21 @@
 import { useState } from "react"
 import { useUser } from "@clerk/nextjs"
 
+const fa   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
+const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
 const API_BASE = ""
 
 const PRO_FEATURES = [
+  "Unlimited scans",
   "Unlimited scan history",
   "Compare mode — track changes between scans",
   "PDF export — shareable scan report",
-  "AI rewrite suggestions — per-issue, on demand",
+  "AI rewrite suggestions — per issue, on demand",
 ]
 
 export default function BillingPage() {
   const { isLoaded } = useUser()
-  const [email, setEmail] = useState("")
+  const [email, setEmail]         = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,7 +33,6 @@ export default function BillingPage() {
       })
       setSubmitted(true)
     } catch {
-      // Non-fatal
       setSubmitted(true)
     } finally {
       setSubmitting(false)
@@ -41,49 +43,51 @@ export default function BillingPage() {
 
   return (
     <div>
-      <header style={{ marginBottom: "2.5rem" }}>
-        <p style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)", margin: "0 0 0.6rem" }}>
+      {/* Page header */}
+      <header style={{ marginBottom: "36px" }}>
+        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#858585", margin: "0 0 10px" }}>
           Billing
         </p>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 400, color: "var(--text-primary)", margin: "0 0 0.6rem", lineHeight: 1.2 }}>
+        <h1 style={{ fontFamily: fa, fontSize: "1.75rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
           Pro plan
         </h1>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.65, fontWeight: 300 }}>
+        <p style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585", margin: 0, lineHeight: 1.65 }}>
           Pro is in active development.
         </p>
       </header>
 
       {/* Current plan */}
-      <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "3px", padding: "1.25rem 1.5rem", marginBottom: "1.5rem", background: "var(--bg-elevated)" }}>
-        <div style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", padding: "20px 24px", marginBottom: "16px" }}>
+        <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 6px" }}>
           Current plan
-        </div>
-        <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--text-primary)", fontWeight: 500 }}>
+        </p>
+        <p style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 500, color: "#0D0C0A", margin: 0 }}>
           Free
-        </div>
+        </p>
       </div>
 
-      {/* Pro features */}
-      <div style={{ border: "1px solid #7c8e5c", borderRadius: "3px", padding: "1.5rem", marginBottom: "1.5rem", background: "var(--bg-elevated)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.25rem" }}>
+      {/* Pro card */}
+      <div style={{ background: "#FFFFFF", border: "2px solid #0D0C0A", borderRadius: "12px", padding: "24px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
           <div>
-            <div style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.35rem" }}>
-              Pro
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
-              <span style={{ fontFamily: "var(--font-data)", fontSize: "1.75rem", fontWeight: 400, color: "var(--text-primary)", lineHeight: 1 }}>$9</span>
-              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-dim)" }}>/ month</span>
+            <p style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#858585", margin: "0 0 8px" }}>Pro</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontFamily: fa, fontSize: "2.25rem", fontWeight: 600, color: "#0D0C0A", lineHeight: 1 }}>$9</span>
+              <span style={{ fontFamily: fa, fontSize: "0.9rem", color: "#858585" }}>/ month</span>
             </div>
           </div>
-          <span style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--sev-medium)", padding: "0.2rem 0.55rem", border: "1px solid currentColor", borderRadius: "2px" }}>
-            coming soon
+          <span style={{ fontFamily: mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9a4d22", padding: "4px 10px", border: "1px solid #9a4d22", borderRadius: "100px" }}>
+            Coming soon
           </span>
         </div>
-        <ul style={{ listStyle: "none", margin: "0 0 0", padding: 0, display: "grid", gap: "0.5rem" }}>
-          {PRO_FEATURES.map(f => (
-            <li key={f} style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--text-secondary)", display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-              <span style={{ color: "var(--accent)", fontSize: "0.68rem", flexShrink: 0 }}>✓</span>
-              {f}
+
+        <div style={{ height: 1, background: "#EBEBEB", marginBottom: "20px" }} />
+
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
+          {PRO_FEATURES.map(feat => (
+            <li key={feat} style={{ fontFamily: fa, fontSize: "0.9rem", color: "#0D0C0A", display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <span style={{ color: "#7c8e5c", fontSize: "0.75rem", flexShrink: 0 }}>✓</span>
+              {feat}
             </li>
           ))}
         </ul>
@@ -91,14 +95,14 @@ export default function BillingPage() {
 
       {/* Waitlist */}
       {!submitted ? (
-        <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "3px", padding: "1.5rem", background: "var(--bg-surface)" }}>
-          <h2 style={{ fontFamily: "var(--font-data)", fontSize: "0.56rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", margin: "0 0 0.75rem" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid #EBEBEB", borderRadius: "12px", padding: "24px" }}>
+          <h2 style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: "#0D0C0A", margin: "0 0 6px" }}>
             Notify me at launch
           </h2>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--text-secondary)", margin: "0 0 1rem", lineHeight: 1.6 }}>
+          <p style={{ fontFamily: fa, fontSize: "0.875rem", color: "#858585", margin: "0 0 16px", lineHeight: 1.65 }}>
             We&apos;ll send one email when Pro launches. No marketing. No lists.
           </p>
-          <form onSubmit={handleWaitlist} style={{ display: "flex", gap: "0.75rem" }}>
+          <form onSubmit={handleWaitlist} style={{ display: "flex", gap: "10px" }}>
             <input
               type="email"
               value={email}
@@ -106,21 +110,24 @@ export default function BillingPage() {
               placeholder="your@email.com"
               required
               style={{
-                fontFamily: "var(--font-body)", fontSize: "0.82rem",
-                color: "var(--text-primary)", background: "var(--bg-elevated)",
-                border: "1px solid var(--border-mid)", borderRadius: "2px",
-                padding: "0.45rem 0.75rem", outline: "none", flex: 1,
+                fontFamily: fa, fontSize: "0.875rem",
+                color: "#0D0C0A", background: "#F4F4F4",
+                border: "1px solid #DCDCDC", borderRadius: "8px",
+                padding: "10px 14px", outline: "none", flex: 1,
               }}
             />
             <button
               type="submit"
               disabled={submitting}
               style={{
-                fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 500,
-                color: submitting ? "var(--text-dim)" : "#0d0c0a",
-                background: submitting ? "var(--border-mid)" : "var(--accent)",
-                border: "none", borderRadius: "2px", padding: "0.45rem 1rem",
-                cursor: submitting ? "default" : "pointer", whiteSpace: "nowrap",
+                fontFamily: fa, fontSize: "0.875rem", fontWeight: 500,
+                color:      submitting ? "#B3B3B3" : "#FFFFFF",
+                background: submitting ? "#EBEBEB"  : "#0D0C0A",
+                border: "none", borderRadius: "8px",
+                padding: "10px 20px",
+                cursor: submitting ? "default" : "pointer",
+                whiteSpace: "nowrap",
+                transition: "background 0.15s",
               }}
             >
               {submitting ? "Saving…" : "Notify me"}
@@ -128,7 +135,7 @@ export default function BillingPage() {
           </form>
         </div>
       ) : (
-        <div style={{ border: "1px solid rgba(124,142,92,0.3)", borderRadius: "3px", padding: "1rem 1.25rem", background: "rgba(124,142,92,0.06)", fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--accent)" }}>
+        <div style={{ background: "rgba(124,142,92,0.08)", border: "1px solid rgba(124,142,92,0.25)", borderRadius: "12px", padding: "16px 20px", fontFamily: fa, fontSize: "0.9rem", color: "#7c8e5c" }}>
           You&apos;re on the list. We&apos;ll email you when Pro launches.
         </div>
       )}

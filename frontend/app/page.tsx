@@ -419,12 +419,12 @@ export default function LandingPage() {
               </div>
               <div className={styles.pricingDivider} />
               <ul className={styles.pricingFeatures}>
-                {['Unlimited scans', 'Full score breakdown', 'Issue evidence & fix patterns', 'Keyword gap analysis', 'ATS text preview'].map(f => (
+                {['3 scans per month', 'Overall score /100', 'Score breakdown (5 signals)', 'Issue evidence & fix patterns', 'Keyword gap analysis'].map(f => (
                   <li key={f} className={styles.pricingFeature}>
                     <span className={styles.pricingCheck}>✓</span>{f}
                   </li>
                 ))}
-                {['Scan history', 'PDF export', 'AI rewrite suggestions'].map(f => (
+                {['Scan history', 'Compare mode', 'PDF export', 'AI rewrite suggestions'].map(f => (
                   <li key={f} className={styles.pricingFeatureOff}>
                     <span>–</span>{f}
                   </li>

@@ -4,77 +4,132 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { UserButton } from "@clerk/nextjs"
 
+const fa = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
+
 const NAV = [
-  { href: "/account", label: "Account" },
-  { href: "/account/data", label: "Data & Privacy" },
-  { href: "/account/billing", label: "Billing" },
+  { href: "/account",       label: "Account"       },
+  { href: "/account/data",  label: "Data & Privacy" },
+  { href: "/account/billing", label: "Billing"     },
 ]
+
+// Light theme CSS variable overrides — identical to workspace
+const lightVars = {
+  "--bg-base":       "#F4F4F4",
+  "--bg-surface":    "#FFFFFF",
+  "--bg-elevated":   "#FAFAFA",
+  "--bg-muted":      "#F4F4F4",
+  "--bg-accent-low": "#F0F4EC",
+  "--border-subtle": "#EBEBEB",
+  "--border-mid":    "#DCDCDC",
+  "--text-primary":  "#0D0C0A",
+  "--text-secondary":"#474546",
+  "--text-dim":      "#858585",
+  "--accent":        "#7c8e5c",
+  "--accent-hover":  "#8fa85a",
+  "--sev-critical":  "#8c2f4e",
+  "--sev-high":      "#9a4d22",
+  "--sev-medium":    "#7a6e28",
+  "--sev-low":       "#858585",
+  "--mineral":       "#4a4640",
+  "--font-body":     fa,
+  "--font-display":  fa,
+  "--font-data":     "var(--font-mono, 'IBM Plex Mono', monospace)",
+} as React.CSSProperties
 
 const clerkUserButtonAppearance = {
   variables: {
-    colorBackground: "var(--bg-elevated)",
-    colorText: "var(--text-primary)",
-    colorPrimary: "var(--accent)",
-    borderRadius: "2px",
-    fontFamily: "var(--font-body)",
+    colorBackground: "#FFFFFF",
+    colorText:       "#0D0C0A",
+    colorPrimary:    "#7c8e5c",
+    borderRadius:    "4px",
+    fontFamily:      fa,
   },
   elements: {
     userButtonPopoverCard: {
-      border: "1px solid var(--border-subtle)",
-      boxShadow: "none",
-      background: "var(--bg-elevated)",
+      border:     "1px solid #EBEBEB",
+      boxShadow:  "0 4px 16px rgba(0,0,0,0.08)",
+      background: "#FFFFFF",
     },
     userButtonPopoverFooter: { display: "none" },
   },
 }
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
+export default function AccountLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   return (
-    <div style={{ background: "var(--bg-base)", minHeight: "100vh", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
+    <div style={{
+      ...lightVars,
+      background:  "#F4F4F4",
+      minHeight:   "100vh",
+      color:       "#0D0C0A",
+      fontFamily:  fa,
+    }}>
 
+      {/* Nav — white, matching site style */}
       <nav style={{
-        position: "sticky", top: 0, zIndex: 50,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 2rem", height: 58,
-        background: "rgba(13,12,10,0.96)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid var(--border-subtle)",
+        position:     "sticky",
+        top:          0,
+        zIndex:       50,
+        height:       64,
+        display:      "flex",
+        alignItems:   "center",
+        padding:      "0 40px",
+        background:   "#FFFFFF",
+        borderBottom: "1px solid #EBEBEB",
+        gap:          "32px",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-          <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 400, color: "var(--text-primary)", textDecoration: "none" }}>
-            TraceRank
-          </Link>
-          <div style={{ display: "flex", gap: "1.5rem" }}>
-            {NAV.map(({ href, label }) => {
-              const active = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  style={{
-                    fontFamily: "var(--font-body)", fontSize: "0.78rem",
-                    color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                    textDecoration: "none",
-                    borderBottom: active ? "1px solid var(--accent)" : "1px solid transparent",
-                    paddingBottom: "2px",
-                    transition: "color 0.2s ease",
-                  }}
-                >
-                  {label}
-                </Link>
-              )
-            })}
-          </div>
+        {/* Wordmark */}
+        <Link href="/" style={{
+          fontFamily:     fa,
+          fontSize:       "1rem",
+          fontWeight:     600,
+          color:          "#0D0C0A",
+          textDecoration: "none",
+          letterSpacing:  "-0.01em",
+          flexShrink:     0,
+        }}>
+          TraceRank
+        </Link>
+
+        {/* Sub-nav links */}
+        <div style={{ display: "flex", gap: "4px", flex: 1 }}>
+          {NAV.map(({ href, label }) => {
+            const active = pathname === href
+            return (
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  fontFamily:      fa,
+                  fontSize:        "0.875rem",
+                  fontWeight:      active ? 500 : 400,
+                  color:           active ? "#0D0C0A" : "#858585",
+                  textDecoration:  "none",
+                  padding:         "6px 14px",
+                  borderRadius:    "100px",
+                  background:      active ? "#F4F4F4" : "transparent",
+                  transition:      "background 0.15s, color 0.15s",
+                }}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </div>
+
+        {/* User button */}
         <UserButton appearance={clerkUserButtonAppearance} />
       </nav>
 
-      <main style={{ maxWidth: 680, margin: "0 auto", padding: "3.5rem 2rem 6rem" }}>
+      {/* Page content */}
+      <main style={{
+        maxWidth: 680,
+        margin:   "0 auto",
+        padding:  "48px 24px 80px",
+      }}>
         {children}
       </main>
-
     </div>
   )
 }
