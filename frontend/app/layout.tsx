@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
-import { ClerkProvider } from "@clerk/nextjs"
 import { Cormorant, Figtree, IBM_Plex_Mono, Albert_Sans, Unbounded } from "next/font/google"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import "./globals.css"
@@ -42,8 +41,6 @@ export const metadata: Metadata = {
   description: "See exactly where ATS systems and LLM screeners will reject your résumé.",
 }
 
-const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const htmlClass = [
     cormorant.variable,
@@ -53,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     unbounded.variable,
   ].join(" ")
 
-  const inner = (
+  return (
     <html lang="en" data-theme="dark" suppressHydrationWarning className={htmlClass}>
       <body>
         <ThemeProvider initial="dark">
@@ -62,11 +59,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Analytics />
       </body>
     </html>
-  )
-
-  return (
-    <ClerkProvider publishableKey={clerkKey ?? ""}>
-      {inner}
-    </ClerkProvider>
   )
 }

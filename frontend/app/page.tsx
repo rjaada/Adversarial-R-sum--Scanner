@@ -2,9 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { NavUserButton } from '@/components/NavUserButton'
 import styles from './landing.module.css'
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
@@ -103,7 +100,6 @@ const ANATOMY_ROWS = [
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { isLoaded: authLoaded, isSignedIn } = useAuth()
   const [loaded, setLoaded]               = useState(false)
   const [navScrolled, setNavScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen]       = useState(false)
@@ -153,13 +149,8 @@ export default function LandingPage() {
           </div>
 
           <div className={styles.navRight}>
-            {authLoaded && !isSignedIn && (
-              <>
-                <Link href="/sign-in" className={styles.navSignIn}>Sign in</Link>
-                <Link href="/sign-up" className={styles.navCta}>Get started →</Link>
-              </>
-            )}
-            {authLoaded && isSignedIn && <NavUserButton />}
+            <Link href="/sign-in" className={styles.navSignIn}>Sign in</Link>
+            <Link href="/sign-up" className={styles.navCta}>Get started →</Link>
           </div>
 
           <button
@@ -490,7 +481,6 @@ export default function LandingPage() {
             <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
             <Link href="/privacy"     className={styles.footerLink}>Privacy</Link>
             <Link href="/pricing"     className={styles.footerLink}>Pricing</Link>
-            <ThemeToggle />
           </div>
         </div>
       </footer>
