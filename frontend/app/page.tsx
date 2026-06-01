@@ -200,75 +200,86 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── What TraceRank is ─────────────────────────────────────────────── */}
+      {/* ── What TraceRank is + How it works (combined section) ─────────────── */}
       <section className={styles.sectionWhite} id="how-it-works">
-        <div
-          ref={orient.ref}
-          className={`${styles.sectionInner} ${styles.fadeUp} ${orient.visible ? styles.fadeUpVisible : ''}`}
-        >
-          <div className={styles.sectionLabel}>
-            <span className={styles.labelPrefix}>«</span> What TraceRank is
-          </div>
-          <div className={styles.threeCol}>
-            <div className={styles.threeColItem}>
-              <p className={styles.threeColTitle}>What it measures.</p>
-              <p className={styles.threeColBody}>
-                ATS parse integrity, keyword alignment, and experience signal — scored against
-                the structure and vocabulary of a real job description.
-              </p>
-            </div>
-            <div className={styles.threeColItem}>
-              <p className={styles.threeColTitle}>What it does not claim.</p>
-              <p className={styles.threeColBody}>
-                TraceRank does not simulate any specific ATS vendor. Scores reflect lexical
-                and structural analysis only.
-              </p>
-            </div>
-            <div className={styles.threeColItem}>
-              <p className={styles.threeColTitle}>Why that matters.</p>
-              <p className={styles.threeColBody}>
-                Automated screeners are deterministic. Understanding how they process
-                your résumé should not require guesswork.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+        <div className={styles.sectionInner}>
 
-      {/* ── How it works ──────────────────────────────────────────────────── */}
-      <section className={styles.sectionWhite}>
-        <div
-          ref={howItWorks.ref}
-          className={`${styles.sectionInner} ${styles.fadeUp} ${howItWorks.visible ? styles.fadeUpVisible : ''}`}
-        >
-          <div className={styles.sectionLabel}>
-            <span className={styles.labelPrefix}>«</span> How it works
+          {/* What TraceRank is — borderless 40/30/30 typographic grid */}
+          <div
+            ref={orient.ref}
+            className={`${styles.fadeUp} ${orient.visible ? styles.fadeUpVisible : ''}`}
+          >
+            <p className={styles.orientEyebrow}>What TraceRank is</p>
+            <div className={styles.whatGrid}>
+
+              {/* Primary column — the main product claim, larger type */}
+              <div>
+                <p className={styles.whatPrimaryTitle}>What it measures.</p>
+                <p className={styles.whatPrimaryBody}>
+                  ATS parse integrity, keyword alignment, and experience signal — scored
+                  against the structure and vocabulary of a real job description.
+                </p>
+              </div>
+
+              {/* Secondary columns — scope + context, compact */}
+              <div>
+                <span className={styles.orientTag}>Scope</span>
+                <p className={styles.whatSecondaryTitle}>What it does not claim.</p>
+                <p className={styles.whatSecondaryBody}>
+                  TraceRank does not simulate any specific ATS vendor. Scores reflect
+                  lexical and structural analysis only.
+                </p>
+              </div>
+
+              <div>
+                <span className={styles.orientTag}>Context</span>
+                <p className={styles.whatSecondaryTitle}>Why that matters.</p>
+                <p className={styles.whatSecondaryBody}>
+                  Automated screeners are deterministic. Understanding how they score
+                  your résumé should not require guesswork.
+                </p>
+              </div>
+
+            </div>
           </div>
-          <div className={styles.howSteps}>
-            <div className={styles.howStep}>
-              <div className={styles.howStepNum}>01</div>
-              <div className={styles.howStepTitle}>Upload your résumé</div>
-              <div className={styles.howStepDesc}>
-                PDF or DOCX. Parsed as plain text — exactly how an ATS reads it.
+
+          {/* Process track — dark-badge steps with connecting line */}
+          <div
+            ref={howItWorks.ref}
+            className={`${styles.processSection} ${styles.fadeUp} ${howItWorks.visible ? styles.fadeUpVisible : ''}`}
+          >
+            <p className={styles.orientEyebrow}>How it works</p>
+            <div className={styles.processTrack}>
+
+              <div className={styles.processStep}>
+                <div className={styles.processBadge}>01</div>
+                <p className={styles.processStepTitle}>Upload your résumé</p>
+                <p className={styles.processStepDesc}>
+                  PDF or DOCX. Parsed as plain text — exactly how an ATS reads it.
+                </p>
               </div>
-            </div>
-            <div className={styles.howArrow}>→</div>
-            <div className={styles.howStep}>
-              <div className={styles.howStepNum}>02</div>
-              <div className={styles.howStepTitle}>Paste the job description</div>
-              <div className={styles.howStepDesc}>
-                The JD vocabulary becomes the scoring target. Keywords, requirements, experience thresholds.
+
+              <div className={styles.processStep}>
+                <div className={styles.processBadge}>02</div>
+                <p className={styles.processStepTitle}>Paste the job description</p>
+                <p className={styles.processStepDesc}>
+                  The JD vocabulary becomes the scoring target. Keywords, requirements,
+                  experience thresholds.
+                </p>
               </div>
-            </div>
-            <div className={styles.howArrow}>→</div>
-            <div className={styles.howStep}>
-              <div className={styles.howStepNum}>03</div>
-              <div className={styles.howStepTitle}>Get your score</div>
-              <div className={styles.howStepDesc}>
-                Overall score plus 5 sub-scores with specific evidence. Not a rating — a diagnostic.
+
+              <div className={styles.processStep}>
+                <div className={styles.processBadge}>03</div>
+                <p className={styles.processStepTitle}>Get your score</p>
+                <p className={styles.processStepDesc}>
+                  Overall score plus 5 sub-scores with specific evidence. Not a rating
+                  — a diagnostic.
+                </p>
               </div>
+
             </div>
           </div>
+
         </div>
       </section>
 
