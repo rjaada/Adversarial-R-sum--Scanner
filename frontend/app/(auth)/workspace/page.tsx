@@ -483,7 +483,7 @@ export default function WorkspacePage() {
               onClick={() => fileInputRef.current?.click()}
               style={{
                 width: "340px",
-                height: "100%",
+                minHeight: "260px",
                 background: dragOver ? "#FAFAF8" : "#FFFFFF",
                 border: `1.5px dashed ${dragOver ? "#0D0C0A" : "#C8C4BE"}`,
                 borderRadius: "12px",
@@ -533,7 +533,7 @@ export default function WorkspacePage() {
             {/* Card 2 — Job description */}
             <div style={{
               width: "340px",
-              height: "100%",
+              minHeight: "260px",
               background: "#FFFFFF",
               border: `1.5px dashed ${jdFocused ? "#0D0C0A" : "#C8C4BE"}`,
               borderRadius: "12px",
