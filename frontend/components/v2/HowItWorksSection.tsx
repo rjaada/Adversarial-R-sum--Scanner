@@ -2,68 +2,217 @@
 
 import { useEffect, useRef, useState } from "react"
 
+// ── Step panel data ─────────────────────────────────────────────────────────
+
+type ParseItem  = { label: string; ok: boolean; note?: string }
+type MatchItem  = { label: string; matched: boolean }
+type FindingItem = { sev: "Critical" | "High" | "Medium"; title: string; detail: string }
+
+const panelData = {
+  parse: {
+    label: "Résumé parsed",
+    score: { value: 94, label: "Parse score" },
+    sections: [
+      { label: "Contact info",        ok: true  },
+      { label: "Summary",             ok: true  },
+      { label: "Experience · 4 roles",ok: true  },
+      { label: "Education",           ok: true  },
+      { label: "Skills",              ok: true  },
+    ] as ParseItem[],
+    warnings: [
+      "Two-column layout detected — may collapse in ATS",
+      "Table found in skills section — likely to be dropped",
+    ],
+  },
+  jd: {
+    label: "14 requirements extracted",
+    matched: [
+      "React", "TypeScript", "Node.js", "REST APIs", "Agile", "Cross-functional",
+    ] as MatchItem["label"][],
+    unmatched: [
+      "Kubernetes", "GraphQL", "Incident management", "System design",
+      "5+ years ownership", "On-call rotation", "Infrastructure-as-code", "Go",
+    ] as MatchItem["label"][],
+  },
+  report: {
+    label: "17 issues · score 61 / 100",
+    overall: 61,
+    findings: [
+      { sev: "Critical", title: "Two-column layout collapsed", detail: "ATS reads résumé sections out of sequence" },
+      { sev: "Critical", title: "Header parsed as filler text",  detail: "Job title stripped of context by parser" },
+      { sev: "High",     title: "8 of 14 JD requirements missing", detail: "Kubernetes, GraphQL, incident mgmt absent" },
+      { sev: "Medium",   title: "11 passive-voice bullets",        detail: "\"was responsible for\" penalised by screeners" },
+    ] as FindingItem[],
+  },
+}
+
+const sevStyle: Record<FindingItem["sev"], string> = {
+  Critical: "bg-background/15 text-background/80",
+  High:     "bg-background/10 text-background/60",
+  Medium:   "bg-background/[0.06] text-background/40",
+}
+
+// ── Sub-panels ───────────────────────────────────────────────────────────────
+
+function ParsePanel({ active }: { active: boolean }) {
+  const d = panelData.parse
+  return (
+    <div className="p-6 min-h-[300px] flex flex-col gap-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-background/40 uppercase tracking-widest">Sections extracted</span>
+        <span className="text-xs font-mono text-background/40">{d.score.value}% parse score</span>
+      </div>
+
+      <div className="space-y-1">
+        {d.sections.map((s, i) => (
+          <div
+            key={s.label}
+            className={`flex items-center gap-3 py-2 border-b border-background/5 transition-all duration-500 ${
+              active ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+            }`}
+            style={{ transitionDelay: active ? `${i * 80}ms` : "0ms" }}
+          >
+            <span className="text-background/50 text-xs">✓</span>
+            <span className="text-sm text-background/80">{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 space-y-2">
+        {d.warnings.map((w, i) => (
+          <div
+            key={i}
+            className={`flex items-start gap-2 px-3 py-2 bg-background/[0.06] border border-background/10 transition-all duration-500 ${
+              active ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+            }`}
+            style={{ transitionDelay: active ? `${(d.sections.length + i) * 80}ms` : "0ms" }}
+          >
+            <span className="text-background/40 text-xs mt-0.5 shrink-0">⚠</span>
+            <span className="text-xs text-background/40">{w}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function JDPanel({ active }: { active: boolean }) {
+  const d = panelData.jd
+  return (
+    <div className="p-6 min-h-[300px] flex flex-col gap-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-background/40 uppercase tracking-widest">Match analysis</span>
+        <span className="text-xs font-mono text-background/40">{d.matched.length} / {d.matched.length + d.unmatched.length} matched</span>
+      </div>
+
+      <div>
+        <p className="text-xs text-background/30 font-mono mb-2 uppercase tracking-widest">Present</p>
+        <div className="flex flex-wrap gap-2">
+          {d.matched.map((m, i) => (
+            <span
+              key={m}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 bg-background/10 border border-background/20 text-xs text-background/70 transition-all duration-500 ${
+                active ? "opacity-100 scale-100" : "opacity-0 scale-95"
+              }`}
+              style={{ transitionDelay: active ? `${i * 60}ms` : "0ms" }}
+            >
+              <span>✓</span>{m}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs text-background/30 font-mono mb-2 uppercase tracking-widest">Missing</p>
+        <div className="flex flex-wrap gap-2">
+          {d.unmatched.map((u, i) => (
+            <span
+              key={u}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 bg-background/[0.04] border border-background/10 text-xs text-background/35 transition-all duration-500 ${
+                active ? "opacity-100 scale-100" : "opacity-0 scale-95"
+              }`}
+              style={{ transitionDelay: active ? `${(d.matched.length + i) * 60}ms` : "0ms" }}
+            >
+              <span>✗</span>{u}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReportPanel({ active }: { active: boolean }) {
+  const d = panelData.report
+  const filled = Math.round(d.overall / 10)
+  return (
+    <div className="p-6 min-h-[300px] flex flex-col gap-4">
+      {/* Score bar */}
+      <div
+        className={`flex items-center justify-between px-4 py-3 border border-background/10 transition-all duration-500 ${
+          active ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+        }`}
+      >
+        <span className="text-xs font-mono text-background/40">Overall score</span>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-0.5">
+            {[...Array(10)].map((_, i) => (
+              <span key={i} className={`block w-2 h-2 rounded-sm ${i < filled ? "bg-background/70" : "bg-background/15"}`} />
+            ))}
+          </div>
+          <span className="font-mono text-sm text-background/80">{d.overall}<span className="text-background/30">/100</span></span>
+        </div>
+      </div>
+
+      {/* Findings */}
+      <div className="space-y-2">
+        {d.findings.map((f, i) => (
+          <div
+            key={i}
+            className={`px-4 py-3 border border-background/10 hover:border-background/20 transition-all duration-500 ${
+              active ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+            }`}
+            style={{ transitionDelay: active ? `${(i + 1) * 100}ms` : "0ms" }}
+          >
+            <div className="flex items-start gap-3">
+              <span className={`shrink-0 px-1.5 py-0.5 text-[10px] font-mono rounded-sm ${sevStyle[f.sev]}`}>
+                {f.sev}
+              </span>
+              <div>
+                <p className="text-sm text-background/80">{f.title}</p>
+                <p className="text-xs text-background/40 mt-0.5">{f.detail}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Steps config ─────────────────────────────────────────────────────────────
+
 const steps = [
   {
     number: "I",
     title: "Upload your résumé",
-    description:
-      "PDF or DOCX, up to 10 MB. We extract every section: contact info, summary, experience, education, skills, and any custom sections you've added.",
-    code: `// scan.ts — résumé parsed
-
-{
-  sections: [
-    "contact", "summary",
-    "experience", "education",
-    "skills"
-  ],
-  pages: 1,
-  parseScore: 94,
-  warnings: [
-    "two_column_detected",
-    "table_in_skills"
-  ]
-}`,
+    description: "PDF or DOCX, up to 10 MB. We extract every section: contact info, summary, experience, education, skills, and any custom sections you've added.",
+    panelLabel: "Résumé parsed",
+    panel: (active: boolean) => <ParsePanel active={active} />,
   },
   {
     number: "II",
     title: "Paste the job description",
-    description:
-      "Any job posting — LinkedIn, Lever, Greenhouse, or raw text. We extract 15–40 distinct requirements from a typical JD in under two seconds.",
-    code: `// jd.ts — requirements extracted
-
-{
-  requiredSkills: [
-    "React", "TypeScript", "GraphQL"
-  ],
-  impliedSkills: [
-    "REST APIs", "Agile workflows"
-  ],
-  senioritySignals: [
-    "5+ years", "lead", "own"
-  ],
-  matchedCount: 6,
-  totalRequirements: 14
-}`,
+    description: "Any job posting — LinkedIn, Lever, Greenhouse, or raw text. We extract 15–40 distinct requirements from a typical JD in under two seconds.",
+    panelLabel: "14 requirements extracted",
+    panel: (active: boolean) => <JDPanel active={active} />,
   },
   {
     number: "III",
     title: "Get your scored report",
-    description:
-      "Issues ranked by severity. Each finding shows what failed, why it matters, and a specific rewrite suggestion. Plus your ATS plain-text preview.",
-    code: `// report.ts — scan complete
-
-{
-  overallScore: 61,
-  parseScore:   94,
-  jdMatchScore: 43,
-  issueCount:   17,
-  criticalCount: 2,
-  topFixes: [
-    "Restructure two-column layout",
-    "Add: Kubernetes, incident mgmt",
-    "Rephrase 11 passive bullets"
-  ]
-}`,
+    description: "Issues ranked by severity. Each finding shows what failed, why it matters, and a specific rewrite suggestion. Plus your ATS plain-text preview.",
+    panelLabel: "17 issues · score 61/100",
+    panel: (active: boolean) => <ReportPanel active={active} />,
   },
 ]
 
@@ -74,8 +223,12 @@ const styleBlock = `
   }
 `
 
+// ── Section ──────────────────────────────────────────────────────────────────
+
 export function HowItWorksSection() {
   const [activeStep, setActiveStep] = useState(0)
+  const [displayedStep, setDisplayedStep] = useState(0)
+  const [panelVisible, setPanelVisible] = useState(true)
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -86,9 +239,20 @@ export function HowItWorksSection() {
   }, [])
 
   useEffect(() => {
-    const t = setInterval(() => setActiveStep((p) => (p + 1) % steps.length), 5000)
+    const t = setInterval(() => setActiveStep((p) => (p + 1) % steps.length), 6000)
     return () => clearInterval(t)
   }, [])
+
+  // Fade out → swap content → fade in
+  useEffect(() => {
+    if (activeStep === displayedStep) return
+    setPanelVisible(false)
+    const t = setTimeout(() => {
+      setDisplayedStep(activeStep)
+      setPanelVisible(true)
+    }, 220)
+    return () => clearTimeout(t)
+  }, [activeStep, displayedStep])
 
   return (
     <section
@@ -141,7 +305,7 @@ export function HowItWorksSection() {
                     {activeStep === index && (
                       <div className="mt-4 h-px bg-background/20 overflow-hidden">
                         <div className="h-full bg-background w-0"
-                          style={{ animation: "v2-step-progress 5s linear forwards" }} />
+                          style={{ animation: "v2-step-progress 6s linear forwards" }} />
                       </div>
                     )}
                   </div>
@@ -150,44 +314,31 @@ export function HowItWorksSection() {
             ))}
           </div>
 
-          {/* Code display */}
+          {/* Findings panel */}
           <div className="lg:sticky lg:top-32 self-start">
             <div className="border border-background/10 overflow-hidden">
+              {/* Panel header */}
               <div className="px-6 py-4 border-b border-background/10 flex items-center justify-between">
                 <div className="flex gap-2">
                   {[0,1,2].map((i) => <div key={i} className="w-3 h-3 rounded-full bg-background/20" />)}
                 </div>
-                <span className="text-xs font-mono text-background/40">scan.ts</span>
+                <span className={`text-xs font-mono text-background/40 transition-opacity duration-200 ${panelVisible ? "opacity-100" : "opacity-0"}`}>{steps[displayedStep].panelLabel}</span>
               </div>
 
-              <div className="p-8 font-mono text-sm min-h-[300px]">
-                <pre className="text-background/70">
-                  {steps[activeStep].code.split("\n").map((line, li) => (
-                    <div
-                      key={`${activeStep}-${li}`}
-                      className="leading-loose v2-code-line"
-                      style={{ animationDelay: `${li * 80}ms` }}
-                    >
-                      <span className="text-background/20 select-none w-8 inline-block">{li + 1}</span>
-                      <span className="inline-flex">
-                        {line.split("").map((char, ci) => (
-                          <span
-                            key={`${activeStep}-${li}-${ci}`}
-                            className="v2-code-char"
-                            style={{ animationDelay: `${li * 80 + ci * 15}ms` }}
-                          >
-                            {char === " " ? " " : char}
-                          </span>
-                        ))}
-                      </span>
-                    </div>
-                  ))}
-                </pre>
+              {/* Panel content — fades out, swaps, fades in on step change */}
+              <div
+                key={displayedStep}
+                className={`transition-all duration-200 ${panelVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+              >
+                {steps[displayedStep].panel(true)}
               </div>
 
+              {/* Status bar */}
               <div className="px-6 py-4 border-t border-background/10 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs font-mono text-background/40">Analysis complete</span>
+                <span className="w-2 h-2 rounded-full bg-background/40 animate-pulse" />
+                <span className={`text-xs font-mono text-background/40 transition-opacity duration-200 ${panelVisible ? "opacity-100" : "opacity-0"}`}>
+                  {displayedStep === 0 ? "Parsing complete" : displayedStep === 1 ? "Requirements extracted" : "Report ready"}
+                </span>
               </div>
             </div>
           </div>
