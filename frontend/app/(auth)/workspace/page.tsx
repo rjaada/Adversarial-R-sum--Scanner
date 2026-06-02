@@ -15,8 +15,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { useAuth } from "@clerk/nextjs"
-import { NavUserButton } from "@/components/NavUserButton"
+import { useAuth, UserButton } from "@clerk/nextjs"
 import { IssueGate } from "@/components/IssueGate"
 import { UpgradePrompt } from "@/components/UpgradePrompt"
 import { UploadPhase } from "./UploadPhase"
@@ -317,7 +316,18 @@ export default function WorkspacePage() {
               </button>
             </>
           )}
-          <NavUserButton />
+          <UserButton
+                appearance={{
+                  variables: { colorBackground: "#FFFFFF", colorText: "#0D0C0A", colorPrimary: "#7c8e5c", borderRadius: "4px", fontFamily: FA },
+                  elements: {
+                    userButtonPopoverCard:   { border: "1px solid #EBEBEB", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", background: "#FFFFFF" },
+                    userButtonPopoverFooter: { display: "none" },
+                  },
+                }}
+                userProfileUrl="/account"
+                userProfileMode="navigation"
+                afterSignOutUrl="/"
+              />
         </div>
       </nav>
 
