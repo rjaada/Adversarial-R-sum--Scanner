@@ -7,13 +7,19 @@
  * hierarchy, secondary info collapsed by default.
  */
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { IssueGate } from "@/components/IssueGate"
 import { UpgradePrompt } from "@/components/UpgradePrompt"
+import { DocumentPane } from "./DocumentPane"
+import { PDFViewer } from "./PDFViewer"
 import {
   pct, scoreColor, compareScans, track,
   SEV_COLOR, SECTION_HEADER_VARIANTS,
 } from "@/lib/scan-utils"
+import {
+  computeAllAnchors, mergeSpans, buildIssueSpanMap, confidenceLabel,
+  type AnchorResult,
+} from "@/lib/anchor-match"
 import type {
   ScanResult, ScanSummary, Issue, LLMStatus, SubDeltas,
 } from "@/types/workspace"
@@ -110,6 +116,39 @@ export function WorkspaceResults({
   const [showHistory, setShowHistory]         = useState(false)
   const [showSimulation, setShowSimulation]   = useState(false)
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
+  const [viewMode, setViewMode]               = useState<"report" | "review">("report")
+  const [hoveredIssue, setHoveredIssue]       = useState<number | null>(null)
+  const [pdfFailed, setPdfFailed]             = useState(false)
+  const [pdfFailNote, setPdfFailNote]         = useState("")
+
+  // Reset PDF failure state when a new file is scanned
+  useEffect(() => { setPdfFailed(false); setPdfFailNote("") }, [display.scan_id])
+
+  // Esc → deselect
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedIssue(null) }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [setSelectedIssue])
+
+  // Anchor computation (memoised on scan data)
+  const { anchors, sectionBlocks } = useMemo(
+    () => computeAllAnchors(
+      display.issues,
+      display.ats_text_preview ?? "",
+      display.resume_sections ?? {},
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [display.scan_id],
+  )
+  const { inlineSpans, sectionSpans } = useMemo(
+    () => mergeSpans(anchors),
+    [anchors],
+  )
+  const issueSpanMap = useMemo(
+    () => buildIssueSpanMap(inlineSpans, sectionSpans),
+    [inlineSpans, sectionSpans],
+  )
 
   // ── Score data ────────────────────────────────────────────────────────
   const jdReqs = (display.jd_requirements ?? {}) as { required_keywords?: string[]; min_years_experience?: number | null }
@@ -132,6 +171,21 @@ export function WorkspaceResults({
   const confidence   = !jdHasKeywords || parseScore < 40 ? "low" : defaultCount > 0 ? "moderate" : "high"
   const confLabel    = { high: "High confidence", moderate: "Moderate confidence", low: "Low confidence" }[confidence]
   const confColor    = { high: "#7c8e5c", moderate: "#6e6b66", low: "#858585" }[confidence]
+
+  // ── Gating ──────────────────────────────────────────────────────────────
+  // The backend truncates issues and strips content for unauthenticated
+  // callers and sets `gated`. `total_issues` is the true count before
+  // truncation, so the "N more — sign in" nudge stays honest. On a gated
+  // result every sub-score except keyword match is locked.
+  const totalIssues   = display.total_issues ?? display.issues.length
+  const shownCount    = isSignedIn ? display.issues.length : Math.min(display.issues.length, 3)
+  const gateRemaining = totalIssues - shownCount
+  const isGated       = !!display.gated
+
+  // Keyboard activation for non-button clickable rows (WCAG 2.1 AA).
+  const onKey = (fn: () => void) => (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn() }
+  }
 
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", background: BG }}>
@@ -247,7 +301,14 @@ export function WorkspaceResults({
               ? <div style={{ fontFamily: FA, fontSize: "0.72rem", color: T3, fontStyle: "italic" }}>No saved scans.</div>
               : history.map(h => (
                 <div key={h.scan_id} style={{ padding: "0.5rem 0", borderBottom: `1px solid ${BD}` }}>
-                  <div onClick={() => void onLoadScan(h.scan_id)} style={{ cursor: "pointer" }}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Load scan ${h.source_id}`}
+                    onClick={() => void onLoadScan(h.scan_id)}
+                    onKeyDown={onKey(() => void onLoadScan(h.scan_id))}
+                    style={{ cursor: "pointer" }}
+                  >
                     <div style={{ fontFamily: FA, fontSize: "0.72rem", color: T1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.source_id}</div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.15rem" }}>
                       <span style={{ fontFamily: FA, fontSize: "0.62rem", color: T3 }}>{new Date(h.scanned_at).toLocaleDateString()}</span>
@@ -269,11 +330,11 @@ export function WorkspaceResults({
         </div>
       </aside>
 
-      {/* ── Main report ─────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, overflowY: "auto", background: BG, minWidth: 0 }}>
+      {/* ── Main content area ───────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
 
         {/* Top action bar */}
-        <div style={{ padding: "1rem 2rem", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: "1.5rem", background: SURF }}>
+        <div style={{ padding: "0.75rem 2rem", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: "1.5rem", background: SURF, flexShrink: 0 }}>
           <button
             onClick={onNewScan}
             style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, background: "none", border: "none", cursor: "pointer", padding: 0 }}
@@ -284,6 +345,26 @@ export function WorkspaceResults({
             {display.source_id}
           </span>
           {isMock && <span style={{ fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, padding: "0.15rem 0.5rem", border: `1px solid ${BD}`, borderRadius: "2px" }}>sample</span>}
+
+          {/* View toggle */}
+          <div style={{ display: "flex", border: `1px solid ${BD}`, borderRadius: "4px", overflow: "hidden" }}>
+            {(["report", "review"] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                style={{
+                  fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em",
+                  textTransform: "uppercase", padding: "0.3rem 0.75rem",
+                  background: viewMode === mode ? T1 : "transparent",
+                  color: viewMode === mode ? SURF : T3,
+                  border: "none", cursor: "pointer", transition: "background 0.15s",
+                }}
+              >
+                {mode === "report" ? "Report" : "Review"}
+              </button>
+            ))}
+          </div>
+
           <div style={{ marginLeft: "auto" }}>
             <button
               onClick={() => void onExport()}
@@ -294,6 +375,158 @@ export function WorkspaceResults({
             </button>
           </div>
         </div>
+
+        {/* ── Review mode ─────────────────────────────────────────────── */}
+        {viewMode === "review" && compareBase === null && (
+          <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+
+            {/* PDF-first: use PDFViewer when file is a PDF and hasn't failed */}
+            {file?.type === "application/pdf" && !pdfFailed ? (
+              <PDFViewer
+                file={file}
+                issues={display.issues}
+                isSignedIn={isSignedIn}
+                selectedIssue={selectedIssue}
+                hoveredIssue={hoveredIssue}
+                onSelectIssue={setSelectedIssue}
+                onHoverIssue={setHoveredIssue}
+                onFallback={(reason) => {
+                  setPdfFailed(true)
+                  setPdfFailNote(reason)
+                  if (process.env.NODE_ENV === "development")
+                    console.log("[TraceRank PDF] ATS fallback triggered:", reason)
+                }}
+              />
+            ) : (
+              /* ATS text fallback: DOCX, image PDF, no file, or PDF.js error */
+              <>
+                {pdfFailed && pdfFailNote && (
+                  <div style={{ position: "absolute", top: 56, left: 240, zIndex: 20, fontFamily: MONO, fontSize: "0.54rem", color: T3, padding: "0.25rem 0.75rem", background: SURF, border: `1px solid ${BD}`, borderRadius: "2px", pointerEvents: "none" }}>
+                    Showing parsed text — PDF preview unavailable
+                  </div>
+                )}
+                <DocumentPane
+                  atsText={display.ats_text_preview ?? ""}
+                  sections={display.resume_sections ?? {}}
+                  issues={display.issues}
+                  anchors={anchors}
+                  sectionBlocks={sectionBlocks}
+                  inlineSpans={inlineSpans}
+                  sectionSpans={sectionSpans}
+                  issueSpanMap={issueSpanMap}
+                  selectedIssue={selectedIssue}
+                  hoveredIssue={hoveredIssue}
+                  onSelectIssue={setSelectedIssue}
+                  onHoverIssue={setHoveredIssue}
+                />
+
+            {/* Issues panel */}
+            <div style={{ width: "50%", minWidth: 0, overflowY: "auto", background: BG }}>
+              <div style={{ padding: "0.875rem 1.25rem", borderBottom: `1px solid ${BD}`, background: SURF }}>
+                <span style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>
+                  Issues — {totalIssues} found
+                </span>
+              </div>
+              {(isSignedIn ? display.issues : display.issues.slice(0, 3)).map((issue, i) => {
+                const anchor = anchors[i]
+                const isSelected = selectedIssue === i
+                const isHovered = hoveredIssue === i
+                const spanForIssue = issueSpanMap.get(i)
+                const confLabel = anchor ? confidenceLabel(anchor.confidence) : "—"
+                const confColor: Record<string, string> = {
+                  Located: "#7c8e5c", "Approx.": "#9a4d22",
+                  Section: T2, Absent: T3, "—": T3,
+                }
+                const sevColors: Record<string, { bg: string; color: string }> = {
+                  critical: { bg: "rgba(140,47,78,0.08)", color: "#8c2f4e" },
+                  high:     { bg: "rgba(154,77,34,0.08)", color: "#9a4d22" },
+                  medium:   { bg: "rgba(122,110,40,0.08)", color: "#7a6e28" },
+                  low:      { bg: "rgba(26,25,23,0.05)",   color: T2       },
+                }
+                const sc = sevColors[issue.severity] ?? sevColors.low
+
+                return (
+                  <div
+                    key={i}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Issue: ${issue.title}`}
+                    aria-expanded={isSelected}
+                    onClick={() => setSelectedIssue(isSelected ? null : i)}
+                    onKeyDown={onKey(() => setSelectedIssue(isSelected ? null : i))}
+                    onMouseEnter={() => setHoveredIssue(i)}
+                    onMouseLeave={() => setHoveredIssue(null)}
+                    style={{
+                      padding: "0.875rem 1.25rem",
+                      borderBottom: `1px solid ${BD}`,
+                      background: isSelected
+                        ? "rgba(26,25,23,0.02)"
+                        : isHovered ? "rgba(26,25,23,0.012)" : "transparent",
+                      cursor: "pointer",
+                      transition: "background 0.1s",
+                      outline: isHovered && !isSelected && spanForIssue
+                        ? `1px solid ${BD}`
+                        : "none",
+                    }}
+                  >
+                    {/* Row: severity + title + confidence */}
+                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start", marginBottom: isSelected ? "0.75rem" : 0 }}>
+                      <span style={{
+                        fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em",
+                        textTransform: "uppercase", color: sc.color, background: sc.bg,
+                        padding: "0.2rem 0.45rem", borderRadius: "2px", flexShrink: 0,
+                        border: `1px solid ${sc.color}22`,
+                        marginTop: "2px",
+                      }}>
+                        {issue.severity}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: FA, fontSize: "0.84rem", fontWeight: 600, color: T1, lineHeight: 1.4 }}>
+                          {issue.title}
+                        </div>
+                        <div style={{ marginTop: "0.25rem", fontFamily: MONO, fontSize: "0.58rem", color: confColor[confLabel] ?? T3, letterSpacing: "0.06em" }}>
+                          {anchor?.confidence === "medium" ? "~ Approx. location" :
+                           anchor?.confidence === "high"   ? "✓ Located in text"  :
+                           anchor?.confidence === "section" ? `⟳ ${anchor.sectionKey} section` :
+                           anchor?.confidence === "absent"  ? "Section not found"  :
+                           "No document anchor"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded detail */}
+                    {isSelected && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.65, marginBottom: "0.75rem" }}>
+                          {issue.description}
+                        </div>
+                        {issue.evidence && issue.issue_type !== "missing_section" && (
+                          <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem", marginBottom: "0.5rem", fontFamily: MONO, fontSize: "0.7rem", color: T2, lineHeight: 1.8 }}>
+                            {issue.evidence}
+                          </div>
+                        )}
+                        <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem" }}>
+                          <div style={{ fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.4rem" }}>Fix</div>
+                          <div style={{ fontFamily: FA, fontSize: "0.8rem", color: T1, lineHeight: 1.65 }}>
+                            {issue.fix_pattern || issue.suggested_fix}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {!isSignedIn && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
+            </div>
+            </>
+            )}
+
+          </div>
+        )}
+
+        {/* ── Report mode wrapper ──────────────────────────────────────────── */}
+        {(viewMode === "report" || compareBase !== null) && (
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
         {/* ── Compare mode ─────────────────────────────────────────────── */}
         {compareBase !== null && (() => {
@@ -372,24 +605,34 @@ export function WorkspaceResults({
               {/* Sub-scores */}
               <div>
                 {scoreItems.map(s => {
-                  const isNeutral = s.key in neutralDefaults
-                  const p = isNeutral ? 50 : pct(s.value)
+                  // On a gated result only keyword match is revealed; the rest
+                  // are locked ("—") behind sign-in.
+                  const isLocked  = isGated && s.key !== "keyword_match"
+                  const isNeutral = !isLocked && (s.key in neutralDefaults)
+                  const hide      = isLocked || isNeutral
+                  const p         = isNeutral ? 50 : pct(s.value)
                   return (
                     <div key={s.key} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.6rem 0", borderTop: `1px solid ${BD}` }}>
                       <span style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, width: "110px", flexShrink: 0 }}>{s.label}</span>
                       <div style={{ flex: 1, height: "2px", background: "rgba(26,25,23,0.07)", borderRadius: "1px", position: "relative" }}>
-                        {!isNeutral && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: T1, opacity: 0.5, borderRadius: "1px", transition: "width 0.8s ease" }} />}
+                        {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: T1, opacity: 0.5, borderRadius: "1px", transition: "width 0.8s ease" }} />}
                       </div>
-                      <span style={{ fontFamily: MONO, fontSize: "0.82rem", color: isNeutral ? T3 : T1, width: "30px", textAlign: "right", flexShrink: 0 }}>{isNeutral ? "—" : p}</span>
+                      <span style={{ fontFamily: MONO, fontSize: "0.82rem", color: hide ? T3 : T1, width: "30px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
                       <span style={{ fontFamily: MONO, fontSize: "0.58rem", color: T3, width: "30px", flexShrink: 0 }}>{s.weight}</span>
                     </div>
                   )
                 })}
               </div>
 
-              {defaultCount > 0 && (
+              {defaultCount > 0 && !isGated && (
                 <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(26,25,23,0.03)", border: `1px solid ${BD}`, borderRadius: "4px", fontFamily: FA, fontSize: "0.75rem", color: T2, lineHeight: 1.65 }}>
                   One or more sub-scores defaulted to neutral — the job description lacked measurable data for that signal. Not penalties.
+                </div>
+              )}
+
+              {isGated && (
+                <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(26,25,23,0.03)", border: `1px solid ${BD}`, borderRadius: "4px", fontFamily: FA, fontSize: "0.75rem", color: T2, lineHeight: 1.65 }}>
+                  Sign in to unlock the full score breakdown, every finding, the keyword gap analysis, and the “What ATS sees” preview.
                 </div>
               )}
 
@@ -426,7 +669,7 @@ export function WorkspaceResults({
             {/* Issues list */}
             <div ref={issuesSectionRef}>
               <div style={{ padding: "1.25rem 2rem 0.75rem", borderBottom: `1px solid ${BD}` }}>
-                <Eyebrow>Issues — {display.issues.length} found</Eyebrow>
+                <Eyebrow>Issues — {totalIssues} found</Eyebrow>
               </div>
 
               {(isSignedIn ? display.issues : display.issues.slice(0, 3)).map((issue, i) => {
@@ -434,7 +677,12 @@ export function WorkspaceResults({
                 return (
                   <div
                     key={i}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Issue: ${issue.title}`}
+                    aria-expanded={isSelected}
                     onClick={() => setSelectedIssue(isSelected ? null : i)}
+                    onKeyDown={onKey(() => setSelectedIssue(isSelected ? null : i))}
                     style={{
                       padding: "1.25rem 2rem",
                       borderBottom: `1px solid ${BD}`,
@@ -522,7 +770,7 @@ export function WorkspaceResults({
                   </div>
                 )
               })}
-              {!isSignedIn && display.issues.length > 3 && <IssueGate remaining={display.issues.length - 3} />}
+              {!isSignedIn && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
             </div>
 
             {/* ── Collapsible secondary sections ─────────────────────────── */}
@@ -612,7 +860,10 @@ export function WorkspaceResults({
 
           </div>
         )}
-      </main>
+        </div>
+        )}
+
+      </div>
     </div>
   )
 }

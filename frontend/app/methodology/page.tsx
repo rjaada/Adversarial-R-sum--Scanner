@@ -348,8 +348,8 @@ export default function MethodologyPage() {
               [
                 "Keyword gap",
                 "Required JD keyword absent from résumé after synonym check",
-                "Critical–High",
-                "JD source context + synonym check result",
+                "High",
+                "JD keyword + synonym check result",
               ],
               [
                 "Weak phrasing",
@@ -360,26 +360,26 @@ export default function MethodologyPage() {
               [
                 "Missing section",
                 "Expected section absent after all header variants checked",
-                "Critical",
+                "Critical / High / Medium (by section)",
                 "Headers found vs headers searched",
               ],
               [
                 "Low quantification",
                 "Fewer than 40% of experience bullets contain metrics language",
-                "Medium",
+                "High",
                 "Bullet count + checked lines",
               ],
               [
                 "Summary mismatch",
-                "Summary covers fewer than 50% of JD keywords",
-                "Low–Medium",
+                "Summary covers fewer than 20% of JD keywords",
+                "High",
                 "Overlap percentage + missing terms",
               ],
               [
                 "Parse warning",
-                "Structural complexity penalty detected during extraction",
+                "Multi-column layout, tables, or text boxes detected during extraction",
                 "High",
-                "Penalty reason + weight applied",
+                "Detected artifacts + formatting fixes",
               ],
             ]}
           />

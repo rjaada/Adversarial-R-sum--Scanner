@@ -68,7 +68,7 @@ def test_exact_match_lower_when_keywords_missing():
     jd["required_keywords"] = ["terraform", "aws", "kubernetes", "helm", "vault"]
     result = simulate_profiles(WEAK_RESUME, jd, 0.8, [])
     exact = next(p for p in result.profiles if p.id == "exact_match")
-    semantic = next(p for p in result.profiles if p.id == "semantic_fit")
+    semantic = next(p for p in result.profiles if p.id == "adjacent_coverage")
     # semantic fit should score >= exact match when keywords missing but adjacent terms present
     assert semantic.score >= exact.score
 
@@ -93,7 +93,7 @@ def test_semantic_fit_highest_with_adjacent_skills():
     }
     jd = {**JD_STANDARD, "required_keywords": ["aws", "terraform", "kubernetes"]}
     result = simulate_profiles(sections, jd, 0.85, [])
-    semantic = next(p for p in result.profiles if p.id == "semantic_fit")
+    semantic = next(p for p in result.profiles if p.id == "adjacent_coverage")
     exact = next(p for p in result.profiles if p.id == "exact_match")
     assert semantic.score >= exact.score
 
@@ -109,7 +109,7 @@ def test_all_profiles_return_valid_shapes():
         assert 0 <= p.score <= 100
         assert 0 <= p.parse_quality <= 100
         assert 0 <= p.keyword_match <= 100
-        assert 0 <= p.semantic_fit <= 100
+        assert 0 <= p.adjacent_skills <= 100
         assert 0 <= p.structure_confidence <= 100
         assert p.risk_level in ("LOW", "MEDIUM", "HIGH")
         assert isinstance(p.top_strengths, list)
@@ -121,7 +121,7 @@ def test_all_profiles_return_valid_shapes():
 def test_profile_ids_match_expected():
     result = simulate_profiles(FULL_RESUME, dict(JD_STANDARD), 0.9, [])
     ids = {p.id for p in result.profiles}
-    assert ids == {"exact_match", "structure_sensitive", "semantic_fit"}
+    assert ids == {"exact_match", "structure_sensitive", "adjacent_coverage"}
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ def test_high_scoring_profile_has_at_least_one_strength():
 def test_all_profile_weights_sum_to_one():
     for cfg in ALL_PROFILES:
         total = (
-            cfg.w_kw_exact + cfg.w_kw_must + cfg.w_semantic
+            cfg.w_kw_exact + cfg.w_kw_must + cfg.w_adjacent
             + cfg.w_structure + cfg.w_parse + cfg.w_impact + cfg.w_experience
         )
         assert abs(total - 1.0) < 1e-9, f"{cfg.id} weights sum to {total}"

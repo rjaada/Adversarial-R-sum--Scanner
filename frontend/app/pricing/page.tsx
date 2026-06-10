@@ -12,15 +12,34 @@ const T1 = "#1a1917"
 const T2 = "#6e6b66"
 const T3 = "#a09890"
 
-const FREE_FEATURES = ["3 scans per month", "Overall score /100", "Score breakdown (5 signals)", "Issue evidence & fix patterns", "Keyword gap analysis"]
-const FREE_EXCLUDED = ["Scan history", "Compare mode", "PDF export", "AI rewrite suggestions"]
-const PRO_FEATURES  = ["Everything in Free", "Unlimited scans", "Unlimited scan history", "Compare mode", "PDF export", "AI rewrite suggestions — per issue"]
+// Free includes everything the current backend actually delivers to a
+// signed-in user — there is no scan-count limit enforced server-side, so we
+// do not advertise one. Pro's only code-backed differentiator today is
+// longer history retention (free = 90 days, pro = 12 months, set in
+// persistence._expires_at); it is otherwise still in development.
+const FREE_FEATURES = [
+  "Unlimited scans",
+  "Overall score + 5-signal breakdown",
+  "Full issue list with evidence & fix patterns",
+  "Keyword gap analysis",
+  "“What ATS sees” plain-text preview",
+  "ATS profile simulation",
+  "Compare scans",
+  "90-day scan history",
+  "HTML report export",
+  "AI rewrite suggestions (when the AI backend is enabled)",
+]
+const PRO_FEATURES = [
+  "Everything in Free",
+  "12-month scan history retention (Free keeps 90 days)",
+  "Early access to new checks and ATS profiles",
+]
 
 const STYLES = `
-  .pr-btn-free { display:flex;align-items:center;justify-content:center;width:100%;height:52px;font-family:${fa};font-size:15px;font-weight:500;color:${T1};background:transparent;border:1.5px solid ${T1};border-radius:100px;text-decoration:none;transition:background 0.2s,color 0.2s;cursor:pointer;margin-top:auto; }
-  .pr-btn-free:hover { background:${T1};color:#FDFCF9; }
-  .pr-btn-pro  { display:flex;align-items:center;justify-content:center;width:100%;height:52px;font-family:${fa};font-size:15px;font-weight:500;color:#FDFCF9;background:${T1};border:none;border-radius:100px;text-decoration:none;transition:background 0.2s;cursor:pointer;margin-top:auto; }
-  .pr-btn-pro:hover { background:${T2}; }
+  .pr-btn-free { display:flex;align-items:center;justify-content:center;width:100%;height:52px;font-family:${fa};font-size:15px;font-weight:500;color:#FDFCF9;background:${T1};border:none;border-radius:100px;text-decoration:none;transition:background 0.2s;cursor:pointer;margin-top:auto; }
+  .pr-btn-free:hover { background:${T2}; }
+  .pr-btn-pro  { display:flex;align-items:center;justify-content:center;width:100%;height:52px;font-family:${fa};font-size:15px;font-weight:500;color:${T1};background:transparent;border:1.5px solid ${T1};border-radius:100px;text-decoration:none;transition:background 0.2s,color 0.2s;cursor:pointer;margin-top:auto; }
+  .pr-btn-pro:hover { background:${T1};color:#FDFCF9; }
 `
 
 export default function PricingPage() {
@@ -43,12 +62,19 @@ export default function PricingPage() {
         <p style={{ fontFamily: fa, fontSize: "11px", fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: T3, margin: "0 0 16px" }}>
           Pricing
         </p>
+        <h1 style={{ fontFamily: fa, fontSize: "1.9rem", fontWeight: 700, color: T1, margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+          Everything works on Free.
+        </h1>
+        <p style={{ fontFamily: fa, fontSize: "0.95rem", color: T2, margin: 0, lineHeight: 1.65, maxWidth: 560 }}>
+          The full scanner — unlimited scans, every finding, the ATS simulation, compare, and export — is free.
+          Pro is in development and will add longer history retention.
+        </p>
 
         <div style={{ display: "flex", alignItems: "stretch", gap: "24px", marginTop: "32px", flexWrap: "wrap" }}>
 
           {/* Free */}
           <div style={{ flex: "1 1 340px", maxWidth: "420px", paddingTop: "20px" }}>
-            <div style={{ background: "#FFFFFF", border: `1px solid ${BD}`, borderRadius: "8px", padding: 32, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
+            <div style={{ background: "#FFFFFF", border: `2px solid ${T1}`, borderRadius: "8px", padding: 32, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
               <p style={{ fontFamily: fa, fontSize: "12px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: T3, margin: "0 0 12px" }}>Free</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 20 }}>
                 <span style={{ fontFamily: fa, fontSize: "56px", fontWeight: 600, color: T1, lineHeight: 1 }}>$0</span>
@@ -58,12 +84,7 @@ export default function PricingPage() {
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
                 {FREE_FEATURES.map(f => (
                   <li key={f} style={{ fontFamily: fa, fontSize: "15px", color: T1, display: "flex", alignItems: "baseline", gap: 10 }}>
-                    <span style={{ color: T1, fontSize: "12px", flexShrink: 0 }}>✓</span>{f}
-                  </li>
-                ))}
-                {FREE_EXCLUDED.map(f => (
-                  <li key={f} style={{ fontFamily: fa, fontSize: "15px", color: T3, display: "flex", alignItems: "baseline", gap: 10 }}>
-                    <span style={{ flexShrink: 0, color: T3 }}>–</span>{f}
+                    <span style={{ color: "#7c8e5c", fontSize: "12px", flexShrink: 0 }}>✓</span>{f}
                   </li>
                 ))}
               </ul>
@@ -73,10 +94,10 @@ export default function PricingPage() {
 
           {/* Pro */}
           <div style={{ flex: "1 1 340px", maxWidth: "420px", position: "relative", paddingTop: "20px" }}>
-            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", background: T1, color: "#FDFCF9", fontFamily: fa, fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", borderRadius: "100px", padding: "6px 16px", whiteSpace: "nowrap" }}>
-              MOST POPULAR
+            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", background: "#FFFFFF", color: "#9a4d22", fontFamily: fa, fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", border: "1px solid #9a4d22", borderRadius: "100px", padding: "5px 16px", whiteSpace: "nowrap" }}>
+              Coming soon
             </div>
-            <div style={{ background: "#FFFFFF", border: `2px solid ${T1}`, borderRadius: "8px", padding: 32, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
+            <div style={{ background: "#FFFFFF", border: `1px solid ${BD}`, borderRadius: "8px", padding: 32, display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
               <p style={{ fontFamily: fa, fontSize: "12px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: T3, margin: "0 0 12px" }}>Pro</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 20 }}>
                 <span style={{ fontFamily: fa, fontSize: "56px", fontWeight: 600, color: T1, lineHeight: 1 }}>$9</span>
@@ -86,11 +107,11 @@ export default function PricingPage() {
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
                 {PRO_FEATURES.map(f => (
                   <li key={f} style={{ fontFamily: fa, fontSize: "15px", color: T1, display: "flex", alignItems: "baseline", gap: 10 }}>
-                    <span style={{ color: T1, fontSize: "12px", flexShrink: 0 }}>✓</span>{f}
+                    <span style={{ color: T3, fontSize: "12px", flexShrink: 0 }}>✓</span>{f}
                   </li>
                 ))}
               </ul>
-              <Link href="/account/billing" className="pr-btn-pro">Get Pro — coming soon →</Link>
+              <Link href="/account/billing" className="pr-btn-pro">Join the Pro waitlist →</Link>
             </div>
           </div>
 

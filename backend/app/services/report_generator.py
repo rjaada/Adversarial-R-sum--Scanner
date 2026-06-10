@@ -45,7 +45,7 @@ _SEV_COLOR: dict[str, str] = {
 _PROFILE_SHORT = {
     "exact_match":        "Exact",
     "structure_sensitive": "Structure",
-    "semantic_fit":       "Semantic",
+    "adjacent_coverage":  "Transferable",
 }
 
 _VOL_COLOR = {"LOW": "#0f5c52", "MEDIUM": "#9a4d22", "HIGH": "#8c2f4e"}

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, field_validator
 from typing import Literal, Union, Optional
 
 EventPropertyValue = Union[str, int, float, bool, None]
@@ -155,6 +155,12 @@ class ScanResult(BaseModel):
     matched_keywords: list[str]
     top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None
+    # Gating metadata. `gated` is True when the response has been reduced for
+    # an unauthenticated caller (issues truncated, preview/simulation/keyword
+    # gaps stripped server-side). `total_issues` is the true issue count
+    # before truncation, so the UI can show an accurate "N more — sign in".
+    gated: bool = False
+    total_issues: int = 0
 
 
 # ---------------------------------------------------------------------------

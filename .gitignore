@@ -182,3 +182,10 @@ __pycache__/
 .env
 pytest-of-*/
 node-jiti/
+
+# Orphaned landing scaffold — superseded by app/page.tsx + components/v2.
+# Not imported by the app; kept out of version control.
+new_landing/
+
+# Third-party / sample résumé corpus — local fixtures, not part of the app.
+Data/

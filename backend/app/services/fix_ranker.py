@@ -22,14 +22,16 @@ from app.schemas import Issue, RankedFix
 from app.services.scoring import RawSignals
 
 # Issue types that hurt all three ATS profile archetypes
-_BROAD_IMPACT_TYPES = {"keyword_gap", "missing_section"}
+_BROAD_IMPACT_TYPES = {"keyword_gap", "missing_section", "parse_warning"}
 
-# Profiles affected per issue type
+# Profiles affected per issue type. Profile IDs are canonical and must match
+# ats_profiles.py: exact_match, structure_sensitive, adjacent_coverage.
 _AFFECTS: dict[str, list[str]] = {
-    "keyword_gap":              ["exact_match", "structure_sensitive", "semantic_fit"],
-    "missing_section":          ["exact_match", "structure_sensitive", "semantic_fit"],
-    "weak_phrasing":            ["exact_match", "semantic_fit"],
-    "low_quantification":       ["exact_match", "semantic_fit"],
+    "keyword_gap":              ["exact_match", "structure_sensitive", "adjacent_coverage"],
+    "missing_section":          ["exact_match", "structure_sensitive", "adjacent_coverage"],
+    "parse_warning":            ["exact_match", "structure_sensitive", "adjacent_coverage"],
+    "weak_phrasing":            ["exact_match", "adjacent_coverage"],
+    "low_quantification":       ["exact_match", "adjacent_coverage"],
     "summary_keyword_mismatch": ["exact_match"],
 }
 _AFFECTS_DEFAULT = ["exact_match"]

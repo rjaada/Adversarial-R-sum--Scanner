@@ -118,14 +118,91 @@ def _build_rewrite_quantify(bullet: str) -> str:
 def generate_fix_suggestions(
     resume_sections: dict,
     jd_requirements: dict,
+    warnings: list[str] | None = None,
 ) -> list[Issue]:
+    """
+    Build the deterministic issue list.
+
+    `warnings` are the structural parse warnings produced by
+    extract_resume_text (multi-column / tables / text boxes / sparse text).
+    When present they are surfaced as a high-severity "parse_warning" issue
+    so the format risk the extractor detected is actually shown to the user
+    — not just folded silently into the parse-integrity score.
+    """
     issues: list[Issue] = []
+    issues += _check_parse_warnings(warnings or [])
     issues += _check_missing_keywords(jd_requirements)
     issues += _check_weak_phrasing(resume_sections)
     issues += _check_missing_sections(resume_sections)
     issues += _check_quantification(resume_sections)
     issues += _check_summary_relevance(resume_sections, jd_requirements)
     return issues
+
+
+# Maps a substring of the extractor's warning text → (short label, actionable fix).
+_PARSE_WARNING_ADVICE: list[tuple[str, str, str]] = [
+    (
+        "Multi-column",
+        "multi-column layout",
+        "Switch to a single-column layout. Multi-column résumés are read left-to-right "
+        "across both columns by many parsers, which scrambles section order.",
+    ),
+    (
+        "Tables detected",
+        "tables",
+        "Remove tables. Convert tabular content (skills grids, two-column dates) into "
+        "plain text lines — table cells are frequently dropped or reordered in ATS parsing.",
+    ),
+    (
+        "Text boxes",
+        "text boxes",
+        "Move any content out of text boxes into the main document body. Text inside "
+        "text boxes is invisible to most ATS parsers.",
+    ),
+    (
+        "Very little text",
+        "little extractable text",
+        "Export an unflattened, text-based PDF (not a scan or image). Image-only résumés "
+        "produce no extractable text and are rejected or scored as empty by ATS.",
+    ),
+]
+
+
+def _check_parse_warnings(warnings: list[str]) -> list[Issue]:
+    if not warnings:
+        return []
+
+    detected: list[str] = []
+    fixes: list[str] = []
+    for warning in warnings:
+        for key, label, advice in _PARSE_WARNING_ADVICE:
+            if key in warning and label not in detected:
+                detected.append(label)
+                fixes.append(advice)
+
+    if not detected:
+        return []
+
+    detected_str = ", ".join(detected)
+    description = (
+        f"Structural formatting was detected that commonly breaks automated parsing: "
+        f"{detected_str}. ATS systems may misorder, drop, or fail to read parts of this "
+        f"résumé before a human ever sees it."
+    )
+    evidence = " ".join(warnings)
+    fix_pattern = " ".join(fixes)
+
+    return [Issue(
+        issue_type="parse_warning",
+        severity="high",
+        title="Résumé format may not parse correctly in ATS systems",
+        description=description,
+        evidence=evidence,
+        fix_pattern=fix_pattern,
+        source_excerpt="",
+        suggested_fix=fixes[0],
+        impact_score=_impact("high"),
+    )]
 
 
 def _check_missing_keywords(jd_requirements: dict) -> list[Issue]:

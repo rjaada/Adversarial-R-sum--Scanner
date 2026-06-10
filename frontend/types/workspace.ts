@@ -79,6 +79,10 @@ export interface ScanResult {
   matched_keywords: string[]
   top_fixes: RankedFix[]
   simulation?: ProfileSimulation
+  /** True when the backend returned a reduced (unauthenticated) teaser. */
+  gated?: boolean
+  /** True issue count before any server-side truncation. */
+  total_issues?: number
 }
 
 export interface ScanSummary {

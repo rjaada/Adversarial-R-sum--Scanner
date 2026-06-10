@@ -35,10 +35,13 @@ const archetypes = [
   "Product Designer", "Solutions Architect", "Technical Lead", "Growth Manager",
 ]
 
+// Brand severity palette — matches SEV_COLOR / SevBadge / PDFOverlay across
+// the app (critical #8c2f4e, high #9a4d22, medium #7a6e28). Applied as inline
+// color so it can't drift to Tailwind's generic red/orange/yellow.
 const severityColor: Record<string, string> = {
-  Critical: "text-red-600",
-  High:     "text-orange-600",
-  Medium:   "text-yellow-700",
+  Critical: "#8c2f4e",
+  High:     "#9a4d22",
+  Medium:   "#7a6e28",
 }
 
 export function FindingsSection() {
@@ -90,7 +93,7 @@ export function FindingsSection() {
                 <span className="font-mono text-xs text-muted-foreground">{active.severity.slice(0, 3).toUpperCase()}</span>
               </div>
               <div>
-                <p className={`text-lg font-medium ${severityColor[active.severity] ?? ""}`}>
+                <p className="text-lg font-medium" style={{ color: severityColor[active.severity] ?? "inherit" }}>
                   {active.severity} severity
                 </p>
                 <p className="text-muted-foreground">{active.category}</p>

@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Cormorant, Figtree, IBM_Plex_Mono, Albert_Sans, Unbounded } from "next/font/google"
-import { ThemeProvider } from "@/components/ThemeProvider"
 import "./globals.css"
 
 const cormorant = Cormorant({
@@ -45,6 +44,10 @@ export const metadata: Metadata = {
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // TraceRank renders a single warm-paper light palette across every page.
+  // The previous dark/light theme switcher (ThemeProvider/ThemeToggle,
+  // data-theme attribute, dual CSS-variable blocks) was dead code — no page
+  // consumed it — and has been removed.
   const htmlClass = [
     cormorant.variable,
     figtree.variable,
@@ -55,11 +58,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <ClerkProvider publishableKey={clerkKey ?? ""}>
-      <html lang="en" data-theme="dark" suppressHydrationWarning className={htmlClass}>
+      <html lang="en" className={htmlClass}>
         <body>
-          <ThemeProvider initial="dark">
-            {children}
-          </ThemeProvider>
+          {children}
           <Analytics />
         </body>
       </html>

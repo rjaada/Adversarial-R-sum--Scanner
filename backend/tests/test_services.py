@@ -516,3 +516,80 @@ def test_experience_pattern_matches_qualified_phrase():
         assert reqs["min_years_experience"] == expected_years, (
             f"Expected {expected_years} for: {jd_text!r}, got {reqs['min_years_experience']}"
         )
+
+
+# ── Parse-warning surfacing (Fix 3) ───────────────────────────────────────────
+
+def test_parse_warning_issue_emitted_from_warnings():
+    """Structural extractor warnings must surface as a high-severity issue."""
+    sections = {"summary": "x", "experience": "Engineer at Corp", "skills": "Python", "education": "y"}
+    reqs = {"required_keywords": [], "missing_from_resume": []}
+    warnings = [
+        "Multi-column layout detected — ATS may misorder sections",
+        "Tables detected — content may be lost or scrambled in ATS parse",
+    ]
+    issues = generate_fix_suggestions(sections, reqs, warnings=warnings)
+    pw = [i for i in issues if i.issue_type == "parse_warning"]
+    assert len(pw) == 1
+    assert pw[0].severity == "high"
+    assert "multi-column" in pw[0].description.lower()
+    assert pw[0].evidence != ""
+    assert pw[0].fix_pattern != ""
+
+
+def test_no_parse_warning_when_clean():
+    sections = {"summary": "x", "experience": "Engineer at Corp", "skills": "Python", "education": "y"}
+    reqs = {"required_keywords": [], "missing_from_resume": []}
+    issues = generate_fix_suggestions(sections, reqs, warnings=[])
+    assert not any(i.issue_type == "parse_warning" for i in issues)
+
+
+def test_generate_fix_suggestions_warnings_arg_is_optional():
+    """Backward compatibility: omitting `warnings` must not error."""
+    sections = {"experience": "Engineer at Corp"}
+    reqs = {"required_keywords": [], "missing_from_resume": []}
+    issues = generate_fix_suggestions(sections, reqs)
+    assert isinstance(issues, list)
+
+
+# ── Anonymous gating (Fix 11) ─────────────────────────────────────────────────
+
+def test_gate_for_anonymous_strips_gated_content():
+    """Unauthenticated callers must not receive full issues / preview / simulation."""
+    from app.routes.scan import _gate_for_anonymous
+    from app.schemas import ScanResult, Scores, Issue
+
+    def mk(i: int) -> Issue:
+        return Issue(
+            issue_type="keyword_gap", severity="high", title=f"issue {i}",
+            description="d", source_excerpt="", suggested_fix="f", impact_score=3.0,
+        )
+
+    full = ScanResult(
+        scan_id="x", source_id="resume.pdf",
+        ats_text_preview="John Doe john@example.com 555-123-4567",
+        resume_sections={"skills": "Python"},
+        jd_requirements={"required_keywords": ["python"], "matched_keywords": ["python"], "min_years_experience": 3},
+        scores=Scores(overall=0.6, keyword_match=0.5, experience_alignment=0.7,
+                      parse_integrity=0.8, structure=0.75, quantified_impact=0.2),
+        issues=[mk(0), mk(1), mk(2), mk(3), mk(4)],
+        missing_keywords=["aws"], matched_keywords=["python"],
+        top_fixes=[], simulation=None, gated=False, total_issues=5,
+    )
+    g = _gate_for_anonymous(full)
+    assert g.gated is True
+    assert g.total_issues == 5
+    assert len(g.issues) == 3
+    assert g.ats_text_preview == ""
+    assert g.resume_sections == {}
+    assert g.matched_keywords == []
+    assert g.missing_keywords == []
+    assert g.simulation is None
+    # Overall + keyword score survive; other sub-scores are locked (zeroed).
+    assert g.scores.overall == 0.6
+    assert g.scores.keyword_match == 0.5
+    assert g.scores.parse_integrity == 0.0
+    assert g.scores.structure == 0.0
+    # JD-derived keyword list is retained for the score UI; résumé correlation isn't.
+    assert g.jd_requirements.get("required_keywords") == ["python"]
+    assert "matched_keywords" not in g.jd_requirements

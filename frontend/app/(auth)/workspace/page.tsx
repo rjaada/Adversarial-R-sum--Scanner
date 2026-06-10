@@ -183,10 +183,16 @@ export default function WorkspacePage() {
       const data = await res.json() as ScanResult
       setResult(prev => { setPreviousResult(prev); return data })
       setSelectedIssue(null)
-      try { localStorage.setItem(PENDING_SCAN_KEY, JSON.stringify({ result: data, scanned_at: new Date().toISOString() })) } catch {}
+      // Strip the ATS text preview before persisting to localStorage — it can
+      // contain unscrubbed PII (name, email, phone). The server scrubs PII
+      // before DB storage; the client must do the same before localStorage.
+      try {
+        const safeForStorage: ScanResult = { ...data, ats_text_preview: "" }
+        localStorage.setItem(PENDING_SCAN_KEY, JSON.stringify({ result: safeForStorage, scanned_at: new Date().toISOString() }))
+      } catch {}
       track("scan_completed", {
         overall_score:       pct(data.scores.overall),
-        issue_count:         data.issues.length,
+        issue_count:         data.total_issues ?? data.issues.length,
         has_simulation:      data.simulation != null,
         keyword_match_count: data.matched_keywords.length,
       })
@@ -281,13 +287,6 @@ export default function WorkspacePage() {
   return (
     <div style={{ ...LIGHT_VARS, background: "#F4F4F4", minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: FA }}>
       <style>{`
-        @keyframes tr-scan-bar {
-          0%   { width: 0%;  opacity: 1; }
-          70%  { width: 82%; opacity: 1; }
-          90%  { width: 90%; opacity: 1; }
-          100% { width: 90%; opacity: 0.7; }
-        }
-        .tr-scan-bar { animation: tr-scan-bar 3s cubic-bezier(0.4,0,0.2,1) forwards; }
         .upload-card-hover:hover { border-color: #0D0C0A !important; }
         .new-scan-btn:hover { color: #0D0C0A !important; }
       `}</style>

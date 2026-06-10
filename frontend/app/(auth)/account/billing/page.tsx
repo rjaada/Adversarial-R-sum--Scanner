@@ -7,12 +7,14 @@ const fa   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
 const API_BASE = ""
 
+// Honest Pro list: the scanner, compare, export, and AI rewrites are already
+// free for signed-in users, so Pro is differentiated only by what the backend
+// can actually enforce today (longer history retention) plus planned early
+// access. Do not list Free features as Pro-only.
 const PRO_FEATURES = [
-  "Unlimited scans",
-  "Unlimited scan history",
-  "Compare mode — track changes between scans",
-  "PDF export — shareable scan report",
-  "AI rewrite suggestions — per issue, on demand",
+  "Everything in Free",
+  "12-month scan history retention (Free keeps 90 days)",
+  "Early access to new checks and ATS profiles",
 ]
 
 export default function BillingPage() {

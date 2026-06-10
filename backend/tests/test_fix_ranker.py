@@ -43,7 +43,7 @@ def _raw(
     return RawSignals(
         kw_exact=0.5,
         kw_must=0.5,
-        semantic=0.5,
+        adjacent=0.5,
         structure=0.5,
         parse_integrity=0.7,
         impact=0.4,
@@ -175,19 +175,19 @@ def test_quantify_label_on_low_quantification():
 def test_keyword_gap_affects_all_profiles():
     issue = _issue(issue_type="keyword_gap")
     result = rank_fixes([issue], _raw())
-    assert set(result[0].affects_profiles) == {"exact_match", "structure_sensitive", "semantic_fit"}
+    assert set(result[0].affects_profiles) == {"exact_match", "structure_sensitive", "adjacent_coverage"}
 
 
 def test_missing_section_affects_all_profiles():
     issue = _issue(issue_type="missing_section", title="Missing Summary Section")
     result = rank_fixes([issue], _raw())
-    assert set(result[0].affects_profiles) == {"exact_match", "structure_sensitive", "semantic_fit"}
+    assert set(result[0].affects_profiles) == {"exact_match", "structure_sensitive", "adjacent_coverage"}
 
 
 def test_weak_phrasing_affects_two_profiles():
     issue = _issue(issue_type="weak_phrasing")
     result = rank_fixes([issue], _raw())
-    assert set(result[0].affects_profiles) == {"exact_match", "semantic_fit"}
+    assert set(result[0].affects_profiles) == {"exact_match", "adjacent_coverage"}
 
 
 def test_summary_mismatch_affects_exact_match_only():
