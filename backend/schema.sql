@@ -50,3 +50,29 @@ CREATE TABLE IF NOT EXISTS scan_issues (
 );
 
 CREATE INDEX IF NOT EXISTS scan_issues_scan_id_idx ON scan_issues (scan_id);
+
+-- Beta feedback (added in migration 002)
+CREATE TABLE IF NOT EXISTS beta_feedback (
+  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  user_id          TEXT,
+  scan_id          TEXT,
+  surface          TEXT        NOT NULL,
+  usefulness       TEXT,
+  trustworthiness  TEXT,
+  most_helpful     TEXT,
+  confusing_text   TEXT,
+  broken           BOOLEAN,
+  broken_text      TEXT,
+  report_type      TEXT,
+  report_text      TEXT,
+  contact_email    TEXT,
+  view_mode        TEXT,
+  route            TEXT,
+  user_agent       TEXT,
+  app_version      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_beta_feedback_created_at ON beta_feedback (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_beta_feedback_scan_id    ON beta_feedback (scan_id) WHERE scan_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_beta_feedback_user_id    ON beta_feedback (user_id) WHERE user_id IS NOT NULL;

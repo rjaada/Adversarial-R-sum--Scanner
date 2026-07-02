@@ -14,6 +14,8 @@ import { DocumentPane } from "./DocumentPane"
 import { PDFViewer } from "./PDFViewer"
 import { MissingSectionPanel } from "./MissingSectionPanel"
 import { KeywordPlacementHint } from "./KeywordPlacementHint"
+import { FeedbackCard } from "./FeedbackCard"
+import { ReportProblemModal } from "./ReportProblemModal"
 import {
   pct, scoreColor, compareScans, track,
   SEV_COLOR,
@@ -117,6 +119,7 @@ export function WorkspaceResults({
   const [showAtsPreview, setShowAtsPreview]   = useState(false)
   const [showHistory, setShowHistory]         = useState(false)
   const [showSimulation, setShowSimulation]   = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
   const [viewMode, setViewMode]               = useState<"report" | "review">("report")
   const [hoveredIssue, setHoveredIssue]       = useState<number | null>(null)
@@ -400,7 +403,13 @@ export function WorkspaceResults({
             })}
           </div>
 
-          <div style={{ marginLeft: "auto" }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.625rem" }}>
+            <button
+              onClick={() => setReportModalOpen(true)}
+              style={{ fontFamily: FA, fontSize: "0.75rem", padding: "0.4rem 0.875rem", background: "transparent", border: `1px solid ${BD}`, color: T3, borderRadius: "100px", cursor: "pointer" }}
+            >
+              Feedback
+            </button>
             <button
               onClick={() => void onExport()}
               disabled={exporting}
@@ -916,12 +925,26 @@ export function WorkspaceResults({
               </div>
             ) : <UpgradePrompt label="ATS text preview available after sign-in." />}
 
+            {/* End-of-scan feedback card */}
+            <FeedbackCard
+              scanId={display.scan_id}
+              viewMode={viewMode}
+              isMobile={isMobile}
+            />
+
           </div>
         )}
         </div>
         )}
 
       </div>
+
+      <ReportProblemModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        scanId={display.scan_id}
+        viewMode={viewMode}
+      />
     </div>
   )
 }

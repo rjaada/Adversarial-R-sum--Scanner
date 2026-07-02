@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, EmailStr
 from typing import Literal, Union, Optional
 
 EventPropertyValue = Union[str, int, float, bool, None]
@@ -180,6 +180,101 @@ class ThemePrefUpdate(BaseModel):
 
 class WaitlistEntry(BaseModel):
     email: str
+
+
+# ---------------------------------------------------------------------------
+# Beta feedback
+# ---------------------------------------------------------------------------
+
+_USEFULNESS   = {"very_useful", "somewhat_useful", "not_useful"}
+_TRUST        = {"very_trustworthy", "somewhat_trustworthy", "not_trustworthy"}
+_HELPFUL      = {"keyword_gaps", "missing_sections", "rewrites", "review_view", "score", "other"}
+_REPORT_TYPE  = {"bug", "confusing_result", "feature_request", "general"}
+_SURFACE      = {"end_of_scan", "report_problem"}
+
+
+class FeedbackPayload(BaseModel):
+    surface: str
+
+    # Survey (end_of_scan)
+    usefulness:      Optional[str] = None
+    trustworthiness: Optional[str] = None
+    most_helpful:    Optional[str] = None
+    confusing_text:  Optional[str] = None
+    broken:          Optional[bool] = None
+    broken_text:     Optional[str] = None
+
+    # Bug / problem report
+    report_type: Optional[str] = None
+    report_text: Optional[str] = None
+
+    # Contact opt-in
+    contact_email: Optional[str] = None
+
+    # Context metadata
+    scan_id:     Optional[str] = None
+    view_mode:   Optional[str] = None
+    route:       Optional[str] = None
+    user_agent:  Optional[str] = None
+    app_version: Optional[str] = None
+
+    @field_validator("surface")
+    @classmethod
+    def _valid_surface(cls, v: str) -> str:
+        if v not in _SURFACE:
+            raise ValueError(f"Invalid surface '{v}'")
+        return v
+
+    @field_validator("usefulness")
+    @classmethod
+    def _valid_usefulness(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _USEFULNESS:
+            raise ValueError(f"Invalid usefulness '{v}'")
+        return v
+
+    @field_validator("trustworthiness")
+    @classmethod
+    def _valid_trust(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _TRUST:
+            raise ValueError(f"Invalid trustworthiness '{v}'")
+        return v
+
+    @field_validator("most_helpful")
+    @classmethod
+    def _valid_helpful(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _HELPFUL:
+            raise ValueError(f"Invalid most_helpful '{v}'")
+        return v
+
+    @field_validator("report_type")
+    @classmethod
+    def _valid_report_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _REPORT_TYPE:
+            raise ValueError(f"Invalid report_type '{v}'")
+        return v
+
+    @field_validator("confusing_text", "broken_text", "report_text")
+    @classmethod
+    def _trim_text(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        trimmed = v.strip()
+        return trimmed[:2000] if trimmed else None
+
+    @field_validator("contact_email")
+    @classmethod
+    def _trim_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        trimmed = v.strip()[:254]
+        return trimmed if trimmed else None
+
+    @field_validator("scan_id", "view_mode", "route", "user_agent", "app_version")
+    @classmethod
+    def _trim_meta(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return v.strip()[:500]
 
 
 class PurgeResult(BaseModel):
