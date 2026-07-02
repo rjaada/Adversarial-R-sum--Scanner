@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useOptionalAuth, useOptionalUser } from "@/lib/use-optional-clerk"
 import Link from "next/link"
 
 const fa   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
@@ -9,8 +9,8 @@ const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
 const API_BASE = ""
 
 export default function DataPage() {
-  const { isLoaded, isSignedIn, getToken } = useAuth()
-  const { user } = useUser()
+  const { isLoaded, isSignedIn, getToken } = useOptionalAuth()
+  const { user } = useOptionalUser()
   const [deleteScansConfirm,   setDeleteScansConfirm]   = useState("")
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("")
   const [deletingScans,    setDeletingScans]    = useState(false)

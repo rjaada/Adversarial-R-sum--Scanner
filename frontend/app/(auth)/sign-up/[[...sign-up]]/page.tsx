@@ -6,6 +6,8 @@
 import { SignUp } from "@clerk/nextjs"
 import Link from "next/link"
 import { clerkAppearance } from "@/lib/clerk-appearance"
+import { clerkEnabled } from "@/lib/clerk-enabled"
+import { PreviewAuthNotice } from "@/components/PreviewAuthNotice"
 
 const fa = "Albert Sans, system-ui, sans-serif"
 const fu = "var(--font-unbounded, Unbounded, sans-serif)"
@@ -240,7 +242,7 @@ export default function SignUpPage() {
             Free to start. No credit card required.
           </p>
 
-          <SignUp appearance={clerkAppearance} />
+          {clerkEnabled ? <SignUp appearance={clerkAppearance} /> : <PreviewAuthNotice mode="sign-up" />}
         </div>
       </div>
     </div>

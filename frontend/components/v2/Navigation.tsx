@@ -5,6 +5,12 @@ import { useAuth, UserButton } from "@clerk/nextjs"
 import { Button } from "./Button"
 import { Menu, X } from "lucide-react"
 
+// Clerk is only initialized when a publishable key is present (see layout.tsx).
+// The Clerk-hook components below are rendered only when this is true; otherwise
+// the static signed-out fallbacks render, so the landing page works on a
+// localhost preview that can't reach Clerk's external domain.
+const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
 // Clerk UserButton appearance tuned for the v2 light nav
 const userButtonAppearance = {
   variables: {
@@ -48,10 +54,98 @@ const navLinks = [
   { name: "Methodology",   href: "/methodology" },
 ]
 
+// ── Desktop CTA clusters ──────────────────────────────────────────────────────
+
+function DesktopSignedOut({ isScrolled }: { isScrolled: boolean }) {
+  return (
+    <>
+      <a
+        href="/sign-in"
+        className={`text-foreground/70 hover:text-foreground transition-all duration-500 ${isScrolled ? "text-xs" : "text-sm"}`}
+      >
+        Sign in
+      </a>
+      <Button
+        size="sm"
+        className={`rounded-full transition-all duration-500 ${isScrolled ? "px-4 h-8 text-xs" : "px-6"}`}
+        onClick={() => { window.location.href = "/sign-up" }}
+      >
+        Scan free
+      </Button>
+    </>
+  )
+}
+
+function DesktopAuthClerk({ isScrolled }: { isScrolled: boolean }) {
+  const { isLoaded, isSignedIn } = useAuth()
+  if (isLoaded && isSignedIn) {
+    return (
+      <>
+        <a
+          href="/workspace"
+          className={`text-foreground/70 hover:text-foreground transition-all duration-500 ${isScrolled ? "text-xs" : "text-sm"}`}
+        >
+          Workspace
+        </a>
+        <UserButton
+          appearance={userButtonAppearance}
+          userProfileUrl="/account"
+          userProfileMode="navigation"
+          afterSignOutUrl="/"
+        />
+      </>
+    )
+  }
+  if (isLoaded && !isSignedIn) {
+    return <DesktopSignedOut isScrolled={isScrolled} />
+  }
+  // Skeleton placeholder while Clerk loads — prevents layout shift
+  return <div className={`transition-all duration-500 ${isScrolled ? "w-28 h-7" : "w-36 h-9"}`} />
+}
+
+// ── Mobile CTA clusters ───────────────────────────────────────────────────────
+
+function MobileSignedOut({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <>
+      <Button
+        variant="outline"
+        className="flex-1 rounded-full h-14 text-base"
+        onClick={() => { onNavigate(); window.location.href = "/sign-in" }}
+      >
+        Sign in
+      </Button>
+      <Button
+        className="flex-1 rounded-full h-14 text-base"
+        onClick={() => { onNavigate(); window.location.href = "/sign-up" }}
+      >
+        Scan free
+      </Button>
+    </>
+  )
+}
+
+function MobileAuthClerk({ onNavigate }: { onNavigate: () => void }) {
+  const { isLoaded, isSignedIn } = useAuth()
+  if (isLoaded && isSignedIn) {
+    return (
+      <a
+        href="/workspace"
+        className="flex-1 inline-flex items-center justify-center rounded-full h-14 text-base font-medium bg-foreground text-primary-foreground hover:bg-foreground/90 transition-all duration-300"
+        onClick={onNavigate}
+      >
+        Go to Workspace
+      </a>
+    )
+  }
+  return <MobileSignedOut onNavigate={onNavigate} />
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { isLoaded, isSignedIn } = useAuth()
 
   useEffect(() => {
     const handle = () => setIsScrolled(window.scrollY > 20)
@@ -103,41 +197,7 @@ export function Navigation() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-4">
-            {isLoaded && isSignedIn ? (
-              <>
-                <a
-                  href="/workspace"
-                  className={`text-foreground/70 hover:text-foreground transition-all duration-500 ${isScrolled ? "text-xs" : "text-sm"}`}
-                >
-                  Workspace
-                </a>
-                <UserButton
-                  appearance={userButtonAppearance}
-                  userProfileUrl="/account"
-                  userProfileMode="navigation"
-                  afterSignOutUrl="/"
-                />
-              </>
-            ) : isLoaded && !isSignedIn ? (
-              <>
-                <a
-                  href="/sign-in"
-                  className={`text-foreground/70 hover:text-foreground transition-all duration-500 ${isScrolled ? "text-xs" : "text-sm"}`}
-                >
-                  Sign in
-                </a>
-                <Button
-                  size="sm"
-                  className={`rounded-full transition-all duration-500 ${isScrolled ? "px-4 h-8 text-xs" : "px-6"}`}
-                  onClick={() => { window.location.href = "/sign-up" }}
-                >
-                  Scan free
-                </Button>
-              </>
-            ) : (
-              // Skeleton placeholder while Clerk loads — prevents layout shift
-              <div className={`transition-all duration-500 ${isScrolled ? "w-28 h-7" : "w-36 h-9"}`} />
-            )}
+            {hasClerk ? <DesktopAuthClerk isScrolled={isScrolled} /> : <DesktopSignedOut isScrolled={isScrolled} />}
           </div>
 
           {/* Mobile toggle */}
@@ -180,31 +240,9 @@ export function Navigation() {
             }`}
             style={{ transitionDelay: mobileOpen ? "300ms" : "0ms" }}
           >
-            {isLoaded && isSignedIn ? (
-              <a
-                href="/workspace"
-                className="flex-1 inline-flex items-center justify-center rounded-full h-14 text-base font-medium bg-foreground text-primary-foreground hover:bg-foreground/90 transition-all duration-300"
-                onClick={() => setMobileOpen(false)}
-              >
-                Go to Workspace
-              </a>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  className="flex-1 rounded-full h-14 text-base"
-                  onClick={() => { setMobileOpen(false); window.location.href = "/sign-in" }}
-                >
-                  Sign in
-                </Button>
-                <Button
-                  className="flex-1 rounded-full h-14 text-base"
-                  onClick={() => { setMobileOpen(false); window.location.href = "/sign-up" }}
-                >
-                  Scan free
-                </Button>
-              </>
-            )}
+            {hasClerk
+              ? <MobileAuthClerk onNavigate={() => setMobileOpen(false)} />
+              : <MobileSignedOut onNavigate={() => setMobileOpen(false)} />}
           </div>
         </div>
       </div>

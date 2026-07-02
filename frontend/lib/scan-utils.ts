@@ -53,6 +53,30 @@ export const SECTION_HEADER_VARIANTS: Record<string, string[]> = {
   education:  ["education", "academic background", "academic history", "academic", "degree", "university", "college", "educational", "schooling"],
 }
 
+/**
+ * Per-section ATS impact explanation and content guidance.
+ * Used by MissingSectionPanel to give users actionable context
+ * instead of a technical log of what the parser searched for.
+ */
+export const MISSING_SECTION_GUIDE: Record<string, { atsImpact: string; contentGuide: string }> = {
+  summary: {
+    atsImpact: "Most ATS platforms score the Summary section for initial role-fit classification. Without it, the system infers fit from job history alone — producing a noisier, less accurate match against the job description.",
+    contentGuide: "2–3 sentences: current title · years of experience · core domain · what you're targeting. Keep it factual — no filler phrases.",
+  },
+  skills: {
+    atsImpact: "ATS keyword filters scan the Skills section first. Without a dedicated section, keywords are extracted from bullet points — a less reliable signal that lowers keyword match confidence.",
+    contentGuide: "Group by category: Languages · Frameworks · Cloud & Infra · Tools. Use exact terms from the job description — ATS matches keywords literally.",
+  },
+  experience: {
+    atsImpact: "The Experience section is the primary signal for seniority, domain fit, and career chronology. Its absence causes most ATS platforms to flag or reject the résumé before any human review.",
+    contentGuide: "Company · Title · Dates (MM/YYYY), then 3–5 bullets opening with action verbs. Add at least one measurable result per role.",
+  },
+  education: {
+    atsImpact: "Degree detection is required by some ATS platforms for role eligibility checks. Without it, the system may misclassify seniority or mark the résumé as structurally incomplete.",
+    contentGuide: "Degree · Institution · Graduation year. One line per qualification is sufficient — do not expand into coursework unless specifically relevant.",
+  },
+}
+
 // ── Analytics ────────────────────────────────────────────────────────────────
 
 /** Fire a lightweight analytics event. Failures are silently swallowed. */

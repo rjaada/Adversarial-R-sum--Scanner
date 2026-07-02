@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useUser } from "@clerk/nextjs"
+import { useOptionalUser } from "@/lib/use-optional-clerk"
 
 const fa   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
@@ -18,7 +18,7 @@ const PRO_FEATURES = [
 ]
 
 export default function BillingPage() {
-  const { isLoaded } = useUser()
+  const { isLoaded } = useOptionalUser()
   const [email, setEmail]         = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)

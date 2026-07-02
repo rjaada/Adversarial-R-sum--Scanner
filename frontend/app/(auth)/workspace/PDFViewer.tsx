@@ -18,10 +18,35 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { PDFOverlay } from "./PDFOverlay"
+import { MissingSectionPanel } from "./MissingSectionPanel"
+import { KeywordPlacementHint } from "./KeywordPlacementHint"
 import { IssueGate } from "@/components/IssueGate"
-import { computePDFAnchors, type PDFAnchor } from "@/lib/pdf-anchor"
+import { computePDFAnchors, isAnchorableIssue, type PDFAnchor } from "@/lib/pdf-anchor"
 import { confidenceLabel, SEV_HIGHLIGHT } from "@/lib/anchor-match"
 import type { Issue } from "@/types/workspace"
+
+/**
+ * Low-coverage fallback threshold (measured, not guessed).
+ *
+ * Fixture measurement against the production pipeline (pdfplumber excerpts
+ * matched by pdf.js v6 reconstruction) was bimodal: clean single-column and
+ * multi-page résumés anchored at ratio 1.00 (exact/approximate), while
+ * column-collapsed two-column résumés anchored at 0.00 — pdfplumber and
+ * pdf.js interleave the columns differently, so excerpts never match.
+ *
+ * 0.4 sits in the middle of that gap: "fewer than ~half of the locatable
+ * findings could be located" means the PDF overlay would mostly be an empty
+ * page with a long unanchored strip — worse than the ATS text view, where
+ * excerpts always match (ats_text_preview comes from the same pdfplumber
+ * text). It also tolerates a single miss in small sets (1 of 2 anchored =
+ * 0.5 → stays in PDF review).
+ *
+ * The candidate floor avoids deciding off one data point: with 0 or 1
+ * anchorable issues, the PDF (the user's real document) is still the better
+ * canvas even if nothing anchors.
+ */
+const MIN_ANCHOR_RATIO = 0.4
+const MIN_ANCHOR_CANDIDATES = 2
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const FA   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
@@ -162,6 +187,57 @@ function UnanchoredStrip({
   )
 }
 
+// ── Empty annotation notice ───────────────────────────────────────────────────
+
+/**
+ * Shown when the PDF renders fine but every issue is of a type that has no
+ * document location (keyword_gap, missing_section, parse_warning). These
+ * describe what is *absent*, so there is nothing to pin. Without this notice
+ * the user sees a plain PDF with a populated issue panel and no explanation
+ * of why the two are not connected.
+ */
+function EmptyAnnotationNotice({ issues, isSignedIn }: { issues: Issue[]; isSignedIn: boolean }) {
+  const types = new Set(issues.map(i => i.issue_type))
+
+  const reasons: string[] = []
+  if (types.has("missing_section")) reasons.push("missing sections")
+  if (types.has("keyword_gap"))     reasons.push("keyword gaps")
+  if (types.has("parse_warning"))   reasons.push("parse warnings")
+
+  const reasonText = reasons.length > 0 ? reasons.join(", ") : "document-level issues"
+  const count = issues.length
+
+  return (
+    <div style={{
+      margin: "0 0 1.25rem",
+      padding: "1rem 1.25rem",
+      background: SURF,
+      border: `1px solid ${BD}`,
+      borderLeft: `3px solid ${T3}`,
+      borderRadius: "4px",
+      maxWidth: "520px",
+    }}>
+      <div style={{ fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>
+        No document annotations for this scan
+      </div>
+      <div style={{ fontFamily: FA, fontSize: "0.82rem", color: T1, lineHeight: 1.65, marginBottom: "0.625rem" }}>
+        {count > 0
+          ? <>The {count} finding{count !== 1 ? "s" : ""} ({reasonText}) describe what is <em>absent</em> from the résumé rather than a specific passage — there is nothing to pin to a line.</>
+          : "No findings for this scan."
+        }
+      </div>
+      {count > 0 && (
+        <div style={{ fontFamily: FA, fontSize: "0.76rem", color: T2, lineHeight: 1.6 }}>
+          {isSignedIn
+            ? <>See the <strong style={{ color: T1, fontWeight: 600 }}>issues panel</strong> on the right for every finding. A résumé with weak phrasing or unquantified bullets will produce pins directly on this document.</>
+            : <>Sign in to unlock the full scan — weak phrasing and impact language findings anchor directly to lines in your résumé.</>
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function PDFViewer({
@@ -230,6 +306,15 @@ export function PDFViewer({
   useEffect(() => {
     if (viewerState !== "rendering" || pageDims.length === 0) return
 
+    // Track in-flight pdf.js render tasks so we can cancel them on cleanup.
+    // This is the primary guard against the React StrictMode double-invoke
+    // crash: "Cannot use the same canvas during multiple render() operations."
+    // Without cleanup, StrictMode fires the effect, cleans up (nothing), then
+    // fires it again — the second call hits the same canvas while the first
+    // render is still running → pdf.js throws.
+    const activeTasks: Array<{ cancel(): void }> = []
+    let cleanedUp = false
+
     async function renderAndAnchor() {
       const pdf = pdfDocRef.current
       if (!pdf) return
@@ -237,11 +322,13 @@ export function PDFViewer({
       const textContents: Array<{ items: unknown[] }> = []
 
       for (let p = 1; p <= pageDims.length; p++) {
-        if (cancelledRef.current) return
+        if (cancelledRef.current || cleanedUp) return
         const canvas = canvasRefs.current[p - 1]
         if (!canvas) continue
 
         const page = await pdf.getPage(p)
+        if (cancelledRef.current || cleanedUp) { page.cleanup(); return }
+
         const viewport = page.getViewport({ scale: SCALE })
         const dpr = window.devicePixelRatio || 1
 
@@ -249,18 +336,30 @@ export function PDFViewer({
         canvas.height = Math.floor(viewport.height * dpr)
 
         const ctx = canvas.getContext("2d")!
-        await page.render({
+        const renderTask = page.render({
           canvasContext: ctx,
           viewport,
           transform: [dpr, 0, 0, dpr, 0, 0],
-        }).promise
+        })
+        activeTasks.push(renderTask)
+
+        try {
+          await renderTask.promise
+        } catch {
+          // pdf.js throws RenderingCancelledException when .cancel() is called.
+          // Any render error during cleanup is expected — exit silently.
+          page.cleanup()
+          return
+        }
+
+        if (cancelledRef.current || cleanedUp) { page.cleanup(); return }
 
         const tc = await page.getTextContent()
         textContents.push(tc as { items: unknown[] })
         page.cleanup()
       }
 
-      if (cancelledRef.current) return
+      if (cancelledRef.current || cleanedUp) return
 
       // Compute anchors (returns [] if image-based PDF)
       const computed = computePDFAnchors(textContents, pageDims, issues, SCALE)
@@ -268,6 +367,24 @@ export function PDFViewer({
       // If no text at all → fall back
       if (computed.length === 0 && issues.length > 0) {
         const reason = "No text extracted from PDF"
+        if (process.env.NODE_ENV === "development")
+          console.log("[TraceRank PDF] ATS fallback triggered:", reason)
+        setFallbackNote(reason)
+        setViewerState("error")
+        onFallback(reason)
+        return
+      }
+
+      // Low anchor coverage → fall back. When most locatable findings can't
+      // be matched to the PDF text layer (e.g. two-column layouts, where
+      // pdfplumber and pdf.js interleave columns differently), a near-empty
+      // overlay is a weaker experience than the ATS text view, where the
+      // excerpts always match. See MIN_ANCHOR_RATIO above for the measured
+      // justification.
+      const candidates = issues.filter(isAnchorableIssue).length
+      const located = computed.filter(a => a.confidence !== "none").length
+      if (candidates >= MIN_ANCHOR_CANDIDATES && located / candidates < MIN_ANCHOR_RATIO) {
+        const reason = `Low anchor coverage — located ${located} of ${candidates} locatable findings`
         if (process.env.NODE_ENV === "development")
           console.log("[TraceRank PDF] ATS fallback triggered:", reason)
         setFallbackNote(reason)
@@ -289,6 +406,12 @@ export function PDFViewer({
     }
 
     renderAndAnchor()
+    return () => {
+      cleanedUp = true
+      for (const task of activeTasks) {
+        try { task.cancel() } catch {}
+      }
+    }
   }, [viewerState, pageDims, issues]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scroll to anchor on selectedIssue change ──────────────────────────────
@@ -337,6 +460,11 @@ export function PDFViewer({
             </span>
           )}
         </div>
+
+        {/* Empty annotation notice — shown when PDF renders but all issues are unlocatable */}
+        {viewerState === "ready" && issues.length > 0 && !anchors.some(a => a.confidence !== "none") && (
+          <EmptyAnnotationNotice issues={issues} isSignedIn={isSignedIn} />
+        )}
 
         {viewerState === "loading" && <LoadingState />}
 
@@ -479,25 +607,40 @@ export function PDFViewer({
               {/* Expanded detail */}
               {isSelected && (
                 <div onClick={e => e.stopPropagation()}>
-                  <div style={{ fontFamily: FA, fontSize: "0.76rem", color: T2, lineHeight: 1.65, marginBottom: "0.625rem" }}>
-                    {issue.description}
-                  </div>
-                  {issue.evidence && issue.issue_type !== "missing_section" && (
-                    <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.625rem 0.75rem", marginBottom: "0.5rem", fontFamily: MONO, fontSize: "0.68rem", color: T2, lineHeight: 1.75 }}>
-                      {issue.evidence}
-                    </div>
-                  )}
-                  <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.625rem 0.75rem" }}>
-                    <div style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.35rem" }}>Fix</div>
-                    <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T1, lineHeight: 1.65 }}>
-                      {issue.fix_pattern || issue.suggested_fix}
-                    </div>
-                  </div>
-                  {issue.rewrite_starter && (
-                    <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.75rem", background: "rgba(26,25,23,0.025)", borderLeft: "2px solid rgba(26,25,23,0.18)", fontFamily: MONO, fontSize: "0.74rem", color: T1, lineHeight: 1.65 }}>
-                      <div style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.35rem" }}>Rewrite starter</div>
-                      {issue.rewrite_starter}
-                    </div>
+                  {issue.issue_type === "missing_section" ? (
+                    <MissingSectionPanel issue={issue} />
+                  ) : issue.issue_type === "keyword_gap" ? (
+                    <>
+                      <div style={{ fontFamily: FA, fontSize: "0.76rem", color: T2, lineHeight: 1.65, marginBottom: "0.625rem" }}>
+                        {issue.description}
+                      </div>
+                      <KeywordPlacementHint
+                        keyword={issue.title.replace(/^missing keyword:\s*/i, "").trim()}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily: FA, fontSize: "0.76rem", color: T2, lineHeight: 1.65, marginBottom: "0.625rem" }}>
+                        {issue.description}
+                      </div>
+                      {issue.evidence && (
+                        <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.625rem 0.75rem", marginBottom: "0.5rem", fontFamily: MONO, fontSize: "0.68rem", color: T2, lineHeight: 1.75 }}>
+                          {issue.evidence}
+                        </div>
+                      )}
+                      <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.625rem 0.75rem" }}>
+                        <div style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.35rem" }}>Fix</div>
+                        <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T1, lineHeight: 1.65 }}>
+                          {issue.fix_pattern || issue.suggested_fix}
+                        </div>
+                      </div>
+                      {issue.rewrite_starter && (
+                        <div style={{ marginTop: "0.5rem", padding: "0.625rem 0.75rem", background: "rgba(26,25,23,0.025)", borderLeft: "2px solid rgba(26,25,23,0.18)", fontFamily: MONO, fontSize: "0.74rem", color: T1, lineHeight: 1.65 }}>
+                          <div style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.35rem" }}>Rewrite starter</div>
+                          {issue.rewrite_starter}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

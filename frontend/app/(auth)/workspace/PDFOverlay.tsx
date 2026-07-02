@@ -15,6 +15,7 @@
  * Animations are CSS-only; prefers-reduced-motion collapses durations to 0.
  */
 
+import React from "react"
 import type { PDFAnchor } from "@/lib/pdf-anchor"
 import type { Issue } from "@/types/workspace"
 import { SEV_HIGHLIGHT } from "@/lib/anchor-match"
@@ -89,24 +90,25 @@ function HighlightRect({ x, y, width, height, confidence, severity, state, animD
 
   if (confidence === "exact") {
     if (state === "dimmed") {
-      background = "none"
-      borderBottom = `2px solid ${line}33`
-      opacity = 0.3
+      background = bg.replace(/[\d.]+\)$/, "0.25)")
+      borderBottom = `3px solid ${line}66`
+      opacity = 0.5
     } else if (state === "active") {
-      background = bg.replace(/[\d.]+\)$/, "0.28)")
-      borderBottom = `2px solid ${line}`
+      background = bg.replace(/[\d.]+\)$/, "0.55)")
+      borderBottom = `3px solid ${line}`
       animation += `, tr-select-glow 350ms ease-in-out`
     } else if (state === "hovered") {
-      background = bg.replace(/[\d.]+\)$/, "0.20)")
-      borderBottom = `2px solid ${line}`
+      background = bg.replace(/[\d.]+\)$/, "0.48)")
+      borderBottom = `3px solid ${line}`
     } else {
-      background = bg
-      borderBottom = `2px solid ${line}CC`
+      // resting — was nearly invisible (0.06-0.10); boosted to 0.40 so highlights show
+      background = bg.replace(/[\d.]+\)$/, "0.40)")
+      borderBottom = `3px solid ${line}`
     }
   } else {
-    // approximate — dashed underline only
-    borderBottom = `2px dashed ${line}${state === "dimmed" ? "33" : state === "resting" ? "88" : "CC"}`
-    opacity = state === "dimmed" ? 0.2 : state === "resting" ? 0.8 : 1
+    // approximate — dashed underline, boosted from 2px/0.8 to 3px/1.0
+    borderBottom = `3px dashed ${line}${state === "dimmed" ? "55" : "CC"}`
+    opacity = state === "dimmed" ? 0.35 : 1
   }
 
   return (
@@ -146,7 +148,7 @@ interface PinProps {
 
 function Pin({ x, y, label, severity, confidence, state, onClick, onMouseEnter, onMouseLeave }: PinProps) {
   const { line } = sevColors(severity)
-  const size = state === "active" ? 22 : state === "hovered" ? 20 : 18
+  const size = state === "active" ? 28 : state === "hovered" ? 26 : 22
   const isApprox = confidence === "approximate"
 
   return (
@@ -272,5 +274,3 @@ export function PDFOverlay({
   )
 }
 
-// React import needed for Fragment
-import React from "react"

@@ -24,6 +24,42 @@ def extract_resume_text(file_bytes: bytes, filename: str) -> dict:
         raise ValueError(f"Unsupported file type: {filename}")
 
 
+def _detect_columns(words: list[dict]) -> bool:
+    """
+    Detect a multi-column layout from LINE-START x positions.
+
+    The previous heuristic bucketed the x0 of EVERY word, which any normal
+    full-width text line exceeds — it flagged virtually every PDF as
+    multi-column (false 0.20 parse-integrity penalty + a false parse_warning
+    issue on clean single-column résumés; confirmed by fixture measurement).
+
+    Columns manifest as two (or more) dominant left edges where many lines
+    begin, separated by a wide horizontal gap. So: group words into visual
+    lines, take each line's leftmost x0, cluster those starts into 25pt
+    buckets, and report columns only when at least two buckets each anchor
+    3+ lines and sit >= 100pt apart (bullet indents are ~10-15pt and never
+    trip this; a true second column sits far right).
+    """
+    if not words:
+        return False
+    line_starts: dict[int, float] = {}  # top-bucket (~4pt tolerance) -> min x0
+    for w in words:
+        key = round(w["top"] / 4)
+        x = w["x0"]
+        if key not in line_starts or x < line_starts[key]:
+            line_starts[key] = x
+    if len(line_starts) < 6:
+        return False  # too few lines to judge — be conservative
+    buckets: dict[int, int] = {}
+    for x in line_starts.values():
+        b = round(x / 25)
+        buckets[b] = buckets.get(b, 0) + 1
+    dominant = [b for b, count in buckets.items() if count >= 3]
+    if len(dominant) < 2:
+        return False
+    return (max(dominant) - min(dominant)) * 25 >= 100
+
+
 def _extract_pdf(file_bytes: bytes) -> dict:
     import pdfplumber
 
@@ -38,11 +74,8 @@ def _extract_pdf(file_bytes: bytes) -> dict:
             pages_text.append(text)
 
             # Detect multi-column layouts (common ATS failure)
-            words = page.extract_words()
-            if words:
-                x_positions = [w["x0"] for w in words]
-                if len(set(round(x / 50) for x in x_positions)) > 6:
-                    column_detected = True
+            if _detect_columns(page.extract_words()):
+                column_detected = True
 
             # Detect tables (often lost in ATS)
             if page.extract_tables():

@@ -12,9 +12,11 @@ import { IssueGate } from "@/components/IssueGate"
 import { UpgradePrompt } from "@/components/UpgradePrompt"
 import { DocumentPane } from "./DocumentPane"
 import { PDFViewer } from "./PDFViewer"
+import { MissingSectionPanel } from "./MissingSectionPanel"
+import { KeywordPlacementHint } from "./KeywordPlacementHint"
 import {
   pct, scoreColor, compareScans, track,
-  SEV_COLOR, SECTION_HEADER_VARIANTS,
+  SEV_COLOR,
 } from "@/lib/scan-utils"
 import {
   computeAllAnchors, mergeSpans, buildIssueSpanMap, confidenceLabel,
@@ -120,9 +122,28 @@ export function WorkspaceResults({
   const [hoveredIssue, setHoveredIssue]       = useState<number | null>(null)
   const [pdfFailed, setPdfFailed]             = useState(false)
   const [pdfFailNote, setPdfFailNote]         = useState("")
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => { setIsMobile(window.innerWidth <= 639) }
+    check()
+    window.addEventListener("resize", check)
+    return () => { window.removeEventListener("resize", check) }
+  }, [])
 
   // Reset PDF failure state when a new file is scanned
   useEffect(() => { setPdfFailed(false); setPdfFailNote("") }, [display.scan_id])
+
+  // Anonymous users always land on Report — Review has no line annotations for gated scans.
+  // Fires on new scan (scan_id change) and on auth change (sign-out resets to Report).
+  useEffect(() => {
+    if (!isSignedIn) setViewMode("report")
+  }, [display.scan_id, isSignedIn])
+
+  // Review mode shows a split PDF+panel layout that is unusable below 640px.
+  useEffect(() => {
+    if (isMobile && viewMode === "review") { setViewMode("report") }
+  }, [isMobile, viewMode])
 
   // Esc → deselect
   useEffect(() => {
@@ -195,7 +216,7 @@ export function WorkspaceResults({
         width: 220, flexShrink: 0,
         borderRight: `1px solid ${BD}`,
         background: SURF,
-        display: "flex", flexDirection: "column",
+        display: isMobile ? "none" : "flex", flexDirection: "column",
         overflowY: "auto",
       }}>
         {/* Re-scan controls */}
@@ -334,35 +355,49 @@ export function WorkspaceResults({
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
 
         {/* Top action bar */}
-        <div style={{ padding: "0.75rem 2rem", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: "1.5rem", background: SURF, flexShrink: 0 }}>
+        <div style={{ padding: isMobile ? "0.625rem 1rem" : "0.75rem 2rem", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: isMobile ? "0.75rem" : "1.5rem", background: SURF, flexShrink: 0 }}>
           <button
             onClick={onNewScan}
-            style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
           >
             ← New scan
           </button>
-          <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+          <span style={{ display: isMobile ? "none" : "inline", fontFamily: MONO, fontSize: "0.62rem", color: T3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
             {display.source_id}
           </span>
-          {isMock && <span style={{ fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, padding: "0.15rem 0.5rem", border: `1px solid ${BD}`, borderRadius: "2px" }}>sample</span>}
+          <span style={{ display: isMobile || !isMock ? "none" : "inline", fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, padding: "0.15rem 0.5rem", border: `1px solid ${BD}`, borderRadius: "2px" }}>sample</span>
 
-          {/* View toggle */}
-          <div style={{ display: "flex", border: `1px solid ${BD}`, borderRadius: "4px", overflow: "hidden" }}>
-            {(["report", "review"] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                style={{
-                  fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em",
-                  textTransform: "uppercase", padding: "0.3rem 0.75rem",
-                  background: viewMode === mode ? T1 : "transparent",
-                  color: viewMode === mode ? SURF : T3,
-                  border: "none", cursor: "pointer", transition: "background 0.15s",
-                }}
-              >
-                {mode === "report" ? "Report" : "Review"}
-              </button>
-            ))}
+          {/* View toggle — hidden on mobile (Review requires desktop width) */}
+          <div style={{ display: isMobile ? "none" : "flex", border: `1px solid ${BD}`, borderRadius: "4px", overflow: "hidden" }}>
+            {(["report", "review"] as const).map(mode => {
+              const reviewLimited = mode === "review" && !isSignedIn
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  title={reviewLimited ? "Sign in to unlock line-level annotations in Review" : undefined}
+                  style={{
+                    fontFamily: MONO, fontSize: "0.55rem", letterSpacing: "0.1em",
+                    textTransform: "uppercase", padding: "0.3rem 0.75rem",
+                    background: viewMode === mode ? T1 : "transparent",
+                    color: viewMode === mode ? SURF : T3,
+                    border: "none", cursor: "pointer", transition: "background 0.15s",
+                    display: "flex", alignItems: "center", gap: "0.35rem",
+                  }}
+                >
+                  {mode === "report" ? "Report" : "Review"}
+                  {reviewLimited && (
+                    <span style={{
+                      fontSize: "0.45rem", letterSpacing: "0.06em",
+                      opacity: viewMode === "review" ? 0.65 : 0.45,
+                      fontWeight: 400,
+                    }}>
+                      limited
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           <div style={{ marginLeft: "auto" }}>
@@ -497,20 +532,39 @@ export function WorkspaceResults({
                     {/* Expanded detail */}
                     {isSelected && (
                       <div onClick={e => e.stopPropagation()}>
-                        <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.65, marginBottom: "0.75rem" }}>
-                          {issue.description}
-                        </div>
-                        {issue.evidence && issue.issue_type !== "missing_section" && (
-                          <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem", marginBottom: "0.5rem", fontFamily: MONO, fontSize: "0.7rem", color: T2, lineHeight: 1.8 }}>
-                            {issue.evidence}
-                          </div>
+                        {issue.issue_type === "missing_section" ? (
+                          <MissingSectionPanel
+                            issue={issue}
+                            resumeSections={display.resume_sections}
+                          />
+                        ) : issue.issue_type === "keyword_gap" ? (
+                          <>
+                            <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.65, marginBottom: "0.75rem" }}>
+                              {issue.description}
+                            </div>
+                            <KeywordPlacementHint
+                              keyword={issue.title.replace(/^missing keyword:\s*/i, "").trim()}
+                              resumeSections={display.resume_sections ?? undefined}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.65, marginBottom: "0.75rem" }}>
+                              {issue.description}
+                            </div>
+                            {issue.evidence && (
+                              <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem", marginBottom: "0.5rem", fontFamily: MONO, fontSize: "0.7rem", color: T2, lineHeight: 1.8 }}>
+                                {issue.evidence}
+                              </div>
+                            )}
+                            <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem" }}>
+                              <div style={{ fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.4rem" }}>Fix</div>
+                              <div style={{ fontFamily: FA, fontSize: "0.8rem", color: T1, lineHeight: 1.65 }}>
+                                {issue.fix_pattern || issue.suggested_fix}
+                              </div>
+                            </div>
+                          </>
                         )}
-                        <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.75rem" }}>
-                          <div style={{ fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.4rem" }}>Fix</div>
-                          <div style={{ fontFamily: FA, fontSize: "0.8rem", color: T1, lineHeight: 1.65 }}>
-                            {issue.fix_pattern || issue.suggested_fix}
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -546,7 +600,7 @@ export function WorkspaceResults({
             return <span style={{ fontFamily: MONO, fontSize: "0.72rem", color }}>{n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "±0"}</span>
           }
           return (
-            <div style={{ padding: "2rem", borderBottom: `1px solid ${BD}`, maxWidth: 640 }}>
+            <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem", borderBottom: `1px solid ${BD}`, maxWidth: 640 }}>
               <Eyebrow>Compare mode</Eyebrow>
               <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.8, marginBottom: "1.25rem" }}>
                 <div><span style={{ color: T3 }}>Before  </span>{compareBase.source_id}</div>
@@ -588,14 +642,14 @@ export function WorkspaceResults({
           <div>
 
             {/* Score section */}
-            <div style={{ padding: "2rem 2rem 1.75rem", borderBottom: `1px solid ${BD}` }}>
+            <div style={{ padding: isMobile ? "1.25rem 1rem 1rem" : "2rem 2rem 1.75rem", borderBottom: `1px solid ${BD}` }}>
               <Eyebrow>Score breakdown</Eyebrow>
 
               {/* Overall score */}
               <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", marginBottom: "1.75rem" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
-                  <span style={{ fontFamily: FA, fontSize: "4.5rem", fontWeight: 700, color: T1, lineHeight: 1 }}>{pct(display.scores.overall)}</span>
-                  <span style={{ fontFamily: FA, fontSize: "1.5rem", color: T3, fontWeight: 300 }}>/100</span>
+                  <span style={{ fontFamily: FA, fontSize: isMobile ? "3rem" : "4.5rem", fontWeight: 700, color: T1, lineHeight: 1 }}>{pct(display.scores.overall)}</span>
+                  <span style={{ fontFamily: FA, fontSize: isMobile ? "1.1rem" : "1.5rem", color: T3, fontWeight: 300 }}>/100</span>
                 </div>
                 <span title={confLabel} style={{ fontFamily: FA, fontSize: "0.78rem", color: confColor, marginBottom: "0.6rem", cursor: "default" }}>
                   {confLabel}
@@ -612,13 +666,13 @@ export function WorkspaceResults({
                   const hide      = isLocked || isNeutral
                   const p         = isNeutral ? 50 : pct(s.value)
                   return (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.6rem 0", borderTop: `1px solid ${BD}` }}>
-                      <span style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, width: "110px", flexShrink: 0 }}>{s.label}</span>
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem", padding: "0.6rem 0", borderTop: `1px solid ${BD}` }}>
+                      <span style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, width: isMobile ? "96px" : "110px", flexShrink: 0 }}>{s.label}</span>
                       <div style={{ flex: 1, height: "2px", background: "rgba(26,25,23,0.07)", borderRadius: "1px", position: "relative" }}>
                         {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: T1, opacity: 0.5, borderRadius: "1px", transition: "width 0.8s ease" }} />}
                       </div>
                       <span style={{ fontFamily: MONO, fontSize: "0.82rem", color: hide ? T3 : T1, width: "30px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
-                      <span style={{ fontFamily: MONO, fontSize: "0.58rem", color: T3, width: "30px", flexShrink: 0 }}>{s.weight}</span>
+                      {!isMobile && <span style={{ fontFamily: MONO, fontSize: "0.58rem", color: T3, width: "30px", flexShrink: 0 }}>{s.weight}</span>}
                     </div>
                   )
                 })}
@@ -645,7 +699,7 @@ export function WorkspaceResults({
 
             {/* Fix this first */}
             {isSignedIn && display.top_fixes.length > 0 && (
-              <div style={{ padding: "2rem", borderBottom: `1px solid ${BD}` }}>
+              <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem", borderBottom: `1px solid ${BD}` }}>
                 <Eyebrow>Fix this first</Eyebrow>
                 <div>
                   {display.top_fixes.map((fix, i) => (
@@ -668,7 +722,7 @@ export function WorkspaceResults({
 
             {/* Issues list */}
             <div ref={issuesSectionRef}>
-              <div style={{ padding: "1.25rem 2rem 0.75rem", borderBottom: `1px solid ${BD}` }}>
+              <div style={{ padding: isMobile ? "1rem 1rem 0.5rem" : "1.25rem 2rem 0.75rem", borderBottom: `1px solid ${BD}` }}>
                 <Eyebrow>Issues — {totalIssues} found</Eyebrow>
               </div>
 
@@ -684,7 +738,7 @@ export function WorkspaceResults({
                     onClick={() => setSelectedIssue(isSelected ? null : i)}
                     onKeyDown={onKey(() => setSelectedIssue(isSelected ? null : i))}
                     style={{
-                      padding: "1.25rem 2rem",
+                      padding: isMobile ? "0.875rem 1rem" : "1.25rem 2rem",
                       borderBottom: `1px solid ${BD}`,
                       background: isSelected ? "rgba(26,25,23,0.015)" : "transparent",
                       cursor: "pointer", transition: "background 0.15s",
@@ -702,66 +756,70 @@ export function WorkspaceResults({
 
                         {isSelected && (
                           <div style={{ marginTop: "1.25rem" }} onClick={e => e.stopPropagation()}>
-
-                            {/* Evidence */}
-                            {issue.issue_type === "missing_section" ? (() => {
-                              const secKey = issue.title.toLowerCase().replace(/^missing\s+/, "").replace(/\s+section$/, "").trim()
-                              const sects = display.resume_sections ?? {}
-                              const foundSects = Object.keys(sects).filter(k => k !== "_unparsed")
-                              const variants = (SECTION_HEADER_VARIANTS[secKey] ?? []).slice(0, 6)
-                              return (
-                                <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, lineHeight: 2 }}>
-                                  <div><strong style={{ color: T1 }}>Sections found:</strong> {foundSects.length > 0 ? foundSects.join(", ") : "none"}</div>
-                                  <div><strong style={{ color: T1 }}>Searched for:</strong> {variants.join(", ")}</div>
-                                  <div style={{ color: "#8c2f4e" }}>Result: none matched.</div>
-                                </div>
-                              )
-                            })() : issue.evidence ? (
-                              <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, lineHeight: 1.9 }}>
-                                {issue.evidence}
-                              </div>
-                            ) : null}
-
-                            {/* Fix pattern */}
-                            <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem" }}>
-                              <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>Fix pattern</div>
-                              <div style={{ fontFamily: FA, fontSize: "0.82rem", color: T1, lineHeight: 1.7 }}>{issue.fix_pattern || issue.suggested_fix}</div>
-                              {issue.source_excerpt && <pre style={{ marginTop: "0.5rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, whiteSpace: "pre-wrap", lineHeight: 1.65, margin: "0.5rem 0 0" }}>{issue.source_excerpt}</pre>}
-                            </div>
-
-                            {/* Rewrite starter */}
-                            {issue.rewrite_starter && (
-                              <div style={{ background: "rgba(26,25,23,0.025)", border: `1px solid ${BD}`, borderLeft: `2px solid rgba(26,25,23,0.2)`, borderRadius: "0 4px 4px 0", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.78rem", color: T1, lineHeight: 1.7 }}>
-                                <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>Rewrite starter</div>
-                                {issue.rewrite_starter}
-                              </div>
-                            )}
-
-                            {/* AI rewrites */}
-                            {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
-                              <div style={{ marginTop: "0.25rem" }}>
-                                {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy !== false && (
-                                  <button
-                                    onClick={() => void onGenerateRewrites(i, issue)}
-                                    disabled={rewriteLoading[i]}
-                                    style={{ fontFamily: FA, fontSize: "0.75rem", padding: "0.4rem 1rem", background: "transparent", border: `1px solid ${BD2}`, color: T2, borderRadius: "100px", cursor: rewriteLoading[i] ? "default" : "pointer", opacity: rewriteLoading[i] ? 0.6 : 1 }}
-                                  >
-                                    {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
-                                  </button>
-                                )}
-                                {rewriteVariants[i]?.length > 0 && (
-                                  <div style={{ marginTop: "0.5rem" }}>
-                                    <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>AI-assisted rewrites</div>
-                                    {rewriteVariants[i].map((v, vi) => (
-                                      <div key={vi} style={{ padding: "0.65rem 0.875rem", background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", marginBottom: "0.35rem", fontFamily: MONO, fontSize: "0.78rem", color: T1, lineHeight: 1.65 }}>{v}</div>
-                                    ))}
-                                    <button
-                                      onClick={() => setSelectedIssue(null)}
-                                      style={{ fontFamily: FA, fontSize: "0.65rem", color: T3, background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0" }}
-                                    >clear</button>
+                            {issue.issue_type === "missing_section" ? (
+                              <MissingSectionPanel
+                                issue={issue}
+                                resumeSections={display.resume_sections}
+                              />
+                            ) : issue.issue_type === "keyword_gap" ? (
+                              <>
+                                {issue.evidence && (
+                                  <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, lineHeight: 1.9 }}>
+                                    {issue.evidence}
                                   </div>
                                 )}
-                              </div>
+                                <KeywordPlacementHint
+                                  keyword={issue.title.replace(/^missing keyword:\s*/i, "").trim()}
+                                  resumeSections={display.resume_sections ?? undefined}
+                                />
+                              </>
+                            ) : (
+                              <>
+                                {issue.evidence && (
+                                  <div style={{ background: BG, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, lineHeight: 1.9 }}>
+                                    {issue.evidence}
+                                  </div>
+                                )}
+
+                                <div style={{ background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "0.875rem 1rem", marginBottom: "0.75rem" }}>
+                                  <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>Fix pattern</div>
+                                  <div style={{ fontFamily: FA, fontSize: "0.82rem", color: T1, lineHeight: 1.7 }}>{issue.fix_pattern || issue.suggested_fix}</div>
+                                  {issue.source_excerpt && <pre style={{ marginTop: "0.5rem", fontFamily: MONO, fontSize: "0.72rem", color: T2, whiteSpace: "pre-wrap", lineHeight: 1.65, margin: "0.5rem 0 0" }}>{issue.source_excerpt}</pre>}
+                                </div>
+
+                                {issue.rewrite_starter && (
+                                  <div style={{ background: "rgba(26,25,23,0.025)", border: `1px solid ${BD}`, borderLeft: `2px solid rgba(26,25,23,0.2)`, borderRadius: "0 4px 4px 0", padding: "0.875rem 1rem", marginBottom: "0.75rem", fontFamily: MONO, fontSize: "0.78rem", color: T1, lineHeight: 1.7 }}>
+                                    <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>Rewrite starter</div>
+                                    {issue.rewrite_starter}
+                                  </div>
+                                )}
+
+                                {(issue.issue_type === "weak_phrasing" || issue.issue_type === "low_quantification") && (
+                                  <div style={{ marginTop: "0.25rem" }}>
+                                    {!rewriteVariants[i] && llmStatus?.available && llmStatus.healthy !== false && (
+                                      <button
+                                        onClick={() => void onGenerateRewrites(i, issue)}
+                                        disabled={rewriteLoading[i]}
+                                        style={{ fontFamily: FA, fontSize: "0.75rem", padding: "0.4rem 1rem", background: "transparent", border: `1px solid ${BD2}`, color: T2, borderRadius: "100px", cursor: rewriteLoading[i] ? "default" : "pointer", opacity: rewriteLoading[i] ? 0.6 : 1 }}
+                                      >
+                                        {rewriteLoading[i] ? "Generating…" : "Generate AI rewrites"}
+                                      </button>
+                                    )}
+                                    {rewriteVariants[i]?.length > 0 && (
+                                      <div style={{ marginTop: "0.5rem" }}>
+                                        <div style={{ fontFamily: MONO, fontSize: "0.54rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, marginBottom: "0.5rem" }}>AI-assisted rewrites</div>
+                                        {rewriteVariants[i].map((v, vi) => (
+                                          <div key={vi} style={{ padding: "0.65rem 0.875rem", background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", marginBottom: "0.35rem", fontFamily: MONO, fontSize: "0.78rem", color: T1, lineHeight: 1.65 }}>{v}</div>
+                                        ))}
+                                        <button
+                                          onClick={() => setSelectedIssue(null)}
+                                          style={{ fontFamily: FA, fontSize: "0.65rem", color: T3, background: "none", border: "none", cursor: "pointer", padding: "0.1rem 0" }}
+                                        >clear</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -780,13 +838,13 @@ export function WorkspaceResults({
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowKeywords(v => !v)}
-                  style={{ width: "100%", padding: "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
                   <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>Keywords</span>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showKeywords ? "▴" : "▾"}</span>
                 </button>
                 {showKeywords && (
-                  <div style={{ padding: "0 2rem 1.5rem" }}>
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
                       {display.matched_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "rgba(124,142,92,0.08)", color: "#7c8e5c", padding: "0.15rem 0.45rem", borderRadius: "2px", border: "1px solid rgba(124,142,92,0.2)" }}>{k}</span>)}
                       {display.missing_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.45rem", borderRadius: "2px", border: "1px solid rgba(140,47,78,0.15)" }}>–{k}</span>)}
@@ -801,7 +859,7 @@ export function WorkspaceResults({
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowSimulation(v => !v)}
-                  style={{ width: "100%", padding: "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
                   <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>ATS Profile Simulation</span>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showSimulation ? "▴" : "▾"}</span>
@@ -809,7 +867,7 @@ export function WorkspaceResults({
                 {showSimulation && (() => {
                   const sim = display.simulation!
                   return (
-                    <div style={{ padding: "0 2rem 1.5rem" }}>
+                    <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
                       <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, fontStyle: "italic", marginBottom: "1rem", lineHeight: 1.7 }}>{sim.cross_profile_summary}</div>
                       {sim.profiles.map(p => {
                         const open = expandedProfile === p.id
@@ -843,13 +901,13 @@ export function WorkspaceResults({
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowAtsPreview(v => !v)}
-                  style={{ width: "100%", padding: "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
                   <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>What ATS sees</span>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showAtsPreview ? "▴" : "▾"}</span>
                 </button>
                 {showAtsPreview && (
-                  <div style={{ padding: "0 2rem 2rem" }}>
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 2rem" }}>
                     <pre style={{ fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.8, color: T2, whiteSpace: "pre-wrap", wordBreak: "break-word", background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "1.25rem", margin: 0 }}>
                       {display.ats_text_preview}
                     </pre>

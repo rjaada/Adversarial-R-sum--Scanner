@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useUser } from "@clerk/nextjs"
+import { useOptionalUser } from "@/lib/use-optional-clerk"
 
 const fa = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 const mono = "var(--font-mono, 'IBM Plex Mono', monospace)"
 
 export default function AccountPage() {
-  const { isLoaded, user } = useUser()
+  const { isLoaded, user } = useOptionalUser()
   const [displayName, setDisplayName] = useState("")
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)

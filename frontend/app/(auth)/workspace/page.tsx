@@ -15,7 +15,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { useAuth, UserButton } from "@clerk/nextjs"
+import { useOptionalAuth } from "@/lib/use-optional-clerk"
+import { OptionalUserButton } from "@/components/OptionalUserButton"
 import { IssueGate } from "@/components/IssueGate"
 import { UpgradePrompt } from "@/components/UpgradePrompt"
 import { UploadPhase } from "./UploadPhase"
@@ -67,7 +68,7 @@ const LIGHT_VARS = {
 // ── Page component ───────────────────────────────────────────────────────────
 
 export default function WorkspacePage() {
-  const { isLoaded, isSignedIn, getToken } = useAuth()
+  const { isLoaded, isSignedIn, getToken } = useOptionalAuth()
 
   // ── State ──────────────────────────────────────────────────────────
   const [result, setResult]                   = useState<ScanResult | null>(null)
@@ -315,7 +316,7 @@ export default function WorkspacePage() {
               </button>
             </>
           )}
-          <UserButton
+          <OptionalUserButton
                 appearance={{
                   variables: { colorBackground: "#FFFFFF", colorText: "#0D0C0A", colorPrimary: "#7c8e5c", borderRadius: "4px", fontFamily: FA },
                   elements: {

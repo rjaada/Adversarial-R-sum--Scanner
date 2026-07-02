@@ -56,14 +56,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     unbounded.variable,
   ].join(" ")
 
-  return (
-    <ClerkProvider publishableKey={clerkKey ?? ""}>
-      <html lang="en" className={htmlClass}>
-        <body>
-          {children}
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+  const tree = (
+    <html lang="en" className={htmlClass}>
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
   )
+
+  // Initialize Clerk only when a publishable key is present. Without one
+  // (e.g. a localhost preview that cannot reach Clerk's external domain),
+  // render the app without Clerk so public pages preview cleanly. Production
+  // always has a key, so this path is dev/preview-only.
+  return clerkKey
+    ? <ClerkProvider publishableKey={clerkKey}>{tree}</ClerkProvider>
+    : tree
 }

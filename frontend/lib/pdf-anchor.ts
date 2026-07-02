@@ -192,6 +192,24 @@ function derivePin(
   }
 }
 
+// ── Anchorability test ────────────────────────────────────────────────────────
+
+/**
+ * True when an issue carries enough document evidence to even attempt a PDF
+ * anchor: a non-trivial source_excerpt and a type that refers to a concrete
+ * passage (keyword_gap / missing_section describe ABSENT content, so they are
+ * unanchorable by design and live in the unanchored strip).
+ *
+ * Exported as the single source of truth for the anchored-coverage ratio in
+ * PDFViewer — the denominator must use exactly the same precondition as the
+ * matcher, or coverage measurement drifts from reality.
+ */
+export function isAnchorableIssue(issue: Issue): boolean {
+  if (!issue.source_excerpt?.trim()) return false
+  if (issue.issue_type === "keyword_gap" || issue.issue_type === "missing_section") return false
+  return normalizeNeedle(issue.source_excerpt).length >= 8
+}
+
 // ── Per-issue anchor computation ──────────────────────────────────────────────
 
 function computeAnchorForIssue(
@@ -203,13 +221,9 @@ function computeAnchorForIssue(
 ): PDFAnchor {
   const noAnchor: PDFAnchor = { issueIndex, rects: [], pin: { x: 0, y: 0, pageIndex: 0 }, confidence: "none" }
 
-  // Issues with no useful source_excerpt
-  if (!issue.source_excerpt?.trim()) return noAnchor
-  if (issue.issue_type === "keyword_gap") return noAnchor
-  if (issue.issue_type === "missing_section") return noAnchor
+  if (!isAnchorableIssue(issue)) return noAnchor
 
   const needle = normalizeNeedle(issue.source_excerpt)
-  if (needle.length < 8) return noAnchor
 
   const haystack = normHaystack(mpt.text)
 

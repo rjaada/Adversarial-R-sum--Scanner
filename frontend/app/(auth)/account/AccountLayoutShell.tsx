@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { UserButton } from "@clerk/nextjs"
+import { OptionalUserButton } from "@/components/OptionalUserButton"
 
 const fa = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 const BD = "rgba(26,25,23,0.08)"
@@ -65,7 +65,7 @@ export default function AccountLayoutShell({ children }: { children: React.React
           })}
         </div>
 
-        <UserButton appearance={clerkAppearance} userProfileUrl="/account" userProfileMode="navigation" afterSignOutUrl="/" />
+        <OptionalUserButton appearance={clerkAppearance} userProfileUrl="/account" userProfileMode="navigation" afterSignOutUrl="/" />
       </nav>
 
       <main style={{ maxWidth: 680, margin: "0 auto", padding: "48px 24px 80px" }}>

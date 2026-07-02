@@ -6,6 +6,8 @@
 import { SignIn } from "@clerk/nextjs"
 import Link from "next/link"
 import { clerkAppearance } from "@/lib/clerk-appearance"
+import { clerkEnabled } from "@/lib/clerk-enabled"
+import { PreviewAuthNotice } from "@/components/PreviewAuthNotice"
 
 const fa = "Albert Sans, system-ui, sans-serif"
 const fu = "var(--font-unbounded, Unbounded, sans-serif)"
@@ -241,7 +243,7 @@ export default function SignInPage() {
             Continue to your résumé analysis.
           </p>
 
-          <SignIn appearance={clerkAppearance} />
+          {clerkEnabled ? <SignIn appearance={clerkAppearance} /> : <PreviewAuthNotice mode="sign-in" />}
         </div>
       </div>
     </div>
