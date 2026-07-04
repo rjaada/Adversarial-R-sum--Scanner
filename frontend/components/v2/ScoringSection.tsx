@@ -40,7 +40,8 @@ const dimensions = [
   { value: 35, suffix: "%", label: "Keyword & concept match", detail: "Extracted JD requirements vs résumé content across direct, inferred, and contextual matches." },
   { value: 25, suffix: "%", label: "Experience alignment",    detail: "Seniority, scope, and domain relevance scored against stated and inferred JD requirements." },
   { value: 20, suffix: "%", label: "Parse integrity",         detail: "How much of your résumé survives ATS extraction without corruption, reordering, or loss." },
-  { value: 20, suffix: "%", label: "Clarity & impact language", detail: "Strength of phrasing, quantification of achievements, and active-voice framing throughout." },
+  { value: 10, suffix: "%", label: "Structure",               detail: "Expected sections found and recognizable — summary, experience, education, skills." },
+  { value: 10, suffix: "%", label: "Quantified impact",       detail: "Strength of phrasing, quantification of achievements, and active-voice framing throughout." },
 ]
 
 export function ScoringSection() {
@@ -73,7 +74,7 @@ export function ScoringSection() {
             </h2>
           </div>
           <p className="text-muted-foreground font-mono text-sm max-w-xs">
-            Four dimensions. Explicit weights. No black box — every score is traceable to specific findings in your résumé.
+            Five dimensions. Explicit weights. No black box — every score is traceable to specific findings in your résumé.
           </p>
         </div>
 
@@ -83,7 +84,7 @@ export function ScoringSection() {
               key={dim.label}
               className={`bg-background p-8 lg:p-12 transition-all duration-700 ${
                 visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-              }`}
+              } ${i === dimensions.length - 1 ? "md:col-span-2" : ""}`}
               style={{ transitionDelay: `${i * 100}ms` }}
             >
               <AnimatedCounter end={dim.value} suffix={dim.suffix} />

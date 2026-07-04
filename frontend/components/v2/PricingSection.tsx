@@ -1,59 +1,44 @@
 "use client"
 
-import { useState } from "react"
 import { ArrowRight, Check } from "lucide-react"
 
 const plans = [
   {
     name: "Free",
-    description: "Start scanning, no commitment",
-    price: { monthly: 0, annual: 0 },
+    description: "The full scanner, no commitment",
+    price: "$0",
+    period: "forever",
     features: [
-      "3 résumé scans per month",
-      "Parse integrity check",
-      "JD requirement matching",
-      "ATS plain-text preview",
-      "Community support",
+      "Unlimited scans",
+      "Overall score /100",
+      "Score breakdown (5 signals)",
+      "Issue evidence & fix patterns",
+      "Keyword gap analysis",
+      "90-day scan history",
     ],
     cta: "Start scanning free",
-    popular: false,
+    href: "/workspace",
+    comingSoon: false,
   },
   {
     name: "Pro",
-    description: "For active job seekers",
-    price: { monthly: 19, annual: 16 },
+    description: "In development",
+    price: "$9",
+    period: "/month",
     features: [
-      "Unlimited scans",
-      "Full severity-ranked findings",
-      "AI rewrite suggestions per issue",
-      "Scan history & comparison",
-      "Export reports (PDF)",
-      "Priority support",
+      "Everything in Free",
+      "12-month scan history",
+      "Compare mode",
+      "PDF export",
+      "AI rewrite suggestions — per issue",
     ],
-    cta: "Start trial",
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    description: "For teams and career services",
-    price: { monthly: null, annual: null },
-    features: [
-      "Everything in Pro",
-      "Team workspaces",
-      "Bulk résumé analysis",
-      "Custom scoring calibration",
-      "Dedicated onboarding",
-      "SLA guarantee",
-      "Custom contracts",
-    ],
-    cta: "Contact us",
-    popular: false,
+    cta: "Coming soon",
+    href: null,
+    comingSoon: true,
   },
 ]
 
 export function PricingSection() {
-  const [isAnnual, setIsAnnual] = useState(true)
-
   return (
     <section id="pricing" className="relative py-32 lg:py-40 border-t border-foreground/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -63,50 +48,28 @@ export function PricingSection() {
             Pricing
           </span>
           <h2 className="font-display text-5xl md:text-6xl lg:text-7xl tracking-tight text-foreground mb-6">
-            Simple, transparent
+            Everything works
             <br />
-            <span className="v2-text-stroke">pricing</span>
+            <span className="v2-text-stroke">on Free</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl">
-            Start free and upgrade when you need more scans. No hidden fees, no surprises.
+            The full scanner is free — unlimited scans, every finding. Pro is in
+            development and will add longer history retention.
           </p>
         </div>
 
-        {/* Billing toggle */}
-        <div className="flex items-center gap-4 mb-16">
-          <span className={`text-sm transition-colors ${!isAnnual ? "text-foreground" : "text-muted-foreground"}`}>
-            Monthly
-          </span>
-          <button
-            onClick={() => setIsAnnual(!isAnnual)}
-            className="relative w-14 h-7 bg-foreground/10 rounded-full p-1 transition-colors hover:bg-foreground/20"
-          >
-            <div
-              className={`w-5 h-5 bg-foreground rounded-full transition-transform duration-300 ${isAnnual ? "translate-x-7" : "translate-x-0"}`}
-            />
-          </button>
-          <span className={`text-sm transition-colors ${isAnnual ? "text-foreground" : "text-muted-foreground"}`}>
-            Annual
-          </span>
-          {isAnnual && (
-            <span className="ml-2 px-2 py-1 bg-foreground text-primary-foreground text-xs font-mono">
-              Save 16%
-            </span>
-          )}
-        </div>
-
         {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-px bg-foreground/10">
+        <div className="grid md:grid-cols-2 gap-px bg-foreground/10 max-w-4xl">
           {plans.map((plan, idx) => (
             <div
               key={plan.name}
               className={`relative p-8 lg:p-12 bg-background ${
-                plan.popular ? "md:-my-4 md:py-12 lg:py-16 border-2 border-foreground" : ""
+                plan.comingSoon ? "" : "border-2 border-foreground"
               }`}
             >
-              {plan.popular && (
-                <span className="absolute -top-3 left-8 px-3 py-1 bg-foreground text-primary-foreground text-xs font-mono uppercase tracking-widest">
-                  Most Popular
+              {plan.comingSoon && (
+                <span className="absolute -top-3 left-8 px-3 py-1 bg-background border border-foreground/30 text-foreground/70 text-xs font-mono uppercase tracking-widest">
+                  Coming soon
                 </span>
               )}
 
@@ -119,16 +82,12 @@ export function PricingSection() {
               </div>
 
               <div className="mb-8 pb-8 border-b border-foreground/10">
-                {plan.price.monthly !== null ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-5xl lg:text-6xl text-foreground">
-                      ${isAnnual ? plan.price.annual : plan.price.monthly}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                ) : (
-                  <span className="font-display text-4xl text-foreground">Custom</span>
-                )}
+                <div className="flex items-baseline gap-2">
+                  <span className="font-display text-5xl lg:text-6xl text-foreground">
+                    {plan.price}
+                  </span>
+                  <span className="text-muted-foreground">{plan.period}</span>
+                </div>
               </div>
 
               <ul className="space-y-4 mb-10">
@@ -140,25 +99,30 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <button
-                className={`w-full py-4 flex items-center justify-center gap-2 text-sm font-medium transition-all group ${
-                  plan.popular
-                    ? "bg-foreground text-primary-foreground hover:bg-foreground/90"
-                    : "border border-foreground/20 text-foreground hover:border-foreground hover:bg-foreground/5"
-                }`}
-                onClick={() => window.location.href = plan.popular ? "/workspace" : plan.name === "Free" ? "/workspace" : "/contact"}
-              >
-                {plan.cta}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
+              {plan.comingSoon ? (
+                <button
+                  disabled
+                  className="w-full py-4 flex items-center justify-center gap-2 text-sm font-medium border border-foreground/15 text-muted-foreground cursor-not-allowed"
+                >
+                  {plan.cta}
+                </button>
+              ) : (
+                <button
+                  className="w-full py-4 flex items-center justify-center gap-2 text-sm font-medium transition-all group bg-foreground text-primary-foreground hover:bg-foreground/90"
+                  onClick={() => (window.location.href = plan.href!)}
+                >
+                  {plan.cta}
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              )}
             </div>
           ))}
         </div>
 
-        <p className="mt-12 text-center text-sm text-muted-foreground">
-          All plans include PDF and DOCX support, GDPR-compliant storage, and your right to delete your data.{" "}
+        <p className="mt-12 text-sm text-muted-foreground">
+          PDF and DOCX support, GDPR-aware storage, and your right to delete your data — on every plan.{" "}
           <a href="/pricing" className="underline underline-offset-4 hover:text-foreground transition-colors">
-            Compare all features
+            Full pricing details
           </a>
         </p>
       </div>

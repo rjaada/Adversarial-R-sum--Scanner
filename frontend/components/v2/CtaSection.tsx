@@ -60,7 +60,7 @@ export function CtaSection() {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground mt-8 font-mono">
-                  No credit card required · 3 free scans to start
+                  No credit card required · unlimited free scans
                 </p>
               </div>
 

@@ -14,12 +14,9 @@ const footerLinks = {
   Company: [
     { name: "Privacy",  href: "/privacy" },
     { name: "Terms",    href: "/terms" },
-    { name: "Contact",  href: "mailto:hello@tracerank.com" },
   ],
   Support: [
-    { name: "Documentation", href: "#" },
-    { name: "Status",        href: "#" },
-    { name: "GitHub",        href: "#", badge: "Open" },
+    { name: "GitHub", href: "https://github.com/rjaada/Adversarial-R-sum--Scanner", badge: "Open" },
   ],
 }
 
@@ -53,6 +50,7 @@ export function FooterSection() {
                     <li key={link.name}>
                       <a
                         href={link.href}
+                        {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
                       >
                         {link.name}
@@ -72,14 +70,8 @@ export function FooterSection() {
 
         <div className="py-8 border-t border-foreground/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            2025 TraceRank. All rights reserved.
+            2026 TraceRank. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              All systems operational
-            </span>
-          </div>
         </div>
       </div>
     </footer>

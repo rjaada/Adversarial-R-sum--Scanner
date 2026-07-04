@@ -15,13 +15,17 @@ const T3 = "#a09890"
 export default function PrivacyPage() {
   return (
     <div style={{ background: "#FDFCF9", minHeight: "100vh", color: T1, fontFamily: fa }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .legal-nav { padding: 0 80px; }
+        @media (max-width: 767px) { .legal-nav { padding: 0 20px; } }
+      ` }} />
 
-      <nav style={{ borderBottom: `1px solid ${BD}`, padding: "0 80px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", position: "sticky", top: 0, zIndex: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+      <nav className="legal-nav" style={{ borderBottom: `1px solid ${BD}`, height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", background: "#FFFFFF", position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexShrink: 0 }}>
           <Link href="/" style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: T1, textDecoration: "none", letterSpacing: "-0.01em" }}>TraceRank</Link>
           <span style={{ fontFamily: fa, fontSize: "0.875rem", color: T3 }}>Privacy</span>
         </div>
-        <Link href="/workspace" style={{ fontFamily: fa, fontSize: "0.875rem", fontWeight: 500, color: "#FDFCF9", background: T1, borderRadius: "100px", padding: "8px 18px", textDecoration: "none" }}>
+        <Link href="/workspace" style={{ fontFamily: fa, fontSize: "0.875rem", fontWeight: 500, color: "#FDFCF9", background: T1, borderRadius: "100px", padding: "8px 18px", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
           Open scanner →
         </Link>
       </nav>

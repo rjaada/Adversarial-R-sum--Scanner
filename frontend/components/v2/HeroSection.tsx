@@ -16,14 +16,24 @@ const marqueeStats = [
 
 export function HeroSection() {
   const [visible, setVisible] = useState(false)
+  // Entrance transitions have intermittently stalled at opacity 0 on mobile
+  // viewports. After 800ms, force everything visible with !important
+  // utilities — the hero must never be invisible to a real user.
+  const [forceVisible, setForceVisible] = useState(false)
   const [wordIdx, setWordIdx] = useState(0)
 
-  useEffect(() => { setVisible(true) }, [])
+  useEffect(() => {
+    setVisible(true)
+    const t = setTimeout(() => setForceVisible(true), 800)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     const t = setInterval(() => setWordIdx((p) => (p + 1) % words.length), 2500)
     return () => clearInterval(t)
   }, [])
+
+  const forced = forceVisible ? "!opacity-100 !translate-y-0" : ""
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden v2-noise-overlay">
@@ -46,7 +56,7 @@ export function HeroSection() {
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 pt-16 pb-8">
         {/* Eyebrow */}
-        <div className={`mb-8 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className={`mb-8 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} ${forced}`}>
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground">
             <span className="w-8 h-px bg-foreground/30" />
             Adversarial résumé intelligence
@@ -56,12 +66,12 @@ export function HeroSection() {
         {/* Headline */}
         <div className="mb-12">
           <h1
-            className={`text-[clamp(3rem,6.5vw,8rem)] font-display leading-[1.05] tracking-tight transition-all duration-1000 ${
+            className={`text-[clamp(2.5rem,6.5vw,8rem)] font-display leading-[1.05] tracking-tight transition-all duration-1000 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
+            } ${forced}`}
           >
             <span className="block">Reveal how</span>
-            <span className="block whitespace-nowrap">
+            <span className="block md:whitespace-nowrap">
               screeners{" "}
               <span className="relative inline-block">
                 <span key={wordIdx} className="inline-flex">
@@ -88,7 +98,7 @@ export function HeroSection() {
           <p
             className={`text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-xl transition-all duration-700 delay-200 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
+            } ${forced}`}
           >
             Upload your résumé and paste the job description. TraceRank parses, scores, and surfaces every place automated hiring systems will underrate you — with specific fixes attached.
           </p>
@@ -96,7 +106,7 @@ export function HeroSection() {
           <div
             className={`flex flex-col sm:flex-row items-start gap-4 transition-all duration-700 delay-300 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
+            } ${forced}`}
           >
             <Button size="lg" className="rounded-full group" onClick={() => window.location.href="/workspace"}>
               Start scanning free
@@ -110,7 +120,7 @@ export function HeroSection() {
       </div>
 
       {/* Stats marquee */}
-      <div className={`absolute bottom-6 left-0 right-0 transition-all duration-700 delay-500 ${visible ? "opacity-100" : "opacity-0"}`}>
+      <div className={`absolute bottom-6 left-0 right-0 transition-all duration-700 delay-500 ${visible ? "opacity-100" : "opacity-0"} ${forceVisible ? "!opacity-100" : ""}`}>
         <div className="flex gap-16 v2-marquee whitespace-nowrap">
           {[...Array(2)].map((_, setIdx) => (
             <div key={setIdx} className="flex gap-16">

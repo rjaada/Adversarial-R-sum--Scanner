@@ -316,6 +316,14 @@ export default function WorkspacePage() {
               </button>
             </>
           )}
+          {isLoaded && !isSignedIn && (
+            <Link
+              href="/sign-in"
+              style={{ fontFamily: FA, fontSize: "0.875rem", fontWeight: 500, color: "#FDFCF9", background: "#0D0C0A", borderRadius: "100px", padding: "8px 18px", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+              Sign in
+            </Link>
+          )}
           <OptionalUserButton
                 appearance={{
                   variables: { colorBackground: "#FFFFFF", colorText: "#0D0C0A", colorPrimary: "#7c8e5c", borderRadius: "4px", fontFamily: FA },

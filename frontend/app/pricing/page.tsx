@@ -40,6 +40,11 @@ const STYLES = `
   .pr-btn-free:hover { background:${T2}; }
   .pr-btn-pro  { display:flex;align-items:center;justify-content:center;width:100%;height:52px;font-family:${fa};font-size:15px;font-weight:500;color:${T1};background:transparent;border:1.5px solid ${T1};border-radius:100px;text-decoration:none;transition:background 0.2s,color 0.2s;cursor:pointer;margin-top:auto; }
   .pr-btn-pro:hover { background:${T1};color:#FDFCF9; }
+  .pr-nav { padding: 0 80px; }
+  @media (max-width: 767px) {
+    .pr-nav { padding: 0 20px; }
+    .pr-nav-method { display: none; }
+  }
 `
 
 export default function PricingPage() {
@@ -47,11 +52,11 @@ export default function PricingPage() {
     <div style={{ background: "#FDFCF9", minHeight: "100vh", color: T1, fontFamily: fa }}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
-      <nav style={{ height: 64, background: "#FFFFFF", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 80px", position: "sticky", top: 0, zIndex: 100 }}>
-        <Link href="/" style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: T1, textDecoration: "none", letterSpacing: "-0.01em" }}>TraceRank</Link>
+      <nav className="pr-nav" style={{ height: 64, background: "#FFFFFF", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", position: "sticky", top: 0, zIndex: 100 }}>
+        <Link href="/" style={{ fontFamily: fa, fontSize: "1rem", fontWeight: 600, color: T1, textDecoration: "none", letterSpacing: "-0.01em", flexShrink: 0 }}>TraceRank</Link>
         <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-          <Link href="/methodology" style={{ fontFamily: fa, fontSize: "0.875rem", color: T2, textDecoration: "none" }}>Methodology</Link>
-          <Link href="/workspace" style={{ fontFamily: fa, fontSize: "0.875rem", fontWeight: 500, color: "#FDFCF9", background: T1, borderRadius: "100px", padding: "8px 18px", textDecoration: "none" }}>
+          <Link href="/methodology" className="pr-nav-method" style={{ fontFamily: fa, fontSize: "0.875rem", color: T2, textDecoration: "none" }}>Methodology</Link>
+          <Link href="/workspace" style={{ fontFamily: fa, fontSize: "0.875rem", fontWeight: 500, color: "#FDFCF9", background: T1, borderRadius: "100px", padding: "8px 18px", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
             Scan résumé →
           </Link>
         </div>
