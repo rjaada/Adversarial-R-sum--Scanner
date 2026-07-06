@@ -179,18 +179,26 @@ export default function WorkspacePage() {
       const form = new FormData()
       form.append("file", file)
       form.append("jd_text", jdText)
-      const res = await fetch(`${API_BASE}/api/scan`, { method: "POST", body: form })
+      // Signed-in scans must carry the session token — without it the backend
+      // gates the result (truncated issues, stripped preview) as anonymous.
+      const token = await getToken()
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_BASE}/api/scan`, { method: "POST", body: form, headers })
       if (!res.ok) { const msg = await res.text(); throw new Error(msg || "HTTP " + String(res.status)) }
       const data = await res.json() as ScanResult
       setResult(prev => { setPreviousResult(prev); return data })
       setSelectedIssue(null)
+      // Anonymous scans are stashed locally so they can be claimed after
+      // sign-in. Signed-in scans persist server-side — no stash needed.
       // Strip the ATS text preview before persisting to localStorage — it can
       // contain unscrubbed PII (name, email, phone). The server scrubs PII
       // before DB storage; the client must do the same before localStorage.
-      try {
-        const safeForStorage: ScanResult = { ...data, ats_text_preview: "" }
-        localStorage.setItem(PENDING_SCAN_KEY, JSON.stringify({ result: safeForStorage, scanned_at: new Date().toISOString() }))
-      } catch {}
+      if (!token) {
+        try {
+          const safeForStorage: ScanResult = { ...data, ats_text_preview: "" }
+          localStorage.setItem(PENDING_SCAN_KEY, JSON.stringify({ result: safeForStorage, scanned_at: new Date().toISOString() }))
+        } catch {}
+      }
       track("scan_completed", {
         overall_score:       pct(data.scores.overall),
         issue_count:         data.total_issues ?? data.issues.length,

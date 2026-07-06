@@ -202,9 +202,13 @@ export function WorkspaceResults({
   // truncation, so the "N more — sign in" nudge stays honest. On a gated
   // result every sub-score except keyword match is locked.
   const totalIssues   = display.total_issues ?? display.issues.length
-  const shownCount    = isSignedIn ? display.issues.length : Math.min(display.issues.length, 3)
-  const gateRemaining = totalIssues - shownCount
   const isGated       = !!display.gated
+  // A result can be gated even while the client is signed in (e.g. a scan
+  // that ran before the session token attached). Content sections must
+  // follow the payload, not the client auth state, or they render empty.
+  const limited       = !isSignedIn || isGated
+  const shownCount    = limited ? Math.min(display.issues.length, 3) : display.issues.length
+  const gateRemaining = totalIssues - shownCount
 
   // Keyboard activation for non-button clickable rows (WCAG 2.1 AA).
   const onKey = (fn: () => void) => (e: React.KeyboardEvent) => {
@@ -471,7 +475,7 @@ export function WorkspaceResults({
                   Issues — {totalIssues} found
                 </span>
               </div>
-              {(isSignedIn ? display.issues : display.issues.slice(0, 3)).map((issue, i) => {
+              {(limited ? display.issues.slice(0, 3) : display.issues).map((issue, i) => {
                 const anchor = anchors[i]
                 const isSelected = selectedIssue === i
                 const isHovered = hoveredIssue === i
@@ -579,7 +583,7 @@ export function WorkspaceResults({
                   </div>
                 )
               })}
-              {!isSignedIn && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
+              {limited && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
             </div>
             </>
             )}
@@ -695,7 +699,9 @@ export function WorkspaceResults({
 
               {isGated && (
                 <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(26,25,23,0.03)", border: `1px solid ${BD}`, borderRadius: "4px", fontFamily: FA, fontSize: "0.75rem", color: T2, lineHeight: 1.65 }}>
-                  Sign in to unlock the full score breakdown, every finding, the keyword gap analysis, and the “What ATS sees” preview.
+                  {isSignedIn
+                    ? "This scan ran before your session was attached — run a new scan to see the full report."
+                    : "Sign in to unlock the full score breakdown, every finding, the keyword gap analysis, and the “What ATS sees” preview."}
                 </div>
               )}
 
@@ -707,7 +713,7 @@ export function WorkspaceResults({
             </div>
 
             {/* Fix this first */}
-            {isSignedIn && display.top_fixes.length > 0 && (
+            {!limited && display.top_fixes.length > 0 && (
               <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem", borderBottom: `1px solid ${BD}` }}>
                 <Eyebrow>Fix this first</Eyebrow>
                 <div>
@@ -727,7 +733,7 @@ export function WorkspaceResults({
                 </div>
               </div>
             )}
-            {!isSignedIn && <UpgradePrompt label="Fix priority ranking available after sign-in." />}
+            {limited && <UpgradePrompt label="Fix priority ranking available after sign-in." />}
 
             {/* Issues list */}
             <div ref={issuesSectionRef}>
@@ -735,7 +741,7 @@ export function WorkspaceResults({
                 <Eyebrow>Issues — {totalIssues} found</Eyebrow>
               </div>
 
-              {(isSignedIn ? display.issues : display.issues.slice(0, 3)).map((issue, i) => {
+              {(limited ? display.issues.slice(0, 3) : display.issues).map((issue, i) => {
                 const isSelected = selectedIssue === i
                 return (
                   <div
@@ -837,13 +843,13 @@ export function WorkspaceResults({
                   </div>
                 )
               })}
-              {!isSignedIn && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
+              {limited && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
             </div>
 
             {/* ── Collapsible secondary sections ─────────────────────────── */}
 
             {/* Keywords */}
-            {isSignedIn ? (
+            {!limited ? (
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowKeywords(v => !v)}
@@ -864,7 +870,7 @@ export function WorkspaceResults({
             ) : <UpgradePrompt label="Keyword gap analysis available after sign-in." />}
 
             {/* ATS Simulation */}
-            {display.simulation && isSignedIn && (
+            {display.simulation && !limited && (
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowSimulation(v => !v)}
@@ -906,7 +912,7 @@ export function WorkspaceResults({
             )}
 
             {/* ATS Preview */}
-            {isSignedIn ? (
+            {!limited ? (
               <div style={{ borderBottom: `1px solid ${BD}` }}>
                 <button
                   onClick={() => setShowAtsPreview(v => !v)}
