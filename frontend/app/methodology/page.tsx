@@ -347,8 +347,8 @@ export default function MethodologyPage() {
             rows={[
               [
                 "Keyword gap",
-                "Required JD keyword absent from résumé after synonym check",
-                "High",
+                "JD keyword absent from résumé after synonym check",
+                "High if in the JD's stated requirements, Medium if mentioned elsewhere",
                 "JD keyword + synonym check result",
               ],
               [

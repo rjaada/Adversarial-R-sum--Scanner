@@ -207,20 +207,43 @@ def _check_parse_warnings(warnings: list[str]) -> list[Issue]:
 
 def _check_missing_keywords(jd_requirements: dict) -> list[Issue]:
     missing = jd_requirements.get("missing_from_resume", [])
+    # Keywords inside explicit requirement lines are must-haves; anything else
+    # was merely mentioned somewhere in the JD. The two deserve different
+    # severity and different claims — "the JD requires X" is only true for
+    # the first group.
+    must_haves = set(jd_requirements.get("must_have_keywords", []))
+    if not must_haves:
+        req_lines_text = " ".join(jd_requirements.get("requirement_lines", [])).lower()
+        must_haves = {
+            kw for kw in jd_requirements.get("required_keywords", [])
+            if kw in req_lines_text
+        }
     issues = []
     for kw in missing[:10]:
         if len(kw) < 2 or kw in _KEYWORD_NOISE:
             continue
+        if kw in must_haves:
+            severity = "high"
+            description = (
+                f'"{kw}" is listed in the job\'s stated requirements but does not appear '
+                f"in your résumé. Recruiter keyword searches and screeners filtering on it will miss you."
+            )
+        else:
+            severity = "medium"
+            description = (
+                f'"{kw}" appears in the job description but not in your résumé. '
+                f"You won't surface in recruiter searches for it — add it only if you genuinely have it."
+            )
         issues.append(Issue(
             issue_type="keyword_gap",
-            severity="high",
+            severity=severity,  # type: ignore[arg-type]
             title=f"Missing keyword: {kw}",
-            description=f'The JD requires "{kw}" but your résumé does not mention it. ATS keyword filters will penalize this.',
+            description=description,
             evidence=f'"{kw}" does not appear anywhere in your résumé text.',
             fix_pattern=f'Add "{kw}" explicitly in your Skills section or work it into a relevant experience bullet.',
             source_excerpt="",
             suggested_fix=f'Add "{kw}" in your Skills section or weave it into relevant experience descriptions.',
-            impact_score=_impact("high"),
+            impact_score=_impact(severity),
         ))
     return issues
 
@@ -273,16 +296,16 @@ _MISSING_SECTION_EVIDENCE: dict[str, tuple[str, str]] = {
         'Add: Company · Title · Dates, then 3–5 bullets starting with action verbs.',
     ),
     "education": (
-        'No Education or Academic section was found. Some ATS systems require degree detection.',
+        'No Education or Academic section was found. Some employers filter on parsed degree fields.',
         'Add: Degree · Institution · Graduation year. One line is sufficient.',
     ),
 }
 
 _MISSING_SECTION_META: dict[str, tuple[str, str, str]] = {
-    "summary": ("Missing Summary section", "critical", "Add a 2-3 sentence summary at the top. Most ATS systems weight the summary for role-fit classification."),
-    "skills": ("Missing Skills section", "high", "Add a dedicated Skills section. ATS keyword filters scan this section first."),
-    "experience": ("Missing Experience section", "critical", "No Experience section detected. This will cause ATS to reject or low-rank the résumé."),
-    "education": ("Missing Education section", "medium", "Add an Education section. Many ATS systems require degree detection for role classification."),
+    "summary": ("Missing Summary section", "medium", "Add a 2-3 sentence summary at the top. ATS won't reject you for skipping it, but recruiters and LLM screeners read it first — it's the fastest way to signal role fit."),
+    "skills": ("Missing Skills section", "high", "Add a dedicated Skills section. Recruiter keyword searches and structure-sensitive parsers pull from it first."),
+    "experience": ("Missing Experience section", "critical", "No Experience section was detected. Parsers can't build your work history from it, which makes you effectively invisible to filters on experience."),
+    "education": ("Missing Education section", "medium", "Add an Education section. Some employers filter candidates on degree fields parsed from it — one line is enough."),
 }
 
 
