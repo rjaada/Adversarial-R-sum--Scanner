@@ -168,11 +168,15 @@ async def scan_resume(
         # Persist the FULL result (gating only affects what is returned).
         pool = get_pool()
         if pool is not None:
-            try:
-                plan = "free"
-                if user_id:
+            plan = "free"
+            if user_id:
+                try:
                     await upsert_user(pool, user_id)
                     plan = await get_user_plan(pool, user_id)
+                except Exception as db_err:
+                    # Don't let a users-table failure take the scan save with it.
+                    log.warning("user upsert/plan lookup failed (non-fatal): %s", db_err)
+            try:
                 await save_scan(pool, result, user_id=user_id, jd_text=jd_text, plan=plan)
             except Exception as db_err:
                 log.warning("save_scan failed (non-fatal): %s", db_err)
