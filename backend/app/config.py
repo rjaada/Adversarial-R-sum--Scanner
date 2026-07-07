@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     # Clerk — JWKS endpoint for JWT verification
     # Format: https://<your-clerk-frontend-api>/.well-known/jwks.json
     # Find in: Clerk Dashboard → API Keys → Advanced
-    clerk_jwks_url: str = ""
+    # Defaults to the current Clerk instance so a missing env var degrades
+    # auth loudly-visible features (history, ungated scans) rather than
+    # silently rejecting every token. Override when the Clerk instance moves
+    # to production.
+    clerk_jwks_url: str = "https://usable-chow-5.clerk.accounts.dev/.well-known/jwks.json"
 
     # Stripe (Phase 2 — referenced in env now, used in Phase 2)
     stripe_secret_key: str = ""
