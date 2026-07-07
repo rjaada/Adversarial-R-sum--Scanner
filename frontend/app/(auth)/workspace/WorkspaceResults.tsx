@@ -17,7 +17,7 @@ import { KeywordPlacementHint } from "./KeywordPlacementHint"
 import { FeedbackCard } from "./FeedbackCard"
 import { ReportProblemModal } from "./ReportProblemModal"
 import {
-  pct, scoreColor, compareScans, track,
+  pct, scoreColor, scoreBand, compareScans, track,
   SEV_COLOR,
 } from "@/lib/scan-utils"
 import {
@@ -659,14 +659,23 @@ export function WorkspaceResults({
               <Eyebrow>Score breakdown</Eyebrow>
 
               {/* Overall score */}
-              <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", marginBottom: "1.75rem" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "0.875rem", marginBottom: "1.75rem", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
                   <span style={{ fontFamily: FA, fontSize: isMobile ? "3rem" : "4.5rem", fontWeight: 700, color: T1, lineHeight: 1 }}>{pct(display.scores.overall)}</span>
                   <span style={{ fontFamily: FA, fontSize: isMobile ? "1.1rem" : "1.5rem", color: T3, fontWeight: 300 }}>/100</span>
                 </div>
-                <span title={confLabel} style={{ fontFamily: FA, fontSize: "0.78rem", color: confColor, marginBottom: "0.6rem", cursor: "default" }}>
-                  {confLabel}
-                </span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.55rem" }}>
+                  <span
+                    title="Plain-language band over the same score — thresholds documented in the methodology"
+                    style={{ fontFamily: FA, fontSize: "0.95rem", fontWeight: 600, color: scoreColor(pct(display.scores.overall)), cursor: "default" }}
+                  >
+                    {scoreBand(pct(display.scores.overall))}
+                  </span>
+                  <span style={{ fontFamily: FA, fontSize: "0.78rem", color: T3 }}>·</span>
+                  <span title={confLabel} style={{ fontFamily: FA, fontSize: "0.78rem", color: confColor, cursor: "default" }}>
+                    {confLabel}
+                  </span>
+                </div>
               </div>
 
               {/* Sub-scores */}

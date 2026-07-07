@@ -184,6 +184,20 @@ export default function MethodologyPage() {
             Match defaults to 0.50). A neutral default is not a penalty. The scan result
             notes when this has occurred.
           </Callout>
+          <p style={{ margin: "1.1rem 0 0.9rem" }}>
+            The plain-language label shown next to the overall score is a fixed display
+            band over the same number — nothing more. Bands are not outcome predictions.
+          </p>
+          <MTable
+            headers={["Score range", "Label"]}
+            rows={[
+              ["85–100", "Excellent"],
+              ["70–84",  "Strong"],
+              ["55–69",  "Solid"],
+              ["40–54",  "Needs work"],
+              ["0–39",   "At risk"],
+            ]}
+          />
         </MSection>
 
         {/* ── Section 3 ─────────────────────────────────────────────────────── */}

@@ -29,6 +29,19 @@ export function scoreColor(p: number): string {
   return "var(--sev-critical)"
 }
 
+/**
+ * Plain-language band for an overall score (0–100). A display label over the
+ * same number — band thresholds are documented in /methodology and are not
+ * outcome predictions.
+ */
+export function scoreBand(p: number): string {
+  if (p >= 85) return "Excellent"
+  if (p >= 70) return "Strong"
+  if (p >= 55) return "Solid"
+  if (p >= 40) return "Needs work"
+  return "At risk"
+}
+
 // ── Severity colors ──────────────────────────────────────────────────────────
 
 /** Maps issue severity level to its CSS variable. */
