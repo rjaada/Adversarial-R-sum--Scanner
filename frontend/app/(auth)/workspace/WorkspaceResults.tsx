@@ -716,13 +716,14 @@ export function WorkspaceResults({
 
               {/* Sub-scores */}
               <div>
-                {/* Column header — labels the two number columns so the score
-                    is never mistaken for the weight (beta feedback). */}
+                {/* One number per row = the score /100, which the bar fills to.
+                    Weights were shown here but read as bar values (beta feedback:
+                    "experience 25% but the bar is empty") — they live in the
+                    methodology now, and the label below states them plainly. */}
                 <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", paddingBottom: "0.5rem" }}>
                   <span style={{ width: isMobile ? "96px" : "120px", flexShrink: 0 }} />
                   <span style={{ flex: 1 }} />
-                  <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "34px", textAlign: "right", flexShrink: 0 }}>Score</span>
-                  {!isMobile && <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "48px", textAlign: "right", flexShrink: 0 }}>Weight</span>}
+                  <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "44px", textAlign: "right", flexShrink: 0 }}>Score /100</span>
                 </div>
                 {scoreItems.map(s => {
                   // On a gated result only keyword match is revealed; the rest
@@ -737,11 +738,16 @@ export function WorkspaceResults({
                       <div style={{ flex: 1, height: "7px", background: "rgba(26,25,23,0.06)", borderRadius: "4px", position: "relative", overflow: "hidden" }}>
                         {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: scoreColor(p), borderRadius: "4px", transition: "width 0.8s ease" }} />}
                       </div>
-                      <span style={{ fontFamily: FA, fontSize: "0.95rem", fontWeight: 700, color: hide ? T3 : T1, width: "34px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
-                      {!isMobile && <span title="weight in the overall score" style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3, width: "48px", flexShrink: 0, textAlign: "right", cursor: "default" }}>{s.weight}</span>}
+                      <span style={{ fontFamily: FA, fontSize: "0.95rem", fontWeight: 700, color: hide ? T3 : T1, width: "44px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
                     </div>
                   )
                 })}
+              </div>
+
+              {/* Weighting stated in words, clearly about the overall formula —
+                  not a per-row value the bars fill to. */}
+              <div style={{ marginTop: "0.9rem", fontFamily: FA, fontSize: "0.72rem", color: T3, lineHeight: 1.6 }}>
+                Toward your overall score, these count: keyword 35%, experience 25%, parse integrity 20%, structure 10%, impact 10%.
               </div>
 
               {defaultCount > 0 && !isGated && (
