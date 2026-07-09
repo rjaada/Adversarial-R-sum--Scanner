@@ -166,6 +166,7 @@ coverage/
 Thumbs.db
 Desktop.ini
 
+skills/
 .vscode/
 .idea/
 *.iml

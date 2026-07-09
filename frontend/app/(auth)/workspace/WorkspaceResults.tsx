@@ -16,6 +16,7 @@ import { MissingSectionPanel } from "./MissingSectionPanel"
 import { KeywordPlacementHint } from "./KeywordPlacementHint"
 import { FeedbackCard } from "./FeedbackCard"
 import { ReportProblemModal } from "./ReportProblemModal"
+import { InfoTip, AtsLensArt } from "./InfoTip"
 import {
   pct, scoreColor, scoreBand, compareScans, track,
   SEV_COLOR,
@@ -217,12 +218,23 @@ export function WorkspaceResults({
   if (!jdHasKeywords) neutralDefaults.keyword_match = "Defaulted to neutral — JD vocabulary not recognized"
   if (!jdHasYearsReq) neutralDefaults.experience_alignment = "Defaulted to neutral — no years requirement in JD"
 
+  // Plain-language tooltips per signal (beta feedback: jargon with no help).
   const scoreItems = [
-    { label: "Keyword match",  key: "keyword_match",        value: display.scores.keyword_match,        weight: "35%" },
-    { label: "Experience",     key: "experience_alignment", value: display.scores.experience_alignment, weight: "25%" },
-    { label: "Parse integrity",key: "parse_integrity",      value: display.scores.parse_integrity,      weight: "20%" },
-    { label: "Structure",      key: "structure",            value: display.scores.structure,            weight: "10%" },
-    { label: "Impact language",key: "quantified_impact",    value: display.scores.quantified_impact,    weight: "10%" },
+    { label: "Keyword match",  key: "keyword_match",        value: display.scores.keyword_match,        weight: "35%",
+      tip: "How many of the job description's terms appear in your résumé. Recruiters search their database by these exact words.",
+      tipHref: "/methodology#keyword-matching" },
+    { label: "Experience",     key: "experience_alignment", value: display.scores.experience_alignment, weight: "25%",
+      tip: "Your years of experience — read from the dates in your résumé — versus what the job asks for.",
+      tipHref: "/methodology#experience-inference" },
+    { label: "Parse integrity",key: "parse_integrity",      value: display.scores.parse_integrity,      weight: "20%",
+      tip: "How much of your résumé survives being read by software. Multi-column layouts and tables can scramble or lose content.",
+      tipHref: "/methodology#score-composition" },
+    { label: "Structure",      key: "structure",            value: display.scores.structure,            weight: "10%",
+      tip: "Whether the standard sections — summary, experience, education, skills — were found under recognizable headers.",
+      tipHref: "/methodology#section-detection" },
+    { label: "Impact language",key: "quantified_impact",    value: display.scores.quantified_impact,    weight: "10%",
+      tip: "Bullets that show measurable results — “reduced costs 30%” — instead of listing duties. Screeners and recruiters weight these.",
+      tipHref: "/methodology#score-composition" },
   ]
 
   const parseScore   = pct(display.scores.parse_integrity)
@@ -721,7 +733,7 @@ export function WorkspaceResults({
                     "experience 25% but the bar is empty") — they live in the
                     methodology now, and the label below states them plainly. */}
                 <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", paddingBottom: "0.5rem" }}>
-                  <span style={{ width: isMobile ? "96px" : "120px", flexShrink: 0 }} />
+                  <span style={{ width: isMobile ? "118px" : "148px", flexShrink: 0 }} />
                   <span style={{ flex: 1 }} />
                   <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "44px", textAlign: "right", flexShrink: 0 }}>Score /100</span>
                 </div>
@@ -734,7 +746,9 @@ export function WorkspaceResults({
                   const p         = isNeutral ? 50 : pct(s.value)
                   return (
                     <div key={s.key} style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", padding: "0.65rem 0", borderTop: `1px solid ${BD}` }}>
-                      <span style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, width: isMobile ? "96px" : "120px", flexShrink: 0 }}>{s.label}</span>
+                      <span style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, width: isMobile ? "118px" : "148px", flexShrink: 0, display: "flex", alignItems: "center", gap: "5px" }}>
+                        {s.label} <InfoTip title={s.label} body={s.tip} learnHref={s.tipHref} />
+                      </span>
                       <div style={{ flex: 1, height: "7px", background: "rgba(26,25,23,0.06)", borderRadius: "4px", position: "relative", overflow: "hidden" }}>
                         {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: scoreColor(p), borderRadius: "4px", transition: "width 0.8s ease" }} />}
                       </div>
@@ -982,7 +996,15 @@ export function WorkspaceResults({
                   onClick={() => setShowAtsPreview(v => !v)}
                   style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
-                  <CollapsibleTitle>What ATS sees</CollapsibleTitle>
+                  <CollapsibleTitle>
+                    What ATS sees{" "}
+                    <InfoTip
+                      title="What ATS sees"
+                      body="The plain text a parser extracts from your file — no fonts, no columns, no design. Recruiter searches and screeners work on these raw words, not your layout."
+                      learnHref="/methodology#what-we-measure"
+                      art={<AtsLensArt />}
+                    />
+                  </CollapsibleTitle>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showAtsPreview ? "▴" : "▾"}</span>
                 </button>
                 {showAtsPreview && (
