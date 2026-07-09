@@ -38,6 +38,8 @@ const BD2  = "rgba(26,25,23,0.14)"
 const T1   = "#1a1917"
 const T2   = "#6e6b66"
 const T3   = "#a09890"
+const ACCENT = "var(--accent, #7c8e5c)"  // accent tick on section headers
+const MUT    = "#F1EEE8"                   // muted page tone so white cards separate
 
 // ── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -72,11 +74,44 @@ interface Props {
 }
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
+const sectionTitleStyle: React.CSSProperties = {
+  fontFamily: FA, fontSize: "1rem", fontWeight: 700, letterSpacing: "-0.01em", color: T1,
+}
+
+/** Prominent section header: accent tick + bold title (beta feedback: headers
+ *  were 8.7px muted and unreadable). */
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3, marginBottom: "1rem" }}>
-      {children}
+    <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", marginBottom: "1.1rem" }}>
+      <span style={{ width: "3px", height: "1rem", background: ACCENT, borderRadius: "2px", flexShrink: 0 }} />
+      <span style={sectionTitleStyle}>{children}</span>
     </div>
+  )
+}
+
+/** Same header treatment for collapsible section buttons. */
+function CollapsibleTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+      <span style={{ width: "3px", height: "1rem", background: ACCENT, borderRadius: "2px", flexShrink: 0 }} />
+      <span style={sectionTitleStyle}>{children}</span>
+    </span>
+  )
+}
+
+/** White card so each report section is a distinct rectangular frame
+ *  (beta feedback: sections read as one undifferentiated wall). */
+function Card({ children, isMobile }: { children: React.ReactNode; isMobile: boolean }) {
+  return (
+    <section style={{
+      background: SURF,
+      border: `1px solid ${BD2}`,
+      borderRadius: "10px",
+      margin: isMobile ? "0.75rem 0.75rem 0" : "1.25rem 1.5rem 0",
+      overflow: "hidden",
+    }}>
+      {children}
+    </section>
   )
 }
 
@@ -593,7 +628,7 @@ export function WorkspaceResults({
 
         {/* ── Report mode wrapper ──────────────────────────────────────────── */}
         {(viewMode === "report" || compareBase !== null) && (
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, background: MUT }}>
 
         {/* ── Compare mode ─────────────────────────────────────────────── */}
         {compareBase !== null && (() => {
@@ -652,10 +687,11 @@ export function WorkspaceResults({
 
         {/* ── Normal results ────────────────────────────────────────────── */}
         {compareBase === null && (
-          <div>
+          <div style={{ paddingBottom: isMobile ? "0.75rem" : "1.25rem" }}>
 
             {/* Score section */}
-            <div style={{ padding: isMobile ? "1.25rem 1rem 1rem" : "2rem 2rem 1.75rem", borderBottom: `1px solid ${BD}` }}>
+            <Card isMobile={isMobile}>
+            <div style={{ padding: isMobile ? "1.25rem 1rem 1.25rem" : "2rem 2rem 1.75rem" }}>
               <Eyebrow>Score breakdown</Eyebrow>
 
               {/* Overall score */}
@@ -680,6 +716,14 @@ export function WorkspaceResults({
 
               {/* Sub-scores */}
               <div>
+                {/* Column header — labels the two number columns so the score
+                    is never mistaken for the weight (beta feedback). */}
+                <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", paddingBottom: "0.5rem" }}>
+                  <span style={{ width: isMobile ? "96px" : "120px", flexShrink: 0 }} />
+                  <span style={{ flex: 1 }} />
+                  <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "34px", textAlign: "right", flexShrink: 0 }}>Score</span>
+                  {!isMobile && <span style={{ fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T3, width: "48px", textAlign: "right", flexShrink: 0 }}>Weight</span>}
+                </div>
                 {scoreItems.map(s => {
                   // On a gated result only keyword match is revealed; the rest
                   // are locked ("—") behind sign-in.
@@ -688,13 +732,13 @@ export function WorkspaceResults({
                   const hide      = isLocked || isNeutral
                   const p         = isNeutral ? 50 : pct(s.value)
                   return (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem", padding: "0.6rem 0", borderTop: `1px solid ${BD}` }}>
-                      <span style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, width: isMobile ? "96px" : "110px", flexShrink: 0 }}>{s.label}</span>
-                      <div style={{ flex: 1, height: "2px", background: "rgba(26,25,23,0.07)", borderRadius: "1px", position: "relative" }}>
-                        {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: T1, opacity: 0.5, borderRadius: "1px", transition: "width 0.8s ease" }} />}
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", padding: "0.65rem 0", borderTop: `1px solid ${BD}` }}>
+                      <span style={{ fontFamily: FA, fontSize: "0.82rem", color: T2, width: isMobile ? "96px" : "120px", flexShrink: 0 }}>{s.label}</span>
+                      <div style={{ flex: 1, height: "7px", background: "rgba(26,25,23,0.06)", borderRadius: "4px", position: "relative", overflow: "hidden" }}>
+                        {!hide && <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${p}%`, background: scoreColor(p), borderRadius: "4px", transition: "width 0.8s ease" }} />}
                       </div>
-                      <span style={{ fontFamily: MONO, fontSize: "0.82rem", color: hide ? T3 : T1, width: "30px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
-                      {!isMobile && <span style={{ fontFamily: MONO, fontSize: "0.58rem", color: T3, width: "30px", flexShrink: 0 }}>{s.weight}</span>}
+                      <span style={{ fontFamily: FA, fontSize: "0.95rem", fontWeight: 700, color: hide ? T3 : T1, width: "34px", textAlign: "right", flexShrink: 0 }}>{hide ? "—" : p}</span>
+                      {!isMobile && <span title="weight in the overall score" style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3, width: "48px", flexShrink: 0, textAlign: "right", cursor: "default" }}>{s.weight}</span>}
                     </div>
                   )
                 })}
@@ -720,31 +764,35 @@ export function WorkspaceResults({
                 </a>
               </div>
             </div>
+            </Card>
 
             {/* Fix this first */}
             {!limited && display.top_fixes.length > 0 && (
-              <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem", borderBottom: `1px solid ${BD}` }}>
+              <Card isMobile={isMobile}>
+              <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem" }}>
                 <Eyebrow>Fix this first</Eyebrow>
-                <div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {display.top_fixes.map((fix, i) => (
                     <div
                       key={fix.issue_index}
                       onClick={() => { setSelectedIssue(fix.issue_index); track("fix_clicked", { issue_type: fix.issue_type, label: fix.labels[0] ?? "" }) }}
-                      style={{ display: "flex", gap: "1.25rem", padding: "1rem 0", borderTop: i === 0 ? "none" : `1px solid ${BD}`, cursor: "pointer" }}
+                      style={{ display: "flex", gap: "1rem", padding: isMobile ? "0.875rem 1rem" : "1rem 1.125rem", background: MUT, border: `1px solid ${BD}`, borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s" }}
                     >
-                      <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3, paddingTop: "3px", flexShrink: 0, width: "1.5rem" }}>{String(i + 1).padStart(2, "0")}</span>
+                      <span style={{ fontFamily: MONO, fontSize: "0.72rem", fontWeight: 600, color: SURF, background: ACCENT, borderRadius: "6px", flexShrink: 0, width: "1.6rem", height: "1.6rem", display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                       <div>
-                        <div style={{ fontFamily: FA, fontSize: "0.875rem", fontWeight: 600, color: T1, marginBottom: "0.3rem", lineHeight: 1.4 }}>{fix.title}</div>
-                        <div style={{ fontFamily: FA, fontSize: "0.78rem", color: T2, lineHeight: 1.55 }}>{fix.suggested_fix}</div>
+                        <div style={{ fontFamily: FA, fontSize: "0.9rem", fontWeight: 600, color: T1, marginBottom: "0.3rem", lineHeight: 1.4 }}>{fix.title}</div>
+                        <div style={{ fontFamily: FA, fontSize: "0.8rem", color: T2, lineHeight: 1.55 }}>{fix.suggested_fix}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+              </Card>
             )}
             {limited && <UpgradePrompt label="Fix priority ranking available after sign-in." />}
 
             {/* Issues list */}
+            <Card isMobile={isMobile}>
             <div ref={issuesSectionRef}>
               <div style={{ padding: isMobile ? "1rem 1rem 0.5rem" : "1.25rem 2rem 0.75rem", borderBottom: `1px solid ${BD}` }}>
                 <Eyebrow>Issues — {totalIssues} found</Eyebrow>
@@ -854,17 +902,18 @@ export function WorkspaceResults({
               })}
               {limited && gateRemaining > 0 && <IssueGate remaining={gateRemaining} />}
             </div>
+            </Card>
 
             {/* ── Collapsible secondary sections ─────────────────────────── */}
 
             {/* Keywords */}
             {!limited ? (
-              <div style={{ borderBottom: `1px solid ${BD}` }}>
+              <Card isMobile={isMobile}>
                 <button
                   onClick={() => setShowKeywords(v => !v)}
-                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
-                  <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>Keywords</span>
+                  <CollapsibleTitle>Keywords</CollapsibleTitle>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showKeywords ? "▴" : "▾"}</span>
                 </button>
                 {showKeywords && (
@@ -875,17 +924,17 @@ export function WorkspaceResults({
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             ) : <UpgradePrompt label="Keyword gap analysis available after sign-in." />}
 
             {/* ATS Simulation */}
             {display.simulation && !limited && (
-              <div style={{ borderBottom: `1px solid ${BD}` }}>
+              <Card isMobile={isMobile}>
                 <button
                   onClick={() => setShowSimulation(v => !v)}
-                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
-                  <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>ATS Profile Simulation</span>
+                  <CollapsibleTitle>ATS Profile Simulation</CollapsibleTitle>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showSimulation ? "▴" : "▾"}</span>
                 </button>
                 {showSimulation && (() => {
@@ -917,27 +966,27 @@ export function WorkspaceResults({
                     </div>
                   )
                 })()}
-              </div>
+              </Card>
             )}
 
             {/* ATS Preview */}
             {!limited ? (
-              <div style={{ borderBottom: `1px solid ${BD}` }}>
+              <Card isMobile={isMobile}>
                 <button
                   onClick={() => setShowAtsPreview(v => !v)}
-                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
                 >
-                  <span style={{ fontFamily: MONO, fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T3 }}>What ATS sees</span>
+                  <CollapsibleTitle>What ATS sees</CollapsibleTitle>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showAtsPreview ? "▴" : "▾"}</span>
                 </button>
                 {showAtsPreview && (
-                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 2rem" }}>
-                    <pre style={{ fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.8, color: T2, whiteSpace: "pre-wrap", wordBreak: "break-word", background: SURF, border: `1px solid ${BD}`, borderRadius: "4px", padding: "1.25rem", margin: 0 }}>
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 1.5rem 1.5rem" }}>
+                    <pre style={{ fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.8, color: T2, whiteSpace: "pre-wrap", wordBreak: "break-word", background: MUT, border: `1px solid ${BD}`, borderRadius: "6px", padding: "1.25rem", margin: 0 }}>
                       {display.ats_text_preview}
                     </pre>
                   </div>
                 )}
-              </div>
+              </Card>
             ) : <UpgradePrompt label="ATS text preview available after sign-in." />}
 
             {/* End-of-scan feedback card */}
