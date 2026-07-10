@@ -7,6 +7,7 @@
 
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import type { RefObject } from "react"
 
 const FA   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
@@ -47,7 +48,7 @@ function fmtSize(bytes: number): string {
 /** Stack of papers — two ghosted tilted pages behind a crisp front page. */
 function PaperStack() {
   return (
-    <svg width="112" height="82" viewBox="24 10 88 66" fill="none" style={{ transition: "translate 0.25s ease" }}>
+    <svg width="112" height="82" viewBox="24 10 88 66" fill="none">
       <g transform="rotate(-9 48 50)" opacity="0.30">
         <rect x="30" y="24" width="36" height="48" rx="3" stroke={T1} strokeWidth="1.5" fill={SURF} />
         <line x1="37" y1="36" x2="59" y2="36" stroke={T1} strokeWidth="1.4" strokeLinecap="round" />
@@ -102,6 +103,95 @@ export function UploadPhase({
   onDragLeave,
   onScan,
 }: UploadPhaseProps) {
+  // ── Magnet: the whole page catches a dragged file ──────────────────
+  // When a file enters the window the dropzone activates and the paper
+  // stack is pulled toward the cursor with a critically-damped spring
+  // (rAF lerp on the transform — compositor-only, no re-renders per move).
+  const [magnet, setMagnet] = useState(false)
+  const stackRef = useRef<HTMLDivElement>(null)
+  const zoneRef = useRef<HTMLDivElement>(null)
+  const target = useRef({ x: 0, y: 0 })
+  const current = useRef({ x: 0, y: 0 })
+  const raf = useRef<number | null>(null)
+  const depth = useRef(0)
+
+  useEffect(() => {
+    if (file) return // nothing to catch once a file is chosen
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
+    const loop = () => {
+      const c = current.current, t = target.current
+      c.x += (t.x - c.x) * 0.12
+      c.y += (t.y - c.y) * 0.12
+      if (stackRef.current) {
+        stackRef.current.style.transform =
+          `translate(${c.x}px, ${c.y}px) rotate(${c.x * 0.25}deg)`
+      }
+      raf.current = requestAnimationFrame(loop)
+    }
+
+    const hasFiles = (e: DragEvent) => e.dataTransfer?.types?.includes("Files")
+
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth.current++
+      setMagnet(true)
+      if (!reduced && raf.current === null) raf.current = requestAnimationFrame(loop)
+    }
+    const onOver = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault() // required so the window accepts the drop
+      if (reduced || !zoneRef.current) return
+      // pull toward the cursor, clamped — hint the direction, don't chase
+      const r = zoneRef.current.getBoundingClientRect()
+      const dx = e.clientX - (r.left + r.width / 2)
+      const dy = e.clientY - (r.top + r.height / 2)
+      const dist = Math.max(1, Math.hypot(dx, dy))
+      const pull = Math.min(12, dist * 0.06)
+      target.current = { x: (dx / dist) * pull, y: (dy / dist) * pull }
+    }
+    const reset = () => {
+      depth.current = 0
+      setMagnet(false)
+      target.current = { x: 0, y: 0 }
+      // let the spring settle home, then stop the loop
+      setTimeout(() => {
+        if (raf.current !== null && depth.current === 0) {
+          cancelAnimationFrame(raf.current); raf.current = null
+          if (stackRef.current) stackRef.current.style.transform = ""
+          current.current = { x: 0, y: 0 }
+        }
+      }, 400)
+    }
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth.current = Math.max(0, depth.current - 1)
+      if (depth.current === 0) reset()
+    }
+    const onDropWin = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault() // anywhere on the page — the magnet caught it
+      const f = e.dataTransfer?.files?.[0]
+      if (f) onFileChange(f)
+      reset()
+    }
+
+    window.addEventListener("dragenter", onEnter)
+    window.addEventListener("dragover", onOver)
+    window.addEventListener("dragleave", onLeave)
+    window.addEventListener("drop", onDropWin)
+    return () => {
+      window.removeEventListener("dragenter", onEnter)
+      window.removeEventListener("dragover", onOver)
+      window.removeEventListener("dragleave", onLeave)
+      window.removeEventListener("drop", onDropWin)
+      if (raf.current !== null) { cancelAnimationFrame(raf.current); raf.current = null }
+    }
+  }, [file, onFileChange])
+
+  const active = magnet || dragOver
+
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -171,30 +261,40 @@ export function UploadPhase({
               >✕</button>
             </div>
           ) : (
-            /* dropzone */
+            /* dropzone — springs alive when a file enters the window */
             <div
+              ref={zoneRef}
               onDrop={onDrop}
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onClick={() => fileInputRef.current?.click()}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T1; (e.currentTarget as HTMLDivElement).style.background = "rgba(26,25,23,0.015)" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = dragOver ? T1 : BD2; (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = active ? T1 : BD2; (e.currentTarget as HTMLDivElement).style.background = active ? "rgba(26,25,23,0.02)" : "transparent" }}
               style={{
                 marginTop: "18px",
-                border: `1.5px dashed ${dragOver ? T1 : BD2}`,
+                border: `1.5px ${active ? "solid" : "dashed"} ${active ? T1 : BD2}`,
                 borderRadius: "10px", padding: "24px 20px 26px", textAlign: "center",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: "10px",
-                transition: "border-color 0.2s, background 0.2s", cursor: "pointer",
-                background: dragOver ? "rgba(26,25,23,0.02)" : "transparent",
+                transition: "border-color 200ms cubic-bezier(0.23,1,0.32,1), background 200ms cubic-bezier(0.23,1,0.32,1), transform 250ms cubic-bezier(0.32,0.72,0,1)",
+                cursor: "pointer",
+                background: active ? "rgba(26,25,23,0.02)" : "transparent",
+                transform: active ? "scale(1.02)" : "scale(1)",
               }}
             >
-              <PaperStack />
-              <div style={{ fontFamily: FA, fontSize: "15px", fontWeight: 600, color: T1 }}>Drag &amp; drop your résumé</div>
-              <div style={{ fontFamily: FA, fontSize: "12px", color: T3 }}>or</div>
+              <div ref={stackRef} style={{ willChange: magnet ? "transform" : "auto" }}>
+                <PaperStack />
+              </div>
+              <div style={{ fontFamily: FA, fontSize: "15px", fontWeight: 600, color: T1 }}>
+                {active ? "Release — I've got it" : "Drag & drop your résumé"}
+              </div>
+              <div style={{ fontFamily: FA, fontSize: "12px", color: T3, visibility: active ? "hidden" : "visible" }}>or</div>
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
-                style={{ fontFamily: FA, fontSize: "13.5px", fontWeight: 600, background: T1, color: BG, border: 0, borderRadius: "999px", padding: "10px 26px", cursor: "pointer" }}
+                onPointerDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)" }}
+                onPointerUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)" }}
+                onPointerLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)" }}
+                style={{ fontFamily: FA, fontSize: "13.5px", fontWeight: 600, background: T1, color: BG, border: 0, borderRadius: "999px", padding: "10px 26px", cursor: "pointer", transition: "transform 160ms cubic-bezier(0.23,1,0.32,1)", visibility: active ? "hidden" : "visible" }}
               >
                 Browse files
               </button>
