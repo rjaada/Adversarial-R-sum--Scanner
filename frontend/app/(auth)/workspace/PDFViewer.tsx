@@ -83,22 +83,25 @@ interface PageDim { w: number; h: number }
 
 // ── Severity badge (mirror WorkspaceResults) ──────────────────────────────────
 
+// Monochrome severity: filled pips + graphite label (mirrors WorkspaceResults).
 function SevBadge({ sev }: { sev: string }) {
-  const colors: Record<string, { bg: string; color: string }> = {
-    critical: { bg: "rgba(140,47,78,0.08)",  color: "#8c2f4e" },
-    high:     { bg: "rgba(154,77,34,0.08)",  color: "#9a4d22" },
-    medium:   { bg: "rgba(122,110,40,0.08)", color: "#7a6e28" },
-    low:      { bg: "rgba(26,25,23,0.05)",   color: T2       },
-  }
-  const s = colors[sev] ?? colors.low
+  const level = ({ critical: 4, high: 3, medium: 2, low: 1 } as Record<string, number>)[sev] ?? 1
   return (
-    <span style={{
-      fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em",
-      textTransform: "uppercase", color: s.color, background: s.bg,
-      padding: "0.15rem 0.4rem", borderRadius: "2px", flexShrink: 0,
-      border: `1px solid ${s.color}22`,
-    }}>
-      {sev}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", flexShrink: 0 }}>
+      <span style={{ display: "inline-flex", gap: "2px" }}>
+        {[1, 2, 3, 4].map(i => (
+          <span key={i} style={{
+            width: "4.5px", height: "4.5px", borderRadius: "50%",
+            border: `1px solid ${T1}`, background: i <= level ? T1 : "transparent",
+          }} />
+        ))}
+      </span>
+      <span style={{
+        fontFamily: MONO, fontSize: "0.5rem", letterSpacing: "0.1em",
+        textTransform: "uppercase", color: T1,
+      }}>
+        {sev}
+      </span>
     </span>
   )
 }
@@ -557,8 +560,8 @@ export function PDFViewer({
             conf === "approximate" ? `~ p.${(anchor.pin.pageIndex + 1)}` :
             "—"
           const confColor =
-            conf === "exact"       ? "#7c8e5c" :
-            conf === "approximate" ? "#9a4d22" : T3
+            conf === "exact"       ? T1 :
+            conf === "approximate" ? T2 : T3
 
           return (
             <div

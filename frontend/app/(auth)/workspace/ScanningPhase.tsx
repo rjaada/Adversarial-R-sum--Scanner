@@ -49,7 +49,7 @@ export function ScanningPhase() {
       </p>
 
       {slow && (
-        <p style={{ fontFamily: FA, fontSize: "13px", color: "#9a4d22", margin: "4px 0 0", textAlign: "center", maxWidth: 360, lineHeight: 1.5 }}>
+        <p style={{ fontFamily: FA, fontSize: "13px", color: "#6e6b66", margin: "4px 0 0", textAlign: "center", maxWidth: 360, lineHeight: 1.5 }}>
           This is taking longer than usual — our server may be waking up. Hang tight.
         </p>
       )}

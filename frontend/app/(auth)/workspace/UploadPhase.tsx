@@ -13,7 +13,6 @@ import type { RefObject } from "react"
 const FA   = "var(--font-albert, 'Albert Sans', system-ui, sans-serif)"
 const MONO = "var(--font-mono, 'IBM Plex Mono', monospace)"
 const BG   = "#FDFCF9"
-const MUT  = "#F1EEE8"
 const SURF = "#FFFFFF"
 const BD   = "rgba(26,25,23,0.08)"
 const BD2  = "rgba(26,25,23,0.16)"
@@ -196,7 +195,7 @@ export function UploadPhase({
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      background: MUT, padding: "48px 24px",
+      background: BG, padding: "48px 24px",
     }}>
 
       {/* Eyebrow */}
@@ -332,7 +331,7 @@ export function UploadPhase({
 
       {/* Error message */}
       {error && (
-        <div style={{ marginTop: "16px", fontFamily: FA, fontSize: "13px", color: "var(--sev-critical)", padding: "10px 16px", border: "1px solid rgba(192,112,128,0.3)", borderRadius: "8px", background: "rgba(140,47,78,0.06)" }}>
+        <div style={{ marginTop: "16px", fontFamily: FA, fontSize: "13px", fontWeight: 600, color: "#1a1917", padding: "10px 16px", border: "1px solid rgba(26,25,23,0.16)", borderRadius: "8px", background: "rgba(26,25,23,0.04)" }}>
           {error}
         </div>
       )}

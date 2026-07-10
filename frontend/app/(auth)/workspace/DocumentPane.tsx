@@ -265,7 +265,7 @@ function Legend() {
       />
       <LegendItem
         label="Approximate"
-        style={{ textDecoration: "underline", textDecorationStyle: "dashed", textDecorationThickness: "2px", textDecorationColor: "#9a4d22", opacity: 0.8 }}
+        style={{ textDecoration: "underline", textDecorationStyle: "dashed", textDecorationThickness: "2px", textDecorationColor: "#1a1917", opacity: 0.8 }}
       />
       <LegendItem
         label="Section only"

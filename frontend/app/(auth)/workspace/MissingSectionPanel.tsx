@@ -42,8 +42,8 @@ export function MissingSectionPanel({ issue, resumeSections }: Props) {
 
   return (
     <div style={{
-      border: `1px solid rgba(140,47,78,0.18)`,
-      borderLeft: `3px solid rgba(140,47,78,0.4)`,
+      border: `1px solid rgba(26,25,23,0.16)`,
+      borderLeft: `3px solid rgba(26,25,23,0.45)`,
       borderRadius: "4px",
       overflow: "hidden",
       marginBottom: "0.75rem",
@@ -52,13 +52,13 @@ export function MissingSectionPanel({ issue, resumeSections }: Props) {
       {/* Eyebrow — signals absence, not weakness */}
       <div style={{
         padding: "0.45rem 1rem",
-        background: "rgba(140,47,78,0.04)",
-        borderBottom: `1px solid rgba(140,47,78,0.12)`,
+        background: "rgba(26,25,23,0.04)",
+        borderBottom: `1px solid rgba(26,25,23,0.10)`,
         fontFamily: MONO,
         fontSize: "0.5rem",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
-        color: "#8c2f4e",
+        color: "#1a1917",
       }}>
         Section absent from résumé
       </div>

@@ -47,17 +47,17 @@ const LIGHT_VARS = {
   "--bg-surface":    "#FFFFFF",
   "--bg-elevated":   "#F8F7F5",
   "--bg-muted":      "#F4F3F0",
-  "--bg-accent-low": "#F0F4EC",
+  "--bg-accent-low": "#F4F3F0",
   "--border-subtle": "rgba(26,25,23,0.08)",
   "--border-mid":    "#DCDCDC",
   "--text-primary":  "#0D0C0A",
   "--text-secondary":"#474546",
   "--text-dim":      "#858585",
-  "--accent":        "#7c8e5c",
-  "--accent-hover":  "#8fa85a",
-  "--sev-critical":  "#8c2f4e",
-  "--sev-high":      "#9a4d22",
-  "--sev-medium":    "#7a6e28",
+  "--accent":        "#1a1917",
+  "--accent-hover":  "#3a3733",
+  "--sev-critical":  "#1a1917",
+  "--sev-high":      "#3a3733",
+  "--sev-medium":    "#6e6b66",
   "--sev-low":       "#858585",
   "--mineral":       "#4a4640",
   "--font-body":     FA,
@@ -334,7 +334,7 @@ export default function WorkspacePage() {
           )}
           <OptionalUserButton
                 appearance={{
-                  variables: { colorBackground: "#FFFFFF", colorText: "#0D0C0A", colorPrimary: "#7c8e5c", borderRadius: "4px", fontFamily: FA },
+                  variables: { colorBackground: "#FFFFFF", colorText: "#0D0C0A", colorPrimary: "#1a1917", borderRadius: "4px", fontFamily: FA },
                   elements: {
                     userButtonPopoverCard:   { border: "1px solid #EBEBEB", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", background: "#FFFFFF" },
                     userButtonPopoverFooter: { display: "none" },

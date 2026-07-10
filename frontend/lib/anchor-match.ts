@@ -439,8 +439,8 @@ export function confidenceLabel(c: AnchorConfidence): string {
 
 /** Severity → highlight colors. */
 export const SEV_HIGHLIGHT: Record<string, { bg: string; line: string }> = {
-  critical: { bg: "rgba(140,47,78,0.10)",  line: "#8c2f4e" },
-  high:     { bg: "rgba(154,77,34,0.08)",  line: "#9a4d22" },
-  medium:   { bg: "rgba(122,110,40,0.07)", line: "#7a6e28" },
-  low:      { bg: "rgba(26,25,23,0.06)",   line: "#a09890" },
+  critical: { bg: "rgba(26,25,23,0.12)", line: "#1a1917" },
+  high:     { bg: "rgba(26,25,23,0.09)", line: "#3a3733" },
+  medium:   { bg: "rgba(26,25,23,0.07)", line: "#6e6b66" },
+  low:      { bg: "rgba(26,25,23,0.05)", line: "#a09890" },
 }

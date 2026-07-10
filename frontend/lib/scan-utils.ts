@@ -22,11 +22,12 @@ export function pct(v: number): number {
   return Math.round(v * 100)
 }
 
-/** Return a CSS variable name for a score value (green / muted / red). */
+/** Return a graphite value for a score — monochrome; magnitude reads from the
+ *  bar width, the number, and the plain-language band, not from hue. */
 export function scoreColor(p: number): string {
-  if (p >= 75) return "var(--accent)"
+  if (p >= 75) return "var(--text-primary)"
   if (p >= 55) return "var(--mineral)"
-  return "var(--sev-critical)"
+  return "var(--text-dim)"
 }
 
 /**

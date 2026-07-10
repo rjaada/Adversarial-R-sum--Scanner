@@ -39,8 +39,8 @@ const BD2  = "rgba(26,25,23,0.14)"
 const T1   = "#1a1917"
 const T2   = "#6e6b66"
 const T3   = "#a09890"
-const ACCENT = "var(--accent, #7c8e5c)"  // accent tick on section headers
-const MUT    = "#F1EEE8"                   // muted page tone so white cards separate
+const ACCENT = "var(--accent, #1a1917)"  // graphite tick on section headers (was green)
+const SUNK   = "inset 0 1px 2px rgba(26,25,23,0.035)"  // recessed depth on paper (Option B — no beige)
 
 // ── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -108,6 +108,9 @@ function Card({ children, isMobile }: { children: React.ReactNode; isMobile: boo
       background: SURF,
       border: `1px solid ${BD2}`,
       borderRadius: "10px",
+      // On paper (#FDFCF9) the card separates via the landing's border + soft
+      // shadow lift, not a darker page tone (beige removed).
+      boxShadow: "0 1px 0 rgba(26,25,23,0.04), 0 4px 16px rgba(26,25,23,0.05)",
       margin: isMobile ? "0.75rem 0.75rem 0" : "1.25rem 1.5rem 0",
       overflow: "hidden",
     }}>
@@ -120,22 +123,26 @@ function SectionDivider() {
   return <div style={{ height: "1px", background: BD, margin: "0" }} />
 }
 
+// Monochrome severity: filled pips (●●●●→●○○○) + graphite label. Magnitude
+// reads from how many pips are filled, not from hue.
 function SevBadge({ sev }: { sev: string }) {
-  const colors: Record<string, { bg: string; color: string }> = {
-    critical: { bg: "rgba(140,47,78,0.08)",  color: "#8c2f4e" },
-    high:     { bg: "rgba(154,77,34,0.08)",   color: "#9a4d22" },
-    medium:   { bg: "rgba(122,110,40,0.08)",  color: "#7a6e28" },
-    low:      { bg: "rgba(26,25,23,0.05)",    color: T2       },
-  }
-  const s = colors[sev.toLowerCase()] ?? colors.low
+  const level = ({ critical: 4, high: 3, medium: 2, low: 1 } as Record<string, number>)[sev.toLowerCase()] ?? 1
   return (
-    <span style={{
-      fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em",
-      textTransform: "uppercase", color: s.color, background: s.bg,
-      padding: "0.2rem 0.5rem", borderRadius: "2px", flexShrink: 0,
-      border: `1px solid ${s.color}22`,
-    }}>
-      {sev}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+      <span style={{ display: "inline-flex", gap: "2px" }}>
+        {[1, 2, 3, 4].map(i => (
+          <span key={i} style={{
+            width: "5px", height: "5px", borderRadius: "50%",
+            border: `1px solid ${T1}`, background: i <= level ? T1 : "transparent",
+          }} />
+        ))}
+      </span>
+      <span style={{
+        fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em",
+        textTransform: "uppercase", color: T1,
+      }}>
+        {sev}
+      </span>
     </span>
   )
 }
@@ -241,7 +248,7 @@ export function WorkspaceResults({
   const defaultCount = Object.keys(neutralDefaults).length
   const confidence   = !jdHasKeywords || parseScore < 40 ? "low" : defaultCount > 0 ? "moderate" : "high"
   const confLabel    = { high: "High confidence", moderate: "Moderate confidence", low: "Low confidence" }[confidence]
-  const confColor    = { high: "#7c8e5c", moderate: "#6e6b66", low: "#858585" }[confidence]
+  const confColor    = { high: T1, moderate: T2, low: T3 }[confidence]
 
   // ── Gating ──────────────────────────────────────────────────────────────
   // The backend truncates issues and strips content for unauthenticated
@@ -314,7 +321,7 @@ export function WorkspaceResults({
           />
 
           {error && (
-            <div style={{ fontFamily: FA, fontSize: "0.68rem", color: "#8c2f4e", marginBottom: "0.5rem", lineHeight: 1.4 }}>
+            <div style={{ fontFamily: FA, fontSize: "0.68rem", color: T1, fontWeight: 600, marginBottom: "0.5rem", lineHeight: 1.4 }}>
               {error}
             </div>
           )}
@@ -529,16 +536,9 @@ export function WorkspaceResults({
                 const spanForIssue = issueSpanMap.get(i)
                 const confLabel = anchor ? confidenceLabel(anchor.confidence) : "—"
                 const confColor: Record<string, string> = {
-                  Located: "#7c8e5c", "Approx.": "#9a4d22",
+                  Located: T1, "Approx.": T2,
                   Section: T2, Absent: T3, "—": T3,
                 }
-                const sevColors: Record<string, { bg: string; color: string }> = {
-                  critical: { bg: "rgba(140,47,78,0.08)", color: "#8c2f4e" },
-                  high:     { bg: "rgba(154,77,34,0.08)", color: "#9a4d22" },
-                  medium:   { bg: "rgba(122,110,40,0.08)", color: "#7a6e28" },
-                  low:      { bg: "rgba(26,25,23,0.05)",   color: T2       },
-                }
-                const sc = sevColors[issue.severity] ?? sevColors.low
 
                 return (
                   <div
@@ -566,14 +566,8 @@ export function WorkspaceResults({
                   >
                     {/* Row: severity + title + confidence */}
                     <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start", marginBottom: isSelected ? "0.75rem" : 0 }}>
-                      <span style={{
-                        fontFamily: MONO, fontSize: "0.52rem", letterSpacing: "0.1em",
-                        textTransform: "uppercase", color: sc.color, background: sc.bg,
-                        padding: "0.2rem 0.45rem", borderRadius: "2px", flexShrink: 0,
-                        border: `1px solid ${sc.color}22`,
-                        marginTop: "2px",
-                      }}>
-                        {issue.severity}
+                      <span style={{ marginTop: "2px", flexShrink: 0 }}>
+                        <SevBadge sev={issue.severity} />
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: FA, fontSize: "0.84rem", fontWeight: 600, color: T1, lineHeight: 1.4 }}>
@@ -640,15 +634,15 @@ export function WorkspaceResults({
 
         {/* ── Report mode wrapper ──────────────────────────────────────────── */}
         {(viewMode === "report" || compareBase !== null) && (
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, background: MUT }}>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, background: BG }}>
 
         {/* ── Compare mode ─────────────────────────────────────────────── */}
         {compareBase !== null && (() => {
           const cmp = compareScans(compareBase, result)
           const VERDICT: Record<string, { color: string; label: string }> = {
-            improved:  { color: "#7c8e5c", label: "Improved"  },
-            neutral:   { color: T2,        label: "Neutral"   },
-            regressed: { color: "#8c2f4e", label: "Regressed" },
+            improved:  { color: T1, label: "↑ Improved"  },
+            neutral:   { color: T2, label: "Neutral"    },
+            regressed: { color: T2, label: "↓ Regressed" },
           }
           const v = VERDICT[cmp.verdict]
           const SUB: [keyof SubDeltas, string][] = [
@@ -656,8 +650,8 @@ export function WorkspaceResults({
             ["parse_integrity", "Parse"], ["structure", "Structure"], ["quantified_impact", "Impact"],
           ]
           function DeltaChip({ n }: { n: number }) {
-            const color = n > 0 ? "#7c8e5c" : n < 0 ? "#8c2f4e" : T3
-            return <span style={{ fontFamily: MONO, fontSize: "0.72rem", color }}>{n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "±0"}</span>
+            const color = n > 0 ? T1 : n < 0 ? T2 : T3
+            return <span style={{ fontFamily: MONO, fontSize: "0.72rem", color }}>{n > 0 ? `▲ +${n}` : n < 0 ? `▼ −${Math.abs(n)}` : "±0"}</span>
           }
           return (
             <div style={{ padding: isMobile ? "1.25rem 1rem" : "2rem", borderBottom: `1px solid ${BD}`, maxWidth: 640 }}>
@@ -682,14 +676,14 @@ export function WorkspaceResults({
                 <div style={{ marginTop: "1.25rem" }}>
                   <Eyebrow>Keywords gained</Eyebrow>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                    {cmp.keywordsGained.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", color: "#7c8e5c", padding: "0.15rem 0.4rem", border: "1px solid rgba(124,142,92,0.3)", borderRadius: "2px" }}>{k}</span>)}
+                    {cmp.keywordsGained.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", color: T1, padding: "0.15rem 0.4rem", border: `1px solid ${T1}`, borderRadius: "2px" }}>✓ {k}</span>)}
                   </div>
                 </div>
               )}
               {cmp.issuesResolved.length > 0 && (
                 <div style={{ marginTop: "1rem" }}>
                   <Eyebrow>Resolved</Eyebrow>
-                  {cmp.issuesResolved.map((iss, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.78rem", color: "#7c8e5c", marginBottom: "0.2rem" }}>✓ {iss.title}</div>)}
+                  {cmp.issuesResolved.map((iss, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.78rem", color: T1, marginBottom: "0.2rem" }}>✓ {iss.title}</div>)}
                 </div>
               )}
               <button onClick={() => setCompareBase(null)} style={{ marginTop: "1.25rem", fontFamily: FA, fontSize: "0.75rem", padding: "0.4rem 1rem", background: "transparent", border: `1px solid ${BD2}`, color: T2, borderRadius: "100px", cursor: "pointer" }}>Exit compare</button>
@@ -796,7 +790,7 @@ export function WorkspaceResults({
                     <div
                       key={fix.issue_index}
                       onClick={() => { setSelectedIssue(fix.issue_index); track("fix_clicked", { issue_type: fix.issue_type, label: fix.labels[0] ?? "" }) }}
-                      style={{ display: "flex", gap: "1rem", padding: isMobile ? "0.875rem 1rem" : "1rem 1.125rem", background: MUT, border: `1px solid ${BD}`, borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s" }}
+                      style={{ display: "flex", gap: "1rem", padding: isMobile ? "0.875rem 1rem" : "1rem 1.125rem", background: BG, boxShadow: SUNK, border: `1px solid ${BD}`, borderRadius: "8px", cursor: "pointer", transition: "border-color 0.15s" }}
                     >
                       <span style={{ fontFamily: MONO, fontSize: "0.72rem", fontWeight: 600, color: SURF, background: ACCENT, borderRadius: "6px", flexShrink: 0, width: "1.6rem", height: "1.6rem", display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                       <div>
@@ -939,8 +933,8 @@ export function WorkspaceResults({
                 {showKeywords && (
                   <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                      {display.matched_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "rgba(124,142,92,0.08)", color: "#7c8e5c", padding: "0.15rem 0.45rem", borderRadius: "2px", border: "1px solid rgba(124,142,92,0.2)" }}>{k}</span>)}
-                      {display.missing_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "rgba(140,47,78,0.06)", color: "#8c2f4e", padding: "0.15rem 0.45rem", borderRadius: "2px", border: "1px solid rgba(140,47,78,0.15)" }}>–{k}</span>)}
+                      {display.matched_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T1, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px solid ${T1}` }}>✓ {k}</span>)}
+                      {display.missing_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T3, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px dashed ${BD2}`, textDecoration: "line-through" }}>{k}</span>)}
                     </div>
                   </div>
                 )}
@@ -975,8 +969,8 @@ export function WorkspaceResults({
                             </div>
                             {open && (
                               <div style={{ padding: "0 1rem 1rem" }}>
-                                {p.top_strengths.length > 0 && p.top_strengths.map((s, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: "#7c8e5c", marginBottom: "0.15rem" }}>✓ {s}</div>)}
-                                {p.top_failures.length  > 0 && p.top_failures.map((s, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: "#8c2f4e", marginBottom: "0.15rem" }}>✗ {s}</div>)}
+                                {p.top_strengths.length > 0 && p.top_strengths.map((s, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: T1, marginBottom: "0.15rem" }}>✓ {s}</div>)}
+                                {p.top_failures.length  > 0 && p.top_failures.map((s, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: T2, marginBottom: "0.15rem" }}>✗ {s}</div>)}
                                 {p.recommended_fixes.length > 0 && <div style={{ marginTop: "0.5rem" }}>{p.recommended_fixes.map((s, i) => <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: T1, marginBottom: "0.15rem" }}>→ {s}</div>)}</div>}
                               </div>
                             )}
@@ -1009,7 +1003,7 @@ export function WorkspaceResults({
                 </button>
                 {showAtsPreview && (
                   <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 1.5rem 1.5rem" }}>
-                    <pre style={{ fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.8, color: T2, whiteSpace: "pre-wrap", wordBreak: "break-word", background: MUT, border: `1px solid ${BD}`, borderRadius: "6px", padding: "1.25rem", margin: 0 }}>
+                    <pre style={{ fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.8, color: T2, whiteSpace: "pre-wrap", wordBreak: "break-word", background: BG, boxShadow: SUNK, border: `1px solid ${BD}`, borderRadius: "6px", padding: "1.25rem", margin: 0 }}>
                       {display.ats_text_preview}
                     </pre>
                   </div>
