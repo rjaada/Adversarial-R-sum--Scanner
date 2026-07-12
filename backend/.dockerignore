@@ -1,0 +1,27 @@
+# Secrets — never bake into the image
+.env
+.env.*
+!.env.example
+
+# Python bytecode & virtualenvs
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tests & dev-only files (not needed at runtime)
+tests/
+requirements-dev.txt
+
+# VCS & docs
+.git/
+.gitignore
+*.md
+
+# Other platform configs (we deploy to Azure Container Apps)
+railway.toml
+start.sh
