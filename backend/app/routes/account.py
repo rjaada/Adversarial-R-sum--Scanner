@@ -1,3 +1,4 @@
+import hmac
 import logging
 from typing import Optional
 
@@ -110,7 +111,8 @@ async def purge_expired(
     """Cron endpoint — protected by shared secret, not user auth."""
     if not settings.internal_cron_secret:
         raise HTTPException(503, "INTERNAL_CRON_SECRET not configured")
-    if x_internal_secret != settings.internal_cron_secret:
+    # Constant-time compare so the secret can't be recovered via timing (audit).
+    if not hmac.compare_digest(x_internal_secret or "", settings.internal_cron_secret):
         raise HTTPException(401, "Unauthorized")
     pool = get_pool()
     if pool is None:

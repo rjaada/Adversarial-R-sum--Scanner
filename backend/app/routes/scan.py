@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import traceback
 import uuid
@@ -7,6 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 
 from app.auth import get_current_user_id, optional_user_id
+from app.services.rate_limit import scan_rate_limit
 from app.config import settings
 from app.db import get_pool
 from app.schemas import ScanResult, ScanSummary, ClaimScanRequest, Scores
@@ -28,9 +30,9 @@ from app.services.scoring import extract_raw_signals, scores_from_raw
 log = logging.getLogger(__name__)
 router = APIRouter()
 
-# Upload guardrails
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
-_READ_CHUNK = 1024 * 1024           # 1 MB
+# Upload guardrails — matches the "MAX 10 MB" advertised in the upload UI.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+_READ_CHUNK = 1024 * 1024            # 1 MB
 
 # Magic-byte signatures so a renamed file can't slip past extension checks.
 _PDF_MAGIC = b"%PDF"
@@ -53,7 +55,7 @@ async def _read_capped(file: UploadFile) -> bytes:
             break
         total += len(chunk)
         if total > MAX_UPLOAD_BYTES:
-            raise HTTPException(413, "File too large. Maximum size is 5 MB.")
+            raise HTTPException(413, "File too large. Maximum size is 10 MB.")
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -106,6 +108,7 @@ async def scan_resume(
     file: UploadFile = File(...),
     jd_text: str = Form(...),
     user_id: Optional[str] = Depends(optional_user_id),
+    _rate_limit: None = Depends(scan_rate_limit),
 ):
     try:
         if not file.filename:
@@ -121,7 +124,10 @@ async def scan_resume(
         _validate_magic(file_bytes, filename)
 
         try:
-            extracted = extract_resume_text(file_bytes, file.filename)
+            # pdfplumber/python-docx parsing is synchronous and CPU-bound; run it
+            # off the event loop so one scan can't block health checks and other
+            # requests on this (single-worker) replica (audit — perf).
+            extracted = await asyncio.to_thread(extract_resume_text, file_bytes, file.filename)
         except HTTPException:
             raise
         except Exception as extract_err:

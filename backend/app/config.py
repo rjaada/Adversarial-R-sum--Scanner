@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     # to production.
     clerk_jwks_url: str = "https://usable-chow-5.clerk.accounts.dev/.well-known/jwks.json"
 
+    # Optional comma-separated allowlist of authorized parties (azp claim), e.g.
+    # "https://tracerank.vercel.app,http://localhost:3000". Empty = not enforced
+    # (tokens are still bound by signature + issuer). Set to reject tokens minted
+    # for other origins.
+    clerk_authorized_parties: str = ""
+
     # Stripe (Phase 2 — referenced in env now, used in Phase 2)
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""

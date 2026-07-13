@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
-const BACKEND = process.env.BACKEND_URL || 'https://adversarial-r-sum-scanner-production.up.railway.app'
+// Production sets BACKEND_URL (Azure Container Apps). The fallback is the local
+// backend for `npm run dev` — never the old Railway host, which is dead.
+const BACKEND = process.env.BACKEND_URL || 'http://localhost:8000'
 
 const nextConfig = {
   async rewrites() {

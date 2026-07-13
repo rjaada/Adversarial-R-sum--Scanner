@@ -52,17 +52,39 @@ def _get_jwks_client() -> PyJWKClient:
         raise HTTPException(503, "Authentication service temporarily unavailable")
 
 
+def _expected_issuer() -> Optional[str]:
+    """Derive the Clerk issuer from the JWKS URL (…/.well-known/jwks.json)."""
+    marker = "/.well-known/jwks.json"
+    url = settings.clerk_jwks_url or ""
+    return url[: -len(marker)] if url.endswith(marker) else None
+
+
 def _verify_token(token: str) -> str:
     """Verify a Clerk JWT and return the user_id (sub claim)."""
     client = _get_jwks_client()
+    issuer = _expected_issuer()
     try:
         signing_key = client.get_signing_key_from_jwt(token)
+        # Clerk session tokens carry no `aud`; identity is bound by the
+        # instance-scoped signing key + `iss`, and (optionally) `azp` against an
+        # origin allowlist. Verify issuer and require exp/sub; audience stays off
+        # by design (audit — hardened without breaking working tokens).
         payload = jwt.decode(
             token,
             signing_key.key,
             algorithms=["RS256"],
-            options={"verify_aud": False},
+            issuer=issuer,
+            options={
+                "verify_aud": False,
+                "verify_iss": issuer is not None,
+                "require": ["exp", "sub"],
+            },
         )
+        parties = [p.strip() for p in settings.clerk_authorized_parties.split(",") if p.strip()]
+        if parties:
+            azp = payload.get("azp")
+            if azp and azp not in parties:
+                raise HTTPException(401, "Token authorized party not allowed")
         user_id: str = payload.get("sub", "")
         if not user_id:
             raise HTTPException(401, "Invalid token: missing sub claim")
