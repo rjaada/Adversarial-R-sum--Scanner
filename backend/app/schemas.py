@@ -161,6 +161,25 @@ class ScanResult(BaseModel):
     keyword_frequencies: dict[str, dict[str, int]] = {}
     # Named formatting checklist (gap #2): {check, status: pass|fail|warn, detail}
     formatting_audit: list[dict] = []
+
+
+class RescanRequest(BaseModel):
+    """Live edit-and-rescore (gap #5): re-score edited TEXT without a file."""
+    text: str
+    jd_text: str
+    # Carried from the original upload so the composite stays comparable —
+    # text edits can't change how the original FILE parses.
+    parse_integrity: float = 1.0
+
+
+class RescanResult(BaseModel):
+    scores: Scores
+    issues: list[Issue]
+    total_issues: int
+    missing_keywords: list[str]
+    matched_keywords: list[str]
+    keyword_categories: dict[str, str] = {}
+    keyword_frequencies: dict[str, dict[str, int]] = {}
     top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None
     # Gating metadata. `gated` is True when the response has been reduced for

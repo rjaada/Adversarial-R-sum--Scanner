@@ -50,6 +50,11 @@ class SlidingWindowLimiter:
 _per_client = SlidingWindowLimiter(max_events=10, window_seconds=60)
 _global = SlidingWindowLimiter(max_events=60, window_seconds=60)
 
+# Live rescans are cheap (pure text scoring, no parse) but fired while typing —
+# allow a much higher per-client rate.
+_rescan_per_client = SlidingWindowLimiter(max_events=60, window_seconds=60)
+_rescan_global = SlidingWindowLimiter(max_events=300, window_seconds=60)
+
 
 def _client_key(request: Request) -> str:
     xff = request.headers.get("x-forwarded-for")
@@ -66,3 +71,13 @@ async def scan_rate_limit(request: Request) -> None:
         raise HTTPException(429, "The scanner is busy right now — please try again in a minute.")
     if not _per_client.check(_client_key(request)):
         raise HTTPException(429, "Too many scans in a short time. Please wait a minute and try again.")
+
+
+async def rescan_rate_limit(request: Request) -> None:
+    """Typing-friendly limiter for live edit-and-rescore."""
+    if settings.environment.lower() == "development":
+        return
+    if not _rescan_global.check("__global__"):
+        raise HTTPException(429, "Live re-scoring is busy — give it a few seconds.")
+    if not _rescan_per_client.check(_client_key(request)):
+        raise HTTPException(429, "Re-scoring too fast — pause a moment.")

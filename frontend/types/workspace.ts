@@ -91,6 +91,17 @@ export interface ScanResult {
   total_issues?: number
 }
 
+/** Response of POST /api/rescan — live edit-and-rescore (ephemeral). */
+export interface RescanResult {
+  scores: Scores
+  issues: Issue[]
+  total_issues: number
+  missing_keywords: string[]
+  matched_keywords: string[]
+  keyword_categories?: Record<string, string>
+  keyword_frequencies?: Record<string, { jd: number; resume: number }>
+}
+
 export interface ScanSummary {
   scan_id: string
   source_id: string

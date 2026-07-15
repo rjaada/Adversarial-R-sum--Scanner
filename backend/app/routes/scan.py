@@ -8,10 +8,13 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 
 from app.auth import get_current_user_id, optional_user_id
-from app.services.rate_limit import scan_rate_limit
+from app.services.rate_limit import scan_rate_limit, rescan_rate_limit
 from app.config import settings
 from app.db import get_pool
-from app.schemas import ScanResult, ScanSummary, ClaimScanRequest, Scores
+from app.schemas import (
+    ScanResult, ScanSummary, ClaimScanRequest, Scores,
+    RescanRequest, RescanResult,
+)
 from app.services.extract_resume import extract_resume_text
 from app.services.fix_ranker import rank_fixes
 from app.services.jd_requirements import extract_jd_requirements
@@ -226,6 +229,49 @@ async def scan_resume(
             status_code=500,
             detail="An unexpected error occurred while analyzing the résumé. Please try again.",
         )
+
+
+@router.post("/rescan", response_model=RescanResult)
+async def rescan_text(
+    body: RescanRequest,
+    user_id: str = Depends(get_current_user_id),
+    _rate_limit: None = Depends(rescan_rate_limit),
+):
+    """
+    Live edit-and-rescore (gap #5): re-score edited résumé TEXT against the JD.
+    No file parse (parse integrity is carried from the original upload), no
+    persistence — an ephemeral what-if. Signed-in only.
+    """
+    if not body.text.strip() or not body.jd_text.strip():
+        raise HTTPException(400, "Both résumé text and job description are required.")
+    if len(body.text) > 100_000 or len(body.jd_text) > 50_000:
+        raise HTTPException(413, "Text too long.")
+
+    pi = min(1.0, max(0.0, body.parse_integrity))
+    sections = parse_resume_sections(body.text)
+    jd_reqs = extract_jd_requirements(body.jd_text)
+    raw = extract_raw_signals(sections, jd_reqs, pi)
+    scores = scores_from_raw(raw)
+    issues = generate_fix_suggestions(sections, jd_reqs, warnings=[])
+    sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
+
+    text_lower = body.text.lower()
+    jd_lower = body.jd_text.lower()
+    display_kws = jd_reqs.get("required_keywords", []) + jd_reqs.get("soft_skills", [])
+    matched = [k for k in display_kws if k.lower() in text_lower]
+    missing = [k for k in display_kws if k.lower() not in text_lower]
+    freq = {k: {"jd": jd_lower.count(k.lower()), "resume": text_lower.count(k.lower())}
+            for k in display_kws}
+
+    return RescanResult(
+        scores=scores,
+        issues=sorted_issues,
+        total_issues=len(sorted_issues),
+        missing_keywords=missing,
+        matched_keywords=matched,
+        keyword_categories=jd_reqs.get("keyword_categories", {}),
+        keyword_frequencies=freq,
+    )
 
 
 @router.post("/scans/claim", response_model=ScanSummary)

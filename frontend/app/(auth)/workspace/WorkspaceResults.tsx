@@ -26,7 +26,7 @@ import {
   type AnchorResult,
 } from "@/lib/anchor-match"
 import type {
-  ScanResult, ScanSummary, Issue, LLMStatus, SubDeltas,
+  ScanResult, ScanSummary, Issue, LLMStatus, SubDeltas, RescanResult,
 } from "@/types/workspace"
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -72,6 +72,7 @@ interface Props {
   error: string | null
   onLoadScan: (id: string) => void
   onLoadScanForCompare: (id: string) => void
+  onRescan: (text: string, parseIntegrity: number) => Promise<RescanResult>
 }
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -155,11 +156,17 @@ export function WorkspaceResults({
   history, rewriteVariants, rewriteLoading, onGenerateRewrites, llmStatus,
   compareBase, setCompareBase, previousResult,
   issuesSectionRef, fileInputRef, file, setFile, jdText, setJdText,
-  onScan, scanning, error, onLoadScan, onLoadScanForCompare,
+  onScan, scanning, error, onLoadScan, onLoadScanForCompare, onRescan,
 }: Props) {
 
   const [showKeywords, setShowKeywords]       = useState(false)
   const [showFormat, setShowFormat]           = useState(false)
+  // Live edit-and-rescore (ephemeral what-if; nothing is saved)
+  const [showEdit, setShowEdit]               = useState(false)
+  const [editText, setEditText]               = useState<string | null>(null)
+  const [liveResult, setLiveResult]           = useState<RescanResult | null>(null)
+  const [liveBusy, setLiveBusy]               = useState(false)
+  const rescanTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showAtsPreview, setShowAtsPreview]   = useState(false)
   const [showHistory, setShowHistory]         = useState(false)
   const [showSimulation, setShowSimulation]   = useState(false)
@@ -920,6 +927,64 @@ export function WorkspaceResults({
             </Card>
 
             {/* ── Collapsible secondary sections ─────────────────────────── */}
+
+            {/* Live edit & re-score (gap #5) — signed-in, needs JD + extracted text */}
+            {!limited && !isMock && display.ats_text_preview && jdText.trim() && (
+              <Card isMobile={isMobile}>
+                <button
+                  onClick={() => { setShowEdit(v => !v); if (editText === null) setEditText(display.ats_text_preview) }}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  <CollapsibleTitle>Live edit — watch your score move</CollapsibleTitle>
+                  <span style={{ fontFamily: MONO, fontSize: "0.68rem", color: T2 }}>
+                    {liveResult && (
+                      <span style={{ fontWeight: 700, color: T1 }}>
+                        {pct(display.scores.overall)} → {pct(liveResult.scores.overall)}
+                        {pct(liveResult.scores.overall) > pct(display.scores.overall) ? " ▲" : pct(liveResult.scores.overall) < pct(display.scores.overall) ? " ▼" : ""}
+                      </span>
+                    )}
+                    <span style={{ fontSize: "0.62rem", color: T3, marginLeft: "0.6rem" }}>{showEdit ? "▴" : "▾"}</span>
+                  </span>
+                </button>
+                {showEdit && (
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
+                    <div style={{ fontFamily: FA, fontSize: "0.75rem", color: T2, lineHeight: 1.6, marginBottom: "0.75rem" }}>
+                      Edit the extracted text below — the score re-computes as you type. Nothing is saved;
+                      apply changes you like to your real résumé file. Parse integrity stays fixed (it belongs to the uploaded file).
+                    </div>
+                    <textarea
+                      value={editText ?? display.ats_text_preview}
+                      onChange={e => {
+                        const v = e.target.value
+                        setEditText(v)
+                        if (rescanTimer.current) clearTimeout(rescanTimer.current)
+                        rescanTimer.current = setTimeout(() => {
+                          setLiveBusy(true)
+                          onRescan(v, display.scores.parse_integrity)
+                            .then(setLiveResult)
+                            .catch(() => {})
+                            .finally(() => setLiveBusy(false))
+                        }, 800)
+                      }}
+                      spellCheck={false}
+                      style={{ width: "100%", minHeight: isMobile ? "220px" : "300px", resize: "vertical", fontFamily: MONO, fontSize: "0.75rem", lineHeight: 1.7, color: T1, background: BG, boxShadow: SUNK, border: `1px solid ${BD2}`, borderRadius: "6px", padding: "1rem", outline: "none" }}
+                    />
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "1.25rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: MONO, fontSize: "0.68rem", color: T3 }}>
+                        {liveBusy ? "re-scoring…" : liveResult ? `keywords ${liveResult.matched_keywords.length}/${liveResult.matched_keywords.length + liveResult.missing_keywords.length} · ${liveResult.total_issues} issues` : "start typing to re-score"}
+                      </span>
+                      {liveResult && liveResult.missing_keywords.length > 0 && (
+                        <span style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                          {liveResult.missing_keywords.slice(0, 6).map(k => (
+                            <span key={k} style={{ fontFamily: MONO, fontSize: "0.65rem", color: T3, padding: "0.1rem 0.4rem", border: `1px dashed ${BD2}`, borderRadius: "2px", textDecoration: "line-through" }}>{k}</span>
+                          ))}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
 
             {/* Formatting audit — ungated (anonymous teaser hook) */}
             {(display.formatting_audit?.length ?? 0) > 0 && (

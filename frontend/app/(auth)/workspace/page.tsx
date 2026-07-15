@@ -29,6 +29,7 @@ import {
 import { MOCK_SCAN } from "@/lib/mock-scan"
 import type {
   ScanResult, ScanSummary, Issue, LLMStatus, RewriteResponse, SubDeltas,
+  RescanResult,
 } from "@/types/workspace"
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -214,6 +215,18 @@ export default function WorkspacePage() {
     } finally {
       setScanning(false)
     }
+  }
+
+  // Live edit-and-rescore (gap #5): re-score edited text, ephemeral, no save.
+  async function rescanText(text: string, parseIntegrity: number): Promise<RescanResult> {
+    const token = await getToken()
+    const res = await fetch(`${API_BASE}/api/rescan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ text, jd_text: jdText, parse_integrity: parseIntegrity }),
+    })
+    if (!res.ok) throw new Error("Rescan failed")
+    return res.json() as Promise<RescanResult>
   }
 
   async function loadScan(scanId: string) {
@@ -403,6 +416,7 @@ export default function WorkspacePage() {
           error={error}
           onLoadScan={(id) => void loadScan(id)}
           onLoadScanForCompare={(id) => void loadScanForCompare(id)}
+          onRescan={rescanText}
         />
       )}
     </div>
