@@ -67,8 +67,11 @@ def _extract_pdf(file_bytes: bytes) -> dict:
     pages_text: list[str] = []
     column_detected = False
     table_detected = False
+    image_count = 0
+    page_count = 0
 
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        page_count = len(pdf.pages)
         for page in pdf.pages:
             text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
             pages_text.append(text)
@@ -80,6 +83,8 @@ def _extract_pdf(file_bytes: bytes) -> dict:
             # Detect tables (often lost in ATS)
             if page.extract_tables():
                 table_detected = True
+
+            image_count += len(page.images)
 
     full_text = "\n".join(pages_text)
 
@@ -93,11 +98,21 @@ def _extract_pdf(file_bytes: bytes) -> dict:
     parse_integrity = _compute_parse_integrity(full_text, warnings)
     ats_preview = _strip_to_ats(full_text)
 
+    audit = _build_audit(
+        full_text,
+        columns=column_detected,
+        tables=table_detected,
+        textboxes=None,          # not detectable in PDF
+        images=image_count,
+        pages=page_count,
+    )
+
     return {
         "text": full_text,
         "ats_preview": ats_preview,
         "parse_integrity": parse_integrity,
         "warnings": warnings,
+        "formatting_audit": audit,
     }
 
 
@@ -111,7 +126,8 @@ def _extract_docx(file_bytes: bytes) -> dict:
 
     # Check for text boxes (common DOCX formatting trap)
     body_xml = doc.element.body.xml
-    if "txbx" in body_xml or "textbox" in body_xml.lower():
+    textboxes = "txbx" in body_xml or "textbox" in body_xml.lower()
+    if textboxes:
         warnings.append("Text boxes detected — content inside text boxes is invisible to most ATS")
 
     if len(full_text.strip()) < 200:
@@ -120,12 +136,68 @@ def _extract_docx(file_bytes: bytes) -> dict:
     parse_integrity = _compute_parse_integrity(full_text, warnings)
     ats_preview = _strip_to_ats(full_text)
 
+    audit = _build_audit(
+        full_text,
+        columns=False,           # column detection is PDF-geometry based
+        tables=len(doc.tables) > 0,
+        textboxes=textboxes,
+        images=body_xml.count("graphicData"),
+        pages=None,              # DOCX has no fixed page count pre-render
+    )
+
     return {
         "text": full_text,
         "ats_preview": ats_preview,
         "parse_integrity": parse_integrity,
         "warnings": warnings,
+        "formatting_audit": audit,
     }
+
+
+def _build_audit(
+    text: str,
+    *,
+    columns: bool,
+    tables: bool,
+    textboxes: bool | None,
+    images: int,
+    pages: int | None,
+) -> list[dict]:
+    """
+    Named formatting checklist (audit gap #2). Each check: pass | fail | warn.
+    Only checks we can actually compute — no fabricated confidence.
+    """
+    stripped = text.strip()
+    # Non-ASCII ratio — decorative glyphs/icons get mangled by naive parsers.
+    non_ascii = len(re.findall(r"[^\x00-\x7F]", stripped))
+    ratio = non_ascii / max(1, len(stripped))
+
+    audit: list[dict] = [
+        {"check": "Single-column layout", "status": "fail" if columns else "pass",
+         "detail": "Multiple columns can be read out of order by ATS parsers." if columns
+                   else "No multi-column layout detected."},
+        {"check": "No tables", "status": "fail" if tables else "pass",
+         "detail": "Table contents are often scrambled or dropped by ATS parsers." if tables
+                   else "No tables detected."},
+        {"check": "Machine-readable text", "status": "fail" if len(stripped) < 200 else "pass",
+         "detail": "Almost no extractable text — likely image-based." if len(stripped) < 200
+                   else "Text extracts cleanly."},
+        {"check": "Standard characters", "status": "warn" if ratio > 0.03 else "pass",
+         "detail": "Many special characters/icons — these often turn into garbage in ATS text."
+                   if ratio > 0.03 else "No unusual character usage."},
+        {"check": "No images/graphics", "status": "warn" if images > 0 else "pass",
+         "detail": f"{images} image(s) found — ATS cannot read content inside graphics."
+                   if images > 0 else "No embedded images."},
+    ]
+    if textboxes is not None:
+        audit.append({"check": "No text boxes", "status": "fail" if textboxes else "pass",
+                      "detail": "Text-box content is invisible to most ATS." if textboxes
+                                else "No text boxes detected."})
+    if pages is not None:
+        audit.append({"check": "Reasonable length", "status": "warn" if pages > 2 else "pass",
+                      "detail": f"{pages} pages — recruiters and some ATS truncate long résumés."
+                                if pages > 2 else f"{pages} page(s)."})
+    return audit
 
 
 def _strip_to_ats(text: str) -> str:

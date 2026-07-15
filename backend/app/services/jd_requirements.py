@@ -50,6 +50,26 @@ _PHRASE_KEYWORDS: frozenset[str] = frozenset({
     "github actions", "test driven development",
 })
 
+# Soft skills — phrases matched as substrings in lowercased text. Kept separate
+# from required_keywords so scoring (hard-skill based) is unchanged.
+_SOFT_SKILLS: frozenset[str] = frozenset({
+    "communication", "leadership", "mentoring", "mentorship", "collaboration",
+    "stakeholder management", "problem solving", "problem-solving",
+    "time management", "attention to detail", "critical thinking",
+    "teamwork", "adaptability", "ownership", "presentation",
+    "negotiation", "decision making", "decision-making", "prioritization",
+    "conflict resolution", "empathy", "coaching",
+})
+
+# Buzzwords/filler — detected so the UI can tell users these are noise,
+# not keywords to chase. Never counted as requirements.
+_BUZZWORDS: frozenset[str] = frozenset({
+    "fast-paced", "self-starter", "team player", "rockstar", "ninja",
+    "dynamic", "passionate", "results-driven", "detail-oriented",
+    "go-getter", "wear many hats", "hit the ground running", "synergy",
+    "proactive", "motivated", "hard-working", "hardworking",
+})
+
 # "go" the language — only treat as a keyword when JD uses it in a technical sense.
 _GO_TECH_RE = re.compile(
     r"\bgolang\b"
@@ -94,6 +114,13 @@ def extract_jd_requirements(jd_text: str) -> dict:
     if _GO_TECH_RE.search(jd_text):
         matched.add("go")
 
+    # Soft skills + buzzwords — categorized separately; not requirements.
+    soft = {s for s in _SOFT_SKILLS if s in text_lower}
+    buzz = {b for b in _BUZZWORDS if b in text_lower}
+    categories: dict[str, str] = {kw: "hard" for kw in matched}
+    categories.update({s: "soft" for s in soft})
+    categories.update({b: "buzzword" for b in buzz})
+
     years_matches = EXPERIENCE_PATTERN.findall(jd_text)
     min_years = max((int(y) for y in years_matches), default=None)
 
@@ -105,6 +132,8 @@ def extract_jd_requirements(jd_text: str) -> dict:
 
     return {
         "required_keywords": sorted(matched),
+        "soft_skills": sorted(soft),
+        "keyword_categories": categories,
         "min_years_experience": min_years,
         "requirement_lines": requirement_lines[:20],
         "raw_word_set": list(words),

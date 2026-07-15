@@ -159,6 +159,7 @@ export function WorkspaceResults({
 }: Props) {
 
   const [showKeywords, setShowKeywords]       = useState(false)
+  const [showFormat, setShowFormat]           = useState(false)
   const [showAtsPreview, setShowAtsPreview]   = useState(false)
   const [showHistory, setShowHistory]         = useState(false)
   const [showSimulation, setShowSimulation]   = useState(false)
@@ -920,6 +921,37 @@ export function WorkspaceResults({
 
             {/* ── Collapsible secondary sections ─────────────────────────── */}
 
+            {/* Formatting audit — ungated (anonymous teaser hook) */}
+            {(display.formatting_audit?.length ?? 0) > 0 && (
+              <Card isMobile={isMobile}>
+                <button
+                  onClick={() => setShowFormat(v => !v)}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  <CollapsibleTitle>Formatting audit</CollapsibleTitle>
+                  <span style={{ fontFamily: MONO, fontSize: "0.68rem", color: T2 }}>
+                    {(() => { const f = display.formatting_audit!.filter(a => a.status !== "pass").length; return f === 0 ? "all clear" : `${f} flagged` })()}
+                    <span style={{ fontSize: "0.62rem", color: T3, marginLeft: "0.6rem" }}>{showFormat ? "▴" : "▾"}</span>
+                  </span>
+                </button>
+                {showFormat && (
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
+                    {display.formatting_audit!.map((a, i) => (
+                      <div key={i} style={{ display: "flex", gap: "0.75rem", alignItems: "baseline", padding: "0.45rem 0", borderBottom: i < display.formatting_audit!.length - 1 ? `1px solid ${BD}` : "none" }}>
+                        <span style={{ fontFamily: MONO, fontSize: "0.75rem", fontWeight: a.status === "pass" ? 400 : 700, color: a.status === "pass" ? T2 : T1, flexShrink: 0, width: "1rem" }}>
+                          {a.status === "pass" ? "✓" : a.status === "warn" ? "!" : "✗"}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontFamily: FA, fontSize: "0.8rem", fontWeight: a.status === "pass" ? 400 : 600, color: T1 }}>{a.check}</span>
+                          <span style={{ fontFamily: FA, fontSize: "0.75rem", color: T2, marginLeft: "0.5rem" }}>{a.detail}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* Keywords */}
             {!limited ? (
               <Card isMobile={isMobile}>
@@ -930,14 +962,43 @@ export function WorkspaceResults({
                   <CollapsibleTitle>Keywords</CollapsibleTitle>
                   <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showKeywords ? "▴" : "▾"}</span>
                 </button>
-                {showKeywords && (
-                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                      {display.matched_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T1, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px solid ${T1}` }}>✓ {k}</span>)}
-                      {display.missing_keywords.map(k => <span key={k} style={{ fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T3, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px dashed ${BD2}`, textDecoration: "line-through" }}>{k}</span>)}
+                {showKeywords && (() => {
+                  // Group by category (Jobscan-style): hard skills vs soft
+                  // skills; buzzwords shown as ignorable noise. Falls back to
+                  // one flat "Keywords" group for old scans without categories.
+                  const cats = display.keyword_categories ?? {}
+                  const hard = { m: display.matched_keywords.filter(k => (cats[k] ?? "hard") === "hard"), x: display.missing_keywords.filter(k => (cats[k] ?? "hard") === "hard") }
+                  const soft = { m: display.matched_keywords.filter(k => cats[k] === "soft"), x: display.missing_keywords.filter(k => cats[k] === "soft") }
+                  const buzz = Object.keys(cats).filter(k => cats[k] === "buzzword")
+                  const chipM = { fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T1, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px solid ${T1}` } as const
+                  const chipX = { fontFamily: MONO, fontSize: "0.68rem", background: "transparent", color: T3, padding: "0.15rem 0.45rem", borderRadius: "2px", border: `1px dashed ${BD2}`, textDecoration: "line-through" } as const
+                  const label = (t: string) => <div style={{ fontFamily: MONO, fontSize: "0.56rem", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: T3, margin: "0.75rem 0 0.4rem" }}>{t}</div>
+                  // Frequency: how hard the JD leans on a missing keyword.
+                  const freq = display.keyword_frequencies ?? {}
+                  const nx = (k: string) => { const n = freq[k]?.jd ?? 0; return n >= 2 ? ` ×${n}` : "" }
+                  return (
+                    <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
+                      {(hard.m.length > 0 || hard.x.length > 0) && <>
+                        {label(`Hard skills — ${hard.m.length}/${hard.m.length + hard.x.length} matched`)}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                          {hard.m.map(k => <span key={k} style={chipM}>✓ {k}</span>)}
+                          {hard.x.map(k => <span key={k} style={chipX} title={freq[k]?.jd ? `Mentioned ${freq[k].jd}× in the job description` : undefined}>{k}{nx(k)}</span>)}
+                        </div>
+                      </>}
+                      {(soft.m.length > 0 || soft.x.length > 0) && <>
+                        {label(`Soft skills — ${soft.m.length}/${soft.m.length + soft.x.length} matched`)}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                          {soft.m.map(k => <span key={k} style={chipM}>✓ {k}</span>)}
+                          {soft.x.map(k => <span key={k} style={chipX} title={freq[k]?.jd ? `Mentioned ${freq[k].jd}× in the job description` : undefined}>{k}{nx(k)}</span>)}
+                        </div>
+                      </>}
+                      {buzz.length > 0 && <>
+                        {label("Buzzwords in the posting — safe to ignore")}
+                        <div style={{ fontFamily: FA, fontSize: "0.75rem", color: T3, lineHeight: 1.6 }}>{buzz.join(" · ")}</div>
+                      </>}
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </Card>
             ) : <UpgradePrompt label="Keyword gap analysis available after sign-in." />}
 

@@ -77,6 +77,12 @@ export interface ScanResult {
   issues: Issue[]
   missing_keywords: string[]
   matched_keywords: string[]
+  /** keyword -> "hard" | "soft" | "buzzword" (covers both lists + JD buzzwords) */
+  keyword_categories?: Record<string, string>
+  /** keyword -> occurrence counts in the JD and the résumé */
+  keyword_frequencies?: Record<string, { jd: number; resume: number }>
+  /** named formatting checklist */
+  formatting_audit?: { check: string; status: "pass" | "fail" | "warn"; detail: string }[]
   top_fixes: RankedFix[]
   simulation?: ProfileSimulation
   /** True when the backend returned a reduced (unauthenticated) teaser. */

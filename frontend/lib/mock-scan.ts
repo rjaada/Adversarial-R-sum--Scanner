@@ -164,8 +164,29 @@ export const MOCK_SCAN: ScanResult = {
       impact_score:    3.2,
     },
   ],
-  missing_keywords: ["kubernetes", "aws", "terraform", "go"],
-  matched_keywords: ["python", "docker", "postgresql"],
+  missing_keywords: ["kubernetes", "aws", "terraform", "go", "stakeholder management"],
+  matched_keywords: ["python", "docker", "postgresql", "communication"],
+  keyword_categories: {
+    kubernetes: "hard", aws: "hard", terraform: "hard", go: "hard",
+    python: "hard", docker: "hard", postgresql: "hard",
+    communication: "soft", "stakeholder management": "soft",
+    "fast-paced": "buzzword", "self-starter": "buzzword",
+  },
+  keyword_frequencies: {
+    kubernetes: { jd: 3, resume: 0 }, aws: { jd: 2, resume: 0 },
+    terraform: { jd: 1, resume: 0 }, go: { jd: 1, resume: 0 },
+    python: { jd: 2, resume: 4 }, docker: { jd: 1, resume: 2 },
+    postgresql: { jd: 1, resume: 1 }, communication: { jd: 1, resume: 1 },
+    "stakeholder management": { jd: 2, resume: 0 },
+  },
+  formatting_audit: [
+    { check: "Single-column layout", status: "pass", detail: "No multi-column layout detected." },
+    { check: "No tables", status: "fail", detail: "Table contents are often scrambled or dropped by ATS parsers." },
+    { check: "Machine-readable text", status: "pass", detail: "Text extracts cleanly." },
+    { check: "Standard characters", status: "pass", detail: "No unusual character usage." },
+    { check: "No images/graphics", status: "warn", detail: "1 image(s) found — ATS cannot read content inside graphics." },
+    { check: "Standard section headings", status: "pass", detail: "Recognized: experience, education, skills." },
+  ],
   top_fixes: [
     {
       issue_index:   0,

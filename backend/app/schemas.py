@@ -153,6 +153,14 @@ class ScanResult(BaseModel):
     issues: list[Issue]
     missing_keywords: list[str]
     matched_keywords: list[str]
+    # keyword -> "hard" | "soft" | "buzzword" for every keyword in the two
+    # lists above (plus JD buzzwords). Additive; scoring is hard-skill only.
+    keyword_categories: dict[str, str] = {}
+    # keyword -> {"jd": n, "resume": m} occurrence counts (gap #3 — frequency,
+    # not just presence). Display-only.
+    keyword_frequencies: dict[str, dict[str, int]] = {}
+    # Named formatting checklist (gap #2): {check, status: pass|fail|warn, detail}
+    formatting_audit: list[dict] = []
     top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None
     # Gating metadata. `gated` is True when the response has been reduced for

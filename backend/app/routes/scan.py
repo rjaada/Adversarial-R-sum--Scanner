@@ -96,6 +96,10 @@ def _gate_for_anonymous(result: ScanResult) -> ScanResult:
         },
         "missing_keywords": [],
         "matched_keywords": [],
+        "keyword_categories": {},
+        # Frequencies correlate with résumé content — strip. The formatting
+        # audit is kept: it's the anonymous teaser's strongest hook.
+        "keyword_frequencies": {},
         "top_fixes": [],
         "simulation": None,
         "gated": True,
@@ -152,8 +156,26 @@ async def scan_resume(
         sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
         top_fixes = rank_fixes(sorted_issues, raw)
 
-        matched_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() in extracted["text"].lower()]
-        missing_kw = [k for k in jd_reqs.get("required_keywords", []) if k.lower() not in extracted["text"].lower()]
+        # Hard skills drive scoring; soft skills are display-only additions.
+        resume_lower = extracted["text"].lower()
+        jd_lower = jd_text.lower()
+        display_kws = jd_reqs.get("required_keywords", []) + jd_reqs.get("soft_skills", [])
+        matched_kw = [k for k in display_kws if k.lower() in resume_lower]
+        missing_kw = [k for k in display_kws if k.lower() not in resume_lower]
+        # Occurrence counts (frequency, not just presence — display only).
+        kw_freq = {k: {"jd": jd_lower.count(k.lower()), "resume": resume_lower.count(k.lower())}
+                   for k in display_kws}
+
+        # Formatting audit + a section-headings check (needs parsed sections).
+        audit = list(extracted.get("formatting_audit", []))
+        std_sections = [s for s in ("experience", "education", "skills") if s in sections]
+        audit.append({
+            "check": "Standard section headings",
+            "status": "pass" if len(std_sections) >= 2 else "fail",
+            "detail": f"Recognized: {', '.join(std_sections) or 'none'}. "
+                      + ("" if len(std_sections) >= 2 else
+                         "ATS look for Experience / Education / Skills headers."),
+        })
 
         result = ScanResult(
             scan_id=scan_id,
@@ -165,6 +187,9 @@ async def scan_resume(
             issues=sorted_issues,
             missing_keywords=missing_kw,
             matched_keywords=matched_kw,
+            keyword_categories=jd_reqs.get("keyword_categories", {}),
+            keyword_frequencies=kw_freq,
+            formatting_audit=audit,
             top_fixes=top_fixes,
             simulation=simulation,
             gated=False,
