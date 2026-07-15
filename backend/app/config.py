@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     llm_model: str = "llama3"
     llm_timeout: int = 30
     llm_api_key: str = ""
-    ats_simulation_enabled: bool = False
+    # Named-ATS profile simulation (rules-based, no external calls).
+    ats_simulation_enabled: bool = True
     analytics_enabled: bool = False
 
     # Deployment environment. "development" relaxes CORS to "*" for local work;

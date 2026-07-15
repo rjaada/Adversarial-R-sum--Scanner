@@ -66,10 +66,18 @@ JD_EMPTY = {
 def test_exact_match_lower_when_keywords_missing():
     jd = dict(JD_STANDARD)
     jd["required_keywords"] = ["terraform", "aws", "kubernetes", "helm", "vault"]
-    result = simulate_profiles(WEAK_RESUME, jd, 0.8, [])
-    exact = next(p for p in result.profiles if p.id == "exact_match")
-    semantic = next(p for p in result.profiles if p.id == "adjacent_coverage")
-    # semantic fit should score >= exact match when keywords missing but adjacent terms present
+    # No exact keyword hits, but adjacency-rich content (docker→kubernetes,
+    # ec2/cloud→aws, infrastructure→terraform) — the semantic-style profile
+    # (icims) must credit that; the literal matcher (taleo) must not.
+    adjacent_resume = {
+        "experience": (
+            "Deployed docker containers to ec2 and managed cloud "
+            "infrastructure provisioning."
+        ),
+    }
+    result = simulate_profiles(adjacent_resume, jd, 0.8, [])
+    exact = next(p for p in result.profiles if p.id == "taleo")
+    semantic = next(p for p in result.profiles if p.id == "icims")
     assert semantic.score >= exact.score
 
 
@@ -80,8 +88,8 @@ def test_structure_sensitive_lower_with_no_sections():
         "experience": "Expert in python, docker, kubernetes, terraform, and aws deployments.",
     }
     result = simulate_profiles(flat_resume, dict(JD_STANDARD), 0.30, [])
-    structure = next(p for p in result.profiles if p.id == "structure_sensitive")
-    exact = next(p for p in result.profiles if p.id == "exact_match")
+    structure = next(p for p in result.profiles if p.id == "workday")
+    exact = next(p for p in result.profiles if p.id == "taleo")
     assert structure.score <= exact.score
 
 
@@ -93,8 +101,8 @@ def test_semantic_fit_highest_with_adjacent_skills():
     }
     jd = {**JD_STANDARD, "required_keywords": ["aws", "terraform", "kubernetes"]}
     result = simulate_profiles(sections, jd, 0.85, [])
-    semantic = next(p for p in result.profiles if p.id == "adjacent_coverage")
-    exact = next(p for p in result.profiles if p.id == "exact_match")
+    semantic = next(p for p in result.profiles if p.id == "icims")
+    exact = next(p for p in result.profiles if p.id == "taleo")
     assert semantic.score >= exact.score
 
 
@@ -104,7 +112,7 @@ def test_semantic_fit_highest_with_adjacent_skills():
 
 def test_all_profiles_return_valid_shapes():
     result = simulate_profiles(FULL_RESUME, dict(JD_STANDARD), 0.9, [_issue()])
-    assert len(result.profiles) == 3
+    assert len(result.profiles) == 6
     for p in result.profiles:
         assert 0 <= p.score <= 100
         assert 0 <= p.parse_quality <= 100
@@ -121,7 +129,7 @@ def test_all_profiles_return_valid_shapes():
 def test_profile_ids_match_expected():
     result = simulate_profiles(FULL_RESUME, dict(JD_STANDARD), 0.9, [])
     ids = {p.id for p in result.profiles}
-    assert ids == {"exact_match", "structure_sensitive", "adjacent_coverage"}
+    assert ids == {"workday", "taleo", "greenhouse", "icims", "lever", "successfactors"}
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +213,7 @@ def test_prose_only_kws_detected():
     }
     jd = {**JD_STANDARD, "required_keywords": ["kubernetes", "docker", "python"]}
     result = simulate_profiles(sections, jd, 0.85, [])
-    structure = next(p for p in result.profiles if p.id == "structure_sensitive")
+    structure = next(p for p in result.profiles if p.id == "workday")
     lost_text = " ".join(structure.lost_signals).lower()
     assert "kubernetes" in lost_text or "docker" in lost_text
 
@@ -216,7 +224,7 @@ def test_prose_only_kws_detected():
 
 def test_degraded_no_jd_no_crash():
     result = simulate_profiles(FULL_RESUME, dict(JD_EMPTY), 0.85, [])
-    assert len(result.profiles) == 3
+    assert len(result.profiles) == 6
     for p in result.profiles:
         assert 0 <= p.score <= 100
 
@@ -225,7 +233,7 @@ def test_degraded_no_jd_scores_reflect_non_keyword_signals():
     result = simulate_profiles(FULL_RESUME, dict(JD_EMPTY), 0.95, [])
     # With full sections + high parse integrity + no keyword requirements,
     # structure_sensitive should not be lowest (it rewards good structure)
-    exact = next(p for p in result.profiles if p.id == "exact_match")
+    exact = next(p for p in result.profiles if p.id == "taleo")
     # exact_match keyword weight dominant — if no required keywords, kw_exact=1.0
     assert exact.score >= 50
 
@@ -242,8 +250,8 @@ def test_structure_sensitive_lowest_on_poor_parse():
         "experience": "I work with python, docker, kubernetes, terraform, and aws daily.",
     }
     result = simulate_profiles(flat_resume, dict(JD_STANDARD), 0.10, [])
-    structure = next(p for p in result.profiles if p.id == "structure_sensitive")
-    exact = next(p for p in result.profiles if p.id == "exact_match")
+    structure = next(p for p in result.profiles if p.id == "workday")
+    exact = next(p for p in result.profiles if p.id == "taleo")
     assert structure.score <= exact.score
 
 

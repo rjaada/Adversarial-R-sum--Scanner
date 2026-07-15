@@ -36,56 +36,116 @@ class ProfileConfig:
     w_experience: float     # years-of-experience match
 
 
-EXACT_MATCH = ProfileConfig(
-    id="exact_match",
-    label="Exact Match",
+# Named platform profiles — each is MODELED on publicly documented behavior
+# patterns of that ATS family (parser strictness, matching style, field
+# orientation). They are NOT replicas; the label and description say so.
+# Weight archetypes: literal-matcher (Taleo), field/structure-centric
+# (Workday, SuccessFactors), semantic (iCIMS), recruiter-search modern
+# (Greenhouse), readability-forward modern (Lever).
+
+TALEO = ProfileConfig(
+    id="taleo",
+    label="Taleo (Oracle) — modeled",
     description=(
-        "Rewards exact keyword overlap; heavily penalises missing must-have terms; "
-        "uses only light adjacent skill inference. Simulates keyword-first screening."
+        "Modeled on Taleo-style screening: literal exact-keyword matching with a "
+        "legacy-strict parser. Synonyms get little credit; formatting problems are "
+        "costly. Not a replica of Oracle Taleo."
     ),
     w_kw_exact=0.35,
     w_kw_must=0.20,
-    w_adjacent=0.08,
+    w_adjacent=0.05,
     w_structure=0.12,
-    w_parse=0.10,
+    w_parse=0.13,
     w_impact=0.08,
     w_experience=0.07,
 )
 
-STRUCTURE_SENSITIVE = ProfileConfig(
-    id="structure_sensitive",
-    label="Structure Sensitive",
+WORKDAY = ProfileConfig(
+    id="workday",
+    label="Workday — modeled",
     description=(
-        "Penalises ambiguous or fragmented formatting; rewards clearly parsed sections, "
-        "date ranges, and dedicated skills blocks. Skills buried in prose may not register."
+        "Modeled on Workday-style screening: field- and structure-centric — clean "
+        "sections, dates and a dedicated skills block matter as much as keywords. "
+        "Skills buried in prose may not register. Not a replica of Workday."
     ),
     w_kw_exact=0.18,
     w_kw_must=0.12,
     w_adjacent=0.08,
-    w_structure=0.28,
-    w_parse=0.22,
+    w_structure=0.26,
+    w_parse=0.20,
     w_impact=0.06,
-    w_experience=0.06,
+    w_experience=0.10,
 )
 
-ADJACENT_COVERAGE = ProfileConfig(
-    id="adjacent_coverage",
-    label="Transferable Skills",
+ICIMS = ProfileConfig(
+    id="icims",
+    label="iCIMS — modeled",
     description=(
-        "Broader matching using adjacent skill inference; rewards transferable and "
-        "contextually relevant experience. Still considers exact keywords but less "
-        "aggressively. Heuristic — not true semantic embedding."
+        "Modeled on iCIMS-style screening: broader semantic/ML-flavoured matching — "
+        "adjacent and transferable skills earn real credit alongside exact terms. "
+        "Heuristic inference, not true embeddings. Not a replica of iCIMS."
     ),
     w_kw_exact=0.14,
     w_kw_must=0.10,
     w_adjacent=0.30,
-    w_structure=0.13,
+    w_structure=0.12,
     w_parse=0.10,
-    w_impact=0.13,
+    w_impact=0.12,
+    w_experience=0.12,
+)
+
+GREENHOUSE = ProfileConfig(
+    id="greenhouse",
+    label="Greenhouse — modeled",
+    description=(
+        "Modeled on Greenhouse-style pipelines: parsing feeds recruiter keyword "
+        "search rather than hard auto-rejection — exact terms and a clean parse "
+        "decide whether you surface. Not a replica of Greenhouse."
+    ),
+    w_kw_exact=0.28,
+    w_kw_must=0.14,
+    w_adjacent=0.10,
+    w_structure=0.14,
+    w_parse=0.18,
+    w_impact=0.10,
+    w_experience=0.06,
+)
+
+LEVER = ProfileConfig(
+    id="lever",
+    label="Lever — modeled",
+    description=(
+        "Modeled on Lever-style pipelines: modern parser, human-forward review — "
+        "readability and quantified impact carry more weight; keywords still gate "
+        "search. Not a replica of Lever."
+    ),
+    w_kw_exact=0.22,
+    w_kw_must=0.10,
+    w_adjacent=0.14,
+    w_structure=0.12,
+    w_parse=0.14,
+    w_impact=0.18,
     w_experience=0.10,
 )
 
-ALL_PROFILES: list[ProfileConfig] = [EXACT_MATCH, STRUCTURE_SENSITIVE, ADJACENT_COVERAGE]
+SUCCESSFACTORS = ProfileConfig(
+    id="successfactors",
+    label="SuccessFactors (SAP) — modeled",
+    description=(
+        "Modeled on SAP SuccessFactors-style screening: enterprise form-field "
+        "orientation — strict structure, explicit experience requirements, "
+        "must-have terms enforced. Not a replica of SuccessFactors."
+    ),
+    w_kw_exact=0.20,
+    w_kw_must=0.16,
+    w_adjacent=0.06,
+    w_structure=0.22,
+    w_parse=0.14,
+    w_impact=0.06,
+    w_experience=0.16,
+)
+
+ALL_PROFILES: list[ProfileConfig] = [WORKDAY, TALEO, GREENHOUSE, ICIMS, LEVER, SUCCESSFACTORS]
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +224,7 @@ def _failures(cfg: ProfileConfig, sig: RawSignals, score: int) -> list[str]:
         secs = ", ".join(sorted(sig.sections_missing))
         out.append(f"Section extraction incomplete: {secs} not found")
 
-    if sig.prose_only_kws and cfg.id == "structure_sensitive":
+    if sig.prose_only_kws and cfg.w_structure >= 0.20:
         n = len(sig.prose_only_kws)
         out.append(f"{n} skill(s) only found in prose — may not register in this profile")
 
@@ -182,11 +242,11 @@ def _failures(cfg: ProfileConfig, sig: RawSignals, score: int) -> list[str]:
 
 def _lost_signals(cfg: ProfileConfig, sig: RawSignals) -> list[str]:
     out: list[str] = []
-    if cfg.id == "structure_sensitive" and sig.prose_only_kws:
+    if cfg.w_structure >= 0.20 and sig.prose_only_kws:
         for kw in sorted(sig.prose_only_kws)[:3]:
             out.append(f"'{kw}' detected in experience body only — may be skipped without a skills block")
-    if cfg.id == "exact_match" and sig.adjacent > sig.kw_exact + 0.15:
-        out.append("Adjacent skills present but not exact matches — no credit in this profile")
+    if cfg.w_adjacent <= 0.06 and sig.adjacent > sig.kw_exact + 0.15:
+        out.append("Adjacent skills present but not exact matches — little credit in this profile")
     if sig.sections_missing:
         for s in sorted(sig.sections_missing)[:2]:
             out.append(f"'{s}' section absent — signals from that block unavailable")
@@ -202,7 +262,7 @@ def _recommended_fixes(
     if sig.missing_must_haves:
         terms = ", ".join(sorted(sig.missing_must_haves)[:3])
         fixes.append(f"Add must-have keywords to résumé: {terms}")
-    if cfg.id == "structure_sensitive" and sig.prose_only_kws:
+    if cfg.w_structure >= 0.20 and sig.prose_only_kws:
         terms = ", ".join(sorted(sig.prose_only_kws)[:3])
         fixes.append(f"Move '{terms}' into a dedicated skills block")
     if sig.sections_missing:
@@ -228,13 +288,17 @@ def _cross_profile_summary(results: list[ProfileResult]) -> str:
     if delta == 0:
         return f"All profiles scored {best.score} — résumé performance is consistent."
     parts = [f"Best in {best.label} ({best.score}), weakest in {worst.label} ({worst.score}). {delta}-pt spread."]
-    # Explain the driver
-    if worst.id == "structure_sensitive":
-        parts.append("Structure-Sensitive score lower due to section or formatting signals.")
-    elif worst.id == "exact_match":
-        parts.append("Exact-Match score lower due to keyword gap.")
-    elif worst.id == "adjacent_coverage":
-        parts.append("Transferable Skills score lower — adjacent skill inference found limited overlap.")
+    # Explain the driver from the worst profile's dominant weight family.
+    cfg = next((c for c in ALL_PROFILES if c.id == worst.id), None)
+    if cfg is not None:
+        kw = cfg.w_kw_exact + cfg.w_kw_must
+        st = cfg.w_structure + cfg.w_parse
+        if st >= kw and st >= cfg.w_adjacent:
+            parts.append(f"{worst.label.split(' —')[0]} weighs structure/parse quality heaviest — formatting signals drag it down.")
+        elif kw >= cfg.w_adjacent:
+            parts.append(f"{worst.label.split(' —')[0]} matches keywords literally — the keyword gap costs most there.")
+        else:
+            parts.append(f"{worst.label.split(' —')[0]} leans on transferable-skill inference — it found limited overlap.")
     return " ".join(parts)
 
 

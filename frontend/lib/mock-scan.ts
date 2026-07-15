@@ -9,8 +9,8 @@ import type { ScanResult, ProfileSimulation } from "@/types/workspace"
 const MOCK_SIMULATION: ProfileSimulation = {
   profiles: [
     {
-      id: "exact_match",
-      label: "Exact Match",
+      id: "taleo",
+      label: "Taleo (Oracle) — modeled",
       description: "Rewards exact keyword overlap; heavily penalises missing must-have terms.",
       score: 52,
       parse_quality: 85,
@@ -30,8 +30,8 @@ const MOCK_SIMULATION: ProfileSimulation = {
       recommended_fixes: ["Add must-have keywords to résumé: kubernetes, aws, terraform", "Add a dedicated skills section"],
     },
     {
-      id: "structure_sensitive",
-      label: "Structure Sensitive",
+      id: "workday",
+      label: "Workday — modeled",
       description: "Penalises ambiguous or fragmented formatting; rewards clearly parsed sections.",
       score: 61,
       parse_quality: 85,
@@ -51,8 +51,8 @@ const MOCK_SIMULATION: ProfileSimulation = {
       recommended_fixes: ["Move 'python', 'docker' into a dedicated skills block", "Add must-have keywords"],
     },
     {
-      id: "adjacent_coverage",
-      label: "Transferable Skills",
+      id: "icims",
+      label: "iCIMS — modeled",
       description: "Broader matching using adjacent skill inference (heuristic). Rewards transferable experience.",
       score: 67,
       parse_quality: 85,
@@ -80,7 +80,7 @@ const MOCK_SIMULATION: ProfileSimulation = {
   ],
   score_spread: { min: 52, max: 67, delta: 15, volatility: "MEDIUM" },
   cross_profile_summary:
-    "Best in Transferable Skills (67), weakest in Exact Match (52). 15-pt spread. Exact-Match score lower due to keyword gap.",
+    "Best in iCIMS — modeled (67), weakest in Taleo (Oracle) — modeled (52). 15-pt spread. Taleo (Oracle) matches keywords literally — the keyword gap costs most there.",
 }
 
 const MOCK_ATS_TEXT = [
