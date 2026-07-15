@@ -38,16 +38,27 @@ SECTION_HEADERS: dict[str, list[str]] = {
         "summary", "professional summary", "career summary",
         "objective", "career objective", "profile", "professional profile",
         "about", "about me", "overview",
+        # French (gap #8) — accented + unaccented spellings
+        "profil", "profil professionnel", "à propos", "a propos",
+        "résumé professionnel", "resume professionnel", "objectif",
     ],
     "experience": [
         "experience", "work experience", "professional experience",
         "work history", "employment", "employment history", "career",
         "relevant experience", "professional background", "career history",
+        # French
+        "expérience", "expériences", "expérience professionnelle",
+        "expériences professionnelles", "experience professionnelle",
+        "experiences professionnelles", "parcours professionnel", "emplois",
     ],
     "education": [
         "education", "academic background", "academic history",
         "academic", "degree", "university", "college",
         "educational", "educational background", "schooling",
+        # French
+        "formation", "formations", "études", "etudes", "diplômes", "diplomes",
+        "parcours académique", "parcours academique", "scolarité", "scolarite",
+        "éducation",
     ],
     "skills": [
         "skills", "technical skills", "key skills", "core skills",
@@ -56,19 +67,28 @@ SECTION_HEADERS: dict[str, list[str]] = {
         "tech stack", "tools", "tools & technologies",
         "programming languages", "languages & frameworks",
         "proficiencies",
+        # French
+        "compétences", "competences", "compétences techniques",
+        "competences techniques", "savoir-faire", "outils",
     ],
     "projects": [
         "projects", "personal projects", "side projects",
         "portfolio", "open source", "open-source contributions",
+        # French
+        "projets", "projets personnels", "réalisations", "realisations",
     ],
     "certifications": [
         "certifications", "certificates", "credentials",
         "licenses", "accreditations",
+        # French
+        "certificats", "diplômes et certifications",
     ],
-    "awards": ["awards", "honors", "achievements", "recognition"],
+    "awards": ["awards", "honors", "achievements", "recognition",
+               "distinctions", "prix"],
     "publications": ["publications", "research", "papers"],
-    "languages": ["languages", "spoken languages"],
-    "volunteer": ["volunteer", "community", "nonprofit"],
+    "languages": ["languages", "spoken languages", "langues"],
+    "volunteer": ["volunteer", "community", "nonprofit",
+                  "bénévolat", "benevolat", "engagement associatif"],
 }
 
 # Short keyword words that frequently begin ordinary sentences. These only
@@ -80,6 +100,7 @@ _WEAK_HEADER_KEYWORDS: frozenset[str] = frozenset({
     "phone", "email", "linkedin", "location", "address",
     "degree", "university", "college", "academic", "about",
     "career", "tools", "research", "papers", "community",
+    "outils", "emplois", "prix", "objectif",
 })
 
 # Lowercase connector words allowed inside a title-cased header

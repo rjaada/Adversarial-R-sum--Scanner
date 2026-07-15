@@ -253,11 +253,19 @@ async def rescan_text(
         raise HTTPException(413, "Text too long.")
 
     pi = min(1.0, max(0.0, body.parse_integrity))
-    sections = parse_resume_sections(body.text)
+    if body.mode in ("cover_letter", "linkedin"):
+        # Gap #7: cover letters / LinkedIn text have no résumé sections — treat
+        # as one block and drop section/parse issues (they don't apply).
+        sections = {"content": body.text}
+        pi = 1.0
+    else:
+        sections = parse_resume_sections(body.text)
     jd_reqs = extract_jd_requirements(body.jd_text)
     raw = extract_raw_signals(sections, jd_reqs, pi)
     scores = scores_from_raw(raw)
     issues = generate_fix_suggestions(sections, jd_reqs, warnings=[])
+    if body.mode in ("cover_letter", "linkedin"):
+        issues = [i for i in issues if i.issue_type not in ("missing_section", "parse_warning")]
     sorted_issues = sorted(issues, key=lambda x: x.impact_score, reverse=True)
 
     text_lower = body.text.lower()

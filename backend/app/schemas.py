@@ -173,6 +173,9 @@ class RescanRequest(BaseModel):
     # Carried from the original upload so the composite stays comparable —
     # text edits can't change how the original FILE parses.
     parse_integrity: float = 1.0
+    # "resume" (default) | "cover_letter" | "linkedin" — non-resume modes treat
+    # the text as one block (no section parsing) and drop section/parse issues.
+    mode: str = "resume"
 
 
 class RescanResult(BaseModel):

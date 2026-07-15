@@ -218,12 +218,12 @@ export default function WorkspacePage() {
   }
 
   // Live edit-and-rescore (gap #5): re-score edited text, ephemeral, no save.
-  async function rescanText(text: string, parseIntegrity: number): Promise<RescanResult> {
+  async function rescanText(text: string, parseIntegrity: number, mode: string = "resume"): Promise<RescanResult> {
     const token = await getToken()
     const res = await fetch(`${API_BASE}/api/rescan`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ text, jd_text: jdText, parse_integrity: parseIntegrity }),
+      body: JSON.stringify({ text, jd_text: jdText, parse_integrity: parseIntegrity, mode }),
     })
     if (!res.ok) throw new Error("Rescan failed")
     return res.json() as Promise<RescanResult>

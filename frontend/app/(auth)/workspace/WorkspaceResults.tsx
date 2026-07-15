@@ -72,7 +72,7 @@ interface Props {
   error: string | null
   onLoadScan: (id: string) => void
   onLoadScanForCompare: (id: string) => void
-  onRescan: (text: string, parseIntegrity: number) => Promise<RescanResult>
+  onRescan: (text: string, parseIntegrity: number, mode?: string) => Promise<RescanResult>
 }
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -167,6 +167,12 @@ export function WorkspaceResults({
   const [liveResult, setLiveResult]           = useState<RescanResult | null>(null)
   const [liveBusy, setLiveBusy]               = useState(false)
   const rescanTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Cover letter / LinkedIn text check (gap #7)
+  const [showLetter, setShowLetter]           = useState(false)
+  const [letterText, setLetterText]           = useState("")
+  const [letterMode, setLetterMode]           = useState<"cover_letter" | "linkedin">("cover_letter")
+  const [letterResult, setLetterResult]       = useState<RescanResult | null>(null)
+  const [letterBusy, setLetterBusy]           = useState(false)
   const [showAtsPreview, setShowAtsPreview]   = useState(false)
   const [showHistory, setShowHistory]         = useState(false)
   const [showSimulation, setShowSimulation]   = useState(false)
@@ -981,6 +987,71 @@ export function WorkspaceResults({
                         </span>
                       )}
                     </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* Cover letter / LinkedIn check (gap #7) — signed-in, needs JD */}
+            {!limited && !isMock && jdText.trim() && (
+              <Card isMobile={isMobile}>
+                <button
+                  onClick={() => setShowLetter(v => !v)}
+                  style={{ width: "100%", padding: isMobile ? "0.875rem 1rem" : "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  <CollapsibleTitle>Cover letter & LinkedIn check</CollapsibleTitle>
+                  <span style={{ fontFamily: MONO, fontSize: "0.62rem", color: T3 }}>{showLetter ? "▴" : "▾"}</span>
+                </button>
+                {showLetter && (
+                  <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                      {(["cover_letter", "linkedin"] as const).map(m => (
+                        <button key={m} onClick={() => { setLetterMode(m); setLetterResult(null) }}
+                          style={{ fontFamily: FA, fontSize: "0.72rem", padding: "0.3rem 0.8rem", borderRadius: "100px", cursor: "pointer",
+                            background: letterMode === m ? T1 : "transparent", color: letterMode === m ? SURF : T2, border: `1px solid ${letterMode === m ? T1 : BD2}` }}>
+                          {m === "cover_letter" ? "Cover letter" : "LinkedIn About"}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={letterText}
+                      onChange={e => setLetterText(e.target.value)}
+                      placeholder={letterMode === "cover_letter" ? "Paste your cover letter…" : "Paste your LinkedIn About / headline text…"}
+                      spellCheck={false}
+                      style={{ width: "100%", minHeight: "180px", resize: "vertical", fontFamily: FA, fontSize: "0.8rem", lineHeight: 1.6, color: T1, background: BG, boxShadow: SUNK, border: `1px solid ${BD2}`, borderRadius: "6px", padding: "1rem", outline: "none" }}
+                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+                      <button
+                        disabled={!letterText.trim() || letterBusy}
+                        onClick={() => {
+                          setLetterBusy(true)
+                          onRescan(letterText, 1.0, letterMode)
+                            .then(setLetterResult).catch(() => {}).finally(() => setLetterBusy(false))
+                        }}
+                        style={{ fontFamily: FA, fontSize: "0.78rem", fontWeight: 600, padding: "0.45rem 1.2rem", borderRadius: "100px", border: "none", cursor: letterText.trim() && !letterBusy ? "pointer" : "default", background: T1, color: SURF, opacity: letterText.trim() && !letterBusy ? 1 : 0.4 }}
+                      >
+                        {letterBusy ? "Checking…" : "Check against this JD"}
+                      </button>
+                      {letterResult && (
+                        <span style={{ fontFamily: MONO, fontSize: "0.7rem", color: T1, fontWeight: 600 }}>
+                          keywords {letterResult.matched_keywords.length}/{letterResult.matched_keywords.length + letterResult.missing_keywords.length} · {letterResult.total_issues} issue{letterResult.total_issues === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
+                    {letterResult && (
+                      <div style={{ marginTop: "0.75rem" }}>
+                        {letterResult.missing_keywords.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.5rem" }}>
+                            {letterResult.missing_keywords.slice(0, 10).map(k => (
+                              <span key={k} style={{ fontFamily: MONO, fontSize: "0.65rem", color: T3, padding: "0.1rem 0.4rem", border: `1px dashed ${BD2}`, borderRadius: "2px", textDecoration: "line-through" }}>{k}</span>
+                            ))}
+                          </div>
+                        )}
+                        {letterResult.issues.slice(0, 3).map((iss, i) => (
+                          <div key={i} style={{ fontFamily: FA, fontSize: "0.75rem", color: T2, lineHeight: 1.6 }}>• {iss.title}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>

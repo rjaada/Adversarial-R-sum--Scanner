@@ -59,6 +59,11 @@ _SOFT_SKILLS: frozenset[str] = frozenset({
     "teamwork", "adaptability", "ownership", "presentation",
     "negotiation", "decision making", "decision-making", "prioritization",
     "conflict resolution", "empathy", "coaching",
+    # French (gap #8)
+    "travail d'équipe", "esprit d'équipe", "gestion de projet",
+    "gestion du temps", "autonomie", "rigueur", "adaptabilité",
+    "prise de décision", "résolution de problèmes", "encadrement",
+    "sens de l'organisation",
 })
 
 # Buzzwords/filler — detected so the UI can tell users these are noise,
@@ -68,6 +73,9 @@ _BUZZWORDS: frozenset[str] = frozenset({
     "dynamic", "passionate", "results-driven", "detail-oriented",
     "go-getter", "wear many hats", "hit the ground running", "synergy",
     "proactive", "motivated", "hard-working", "hardworking",
+    # French
+    "dynamique", "motivé", "motivée", "polyvalent", "polyvalente",
+    "esprit start-up", "force de proposition",
 })
 
 # "go" the language — only treat as a keyword when JD uses it in a technical sense.
@@ -88,10 +96,20 @@ EXPERIENCE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# French: "5 ans d'expérience", "3 années d'expérience", "2+ ans d'exp"
+EXPERIENCE_PATTERN_FR = re.compile(
+    r"(\d+)(?:\+|\s+plus)?\s*(?:ans?|années?)\s+d['']\s*exp[ée]riences?",
+    re.IGNORECASE,
+)
+
 REQUIREMENT_SIGNALS = [
     "required", "must have", "must-have", "you will", "you'll", "we need",
     "looking for", "ideal candidate", "requirements", "qualifications",
     "minimum", "preferred", "nice to have",
+    # French
+    "requis", "exigé", "exigée", "obligatoire", "souhaité", "souhaitée",
+    "profil recherché", "compétences requises", "vous avez", "vous êtes",
+    "maîtrise", "maitrise", "nous recherchons",
 ]
 
 
@@ -121,7 +139,7 @@ def extract_jd_requirements(jd_text: str) -> dict:
     categories.update({s: "soft" for s in soft})
     categories.update({b: "buzzword" for b in buzz})
 
-    years_matches = EXPERIENCE_PATTERN.findall(jd_text)
+    years_matches = EXPERIENCE_PATTERN.findall(jd_text) + EXPERIENCE_PATTERN_FR.findall(jd_text)
     min_years = max((int(y) for y in years_matches), default=None)
 
     requirement_lines = [
