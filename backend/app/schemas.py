@@ -161,6 +161,9 @@ class ScanResult(BaseModel):
     keyword_frequencies: dict[str, dict[str, int]] = {}
     # Named formatting checklist (gap #2): {check, status: pass|fail|warn, detail}
     formatting_audit: list[dict] = []
+    # keyword -> the synonym/alias that actually matched, when it differs
+    # (gap #6 — shown as ✓ postgresql ≈ "postgres"; never a fake exact hit).
+    matched_via: dict[str, str] = {}
 
 
 class RescanRequest(BaseModel):
@@ -180,6 +183,7 @@ class RescanResult(BaseModel):
     matched_keywords: list[str]
     keyword_categories: dict[str, str] = {}
     keyword_frequencies: dict[str, dict[str, int]] = {}
+    matched_via: dict[str, str] = {}
     top_fixes: list[RankedFix] = []
     simulation: ProfileSimulationResult | None = None
     # Gating metadata. `gated` is True when the response has been reduced for

@@ -28,7 +28,7 @@ from app.services.persistence import (
     upsert_user,
 )
 from app.services.rewrite_suggestions import generate_fix_suggestions
-from app.services.scoring import extract_raw_signals, scores_from_raw
+from app.services.scoring import extract_raw_signals, scores_from_raw, match_keywords_display
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -103,6 +103,7 @@ def _gate_for_anonymous(result: ScanResult) -> ScanResult:
         # Frequencies correlate with résumé content — strip. The formatting
         # audit is kept: it's the anonymous teaser's strongest hook.
         "keyword_frequencies": {},
+        "matched_via": {},
         "top_fixes": [],
         "simulation": None,
         "gated": True,
@@ -160,13 +161,16 @@ async def scan_resume(
         top_fixes = rank_fixes(sorted_issues, raw)
 
         # Hard skills drive scoring; soft skills are display-only additions.
+        # Synonym + word-boundary aware (gap #6): 'postgres' counts for
+        # postgresql (shown as ≈), 'java' no longer matches inside 'javascript'.
         resume_lower = extracted["text"].lower()
         jd_lower = jd_text.lower()
         display_kws = jd_reqs.get("required_keywords", []) + jd_reqs.get("soft_skills", [])
-        matched_kw = [k for k in display_kws if k.lower() in resume_lower]
-        missing_kw = [k for k in display_kws if k.lower() not in resume_lower]
+        matched_kw, missing_kw, matched_via = match_keywords_display(display_kws, resume_lower)
         # Occurrence counts (frequency, not just presence — display only).
-        kw_freq = {k: {"jd": jd_lower.count(k.lower()), "resume": resume_lower.count(k.lower())}
+        # For alias matches, count the alias that actually appears.
+        kw_freq = {k: {"jd": jd_lower.count(k.lower()),
+                       "resume": resume_lower.count(matched_via.get(k, k.lower()))}
                    for k in display_kws}
 
         # Formatting audit + a section-headings check (needs parsed sections).
@@ -192,6 +196,7 @@ async def scan_resume(
             matched_keywords=matched_kw,
             keyword_categories=jd_reqs.get("keyword_categories", {}),
             keyword_frequencies=kw_freq,
+            matched_via=matched_via,
             formatting_audit=audit,
             top_fixes=top_fixes,
             simulation=simulation,
@@ -258,9 +263,9 @@ async def rescan_text(
     text_lower = body.text.lower()
     jd_lower = body.jd_text.lower()
     display_kws = jd_reqs.get("required_keywords", []) + jd_reqs.get("soft_skills", [])
-    matched = [k for k in display_kws if k.lower() in text_lower]
-    missing = [k for k in display_kws if k.lower() not in text_lower]
-    freq = {k: {"jd": jd_lower.count(k.lower()), "resume": text_lower.count(k.lower())}
+    matched, missing, matched_via = match_keywords_display(display_kws, text_lower)
+    freq = {k: {"jd": jd_lower.count(k.lower()),
+                "resume": text_lower.count(matched_via.get(k, k.lower()))}
             for k in display_kws}
 
     return RescanResult(
@@ -271,6 +276,7 @@ async def rescan_text(
         matched_keywords=matched,
         keyword_categories=jd_reqs.get("keyword_categories", {}),
         keyword_frequencies=freq,
+        matched_via=matched_via,
     )
 
 

@@ -136,7 +136,42 @@ def generate_fix_suggestions(
     issues += _check_missing_sections(resume_sections)
     issues += _check_quantification(resume_sections)
     issues += _check_summary_relevance(resume_sections, jd_requirements)
+    issues += _check_keyword_stuffing(resume_sections, jd_requirements)
     return issues
+
+
+def _check_keyword_stuffing(resume_sections: dict, jd_requirements: dict) -> list[Issue]:
+    """
+    Gap #6: modern semantic ATS penalise unnatural keyword repetition as a
+    manipulation signal. Flag JD keywords repeated ≥6 times in the résumé.
+    """
+    text = " ".join(resume_sections.values()).lower()
+    stuffed = []
+    for kw in jd_requirements.get("required_keywords", []):
+        n = text.count(kw.lower())
+        if n >= 6:
+            stuffed.append(f"{kw} ({n}×)")
+    if not stuffed:
+        return []
+    return [Issue(
+        issue_type="keyword_stuffing",
+        severity="medium",
+        title="Possible keyword stuffing: " + ", ".join(stuffed[:4]),
+        description=(
+            "Modern ATS use semantic matching and treat unnatural repetition of the "
+            "same term as a manipulation signal — it can lower your score with those "
+            "systems and reads badly to recruiters."
+        ),
+        evidence="",
+        fix_pattern="",
+        rewrite_starter="",
+        source_excerpt="",
+        suggested_fix=(
+            "Keep 2–3 natural mentions per key term and vary the surrounding language "
+            "(related tools, outcomes) instead of repeating the keyword."
+        ),
+        impact_score=_impact("medium"),
+    )]
 
 
 # Maps a substring of the extractor's warning text → (short label, actionable fix).

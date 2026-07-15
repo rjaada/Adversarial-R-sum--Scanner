@@ -83,6 +83,8 @@ export interface ScanResult {
   keyword_frequencies?: Record<string, { jd: number; resume: number }>
   /** named formatting checklist */
   formatting_audit?: { check: string; status: "pass" | "fail" | "warn"; detail: string }[]
+  /** keyword -> alias that actually matched (synonym-aware matching) */
+  matched_via?: Record<string, string>
   top_fixes: RankedFix[]
   simulation?: ProfileSimulation
   /** True when the backend returned a reduced (unauthenticated) teaser. */
@@ -100,6 +102,7 @@ export interface RescanResult {
   matched_keywords: string[]
   keyword_categories?: Record<string, string>
   keyword_frequencies?: Record<string, { jd: number; resume: number }>
+  matched_via?: Record<string, string>
 }
 
 export interface ScanSummary {

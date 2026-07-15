@@ -172,6 +172,7 @@ export const MOCK_SCAN: ScanResult = {
     communication: "soft", "stakeholder management": "soft",
     "fast-paced": "buzzword", "self-starter": "buzzword",
   },
+  matched_via: { postgresql: "postgres" },
   keyword_frequencies: {
     kubernetes: { jd: 3, resume: 0 }, aws: { jd: 2, resume: 0 },
     terraform: { jd: 1, resume: 0 }, go: { jd: 1, resume: 0 },

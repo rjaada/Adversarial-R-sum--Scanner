@@ -1041,19 +1041,22 @@ export function WorkspaceResults({
                   // Frequency: how hard the JD leans on a missing keyword.
                   const freq = display.keyword_frequencies ?? {}
                   const nx = (k: string) => { const n = freq[k]?.jd ?? 0; return n >= 2 ? ` ×${n}` : "" }
+                  // Synonym-aware matches shown honestly: ✓ postgresql ≈ "postgres"
+                  const via = display.matched_via ?? {}
+                  const label2 = (k: string) => via[k] ? <>✓ {k} <span style={{ color: T2 }}>≈ “{via[k]}”</span></> : <>✓ {k}</>
                   return (
                     <div style={{ padding: isMobile ? "0 1rem 1rem" : "0 2rem 1.5rem" }}>
                       {(hard.m.length > 0 || hard.x.length > 0) && <>
                         {label(`Hard skills — ${hard.m.length}/${hard.m.length + hard.x.length} matched`)}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                          {hard.m.map(k => <span key={k} style={chipM}>✓ {k}</span>)}
+                          {hard.m.map(k => <span key={k} style={chipM}>{label2(k)}</span>)}
                           {hard.x.map(k => <span key={k} style={chipX} title={freq[k]?.jd ? `Mentioned ${freq[k].jd}× in the job description` : undefined}>{k}{nx(k)}</span>)}
                         </div>
                       </>}
                       {(soft.m.length > 0 || soft.x.length > 0) && <>
                         {label(`Soft skills — ${soft.m.length}/${soft.m.length + soft.x.length} matched`)}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                          {soft.m.map(k => <span key={k} style={chipM}>✓ {k}</span>)}
+                          {soft.m.map(k => <span key={k} style={chipM}>{label2(k)}</span>)}
                           {soft.x.map(k => <span key={k} style={chipX} title={freq[k]?.jd ? `Mentioned ${freq[k].jd}× in the job description` : undefined}>{k}{nx(k)}</span>)}
                         </div>
                       </>}

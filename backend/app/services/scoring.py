@@ -26,7 +26,13 @@ EXPECTED_SECTIONS = {"summary", "experience", "education", "skills"}
 # Only industry-standard exact-equivalents — not broad semantic cousins.
 _SYNONYMS: dict[str, set[str]] = {
     "go":                            {"go", "golang"},
-    "postgresql":                    {"postgresql", "postgres"},
+    "postgresql":                    {"postgresql", "postgres", "psql"},
+    "aws":                           {"aws", "amazon web services"},
+    "gcp":                           {"gcp", "google cloud", "google cloud platform"},
+    "azure":                         {"azure", "microsoft azure"},
+    "rest api":                      {"rest api", "restful api", "restful"},
+    "elasticsearch":                 {"elasticsearch", "elastic search"},
+    "scikit-learn":                  {"scikit-learn", "sklearn"},
     "javascript":                    {"javascript", "js"},
     "typescript":                    {"typescript", "ts"},
     "kubernetes":                    {"kubernetes", "k8s"},
@@ -83,25 +89,65 @@ class RawSignals:
     prose_only_kws: set[str] = field(default_factory=set)
 
 
+def _match_one(kw: str, resume_text: str, resume_words: set[str]) -> str | None:
+    """Return the synonym that matched (possibly the keyword itself), or None."""
+    synonyms = _SYNONYMS.get(kw, {kw})
+    if " " in kw or "/" in kw:
+        # Phrase keywords: long synonyms use substring match; short abbreviations
+        # (≤4 stripped chars, e.g. "ml", "nlp") use word-set to avoid false substring hits.
+        for syn in sorted(synonyms, key=lambda s: s != kw):  # prefer exact term first
+            stripped = syn.replace(" ", "").replace("/", "")
+            if len(stripped) > 4:
+                if syn in resume_text:
+                    return syn
+            elif syn in resume_words:
+                return syn
+        return None
+    hit = synonyms & resume_words
+    if not hit:
+        return None
+    return kw if kw in hit else sorted(hit)[0]
+
+
+def _tokenize(text: str) -> set[str]:
+    """Word set for matching. Trailing sentence punctuation is stripped so
+    'k8s.' or 'communication,' still match (c#/.net/node.js keep their chars)."""
+    words = set(re.findall(r"[\w\.+#/]+", text))
+    words |= {w.rstrip(".,;:") for w in words}
+    return words
+
+
 def _match_keywords(required: set[str], resume_text: str) -> tuple[set[str], set[str]]:
     """Match required keywords against resume text, handling phrases and synonyms."""
-    resume_words = set(re.findall(r"[\w\.+#/]+", resume_text))
-    matched: set[str] = set()
-
-    for kw in required:
-        synonyms = _SYNONYMS.get(kw, {kw})
-        if " " in kw or "/" in kw:
-            # Phrase keywords: long synonyms use substring match; short abbreviations
-            # (≤4 stripped chars, e.g. "ml", "nlp") use word-set to avoid false substring hits.
-            long_syns = {s for s in synonyms if len(s.replace(" ", "").replace("/", "")) > 4}
-            short_syns = {s for s in synonyms if len(s.replace(" ", "").replace("/", "")) <= 4}
-            if any(syn in resume_text for syn in long_syns) or (short_syns & resume_words):
-                matched.add(kw)
-        else:
-            if synonyms & resume_words:
-                matched.add(kw)
-
+    resume_words = _tokenize(resume_text)
+    matched = {kw for kw in required if _match_one(kw, resume_text, resume_words) is not None}
     return matched, required - matched
+
+
+def match_keywords_display(
+    keywords: list[str], resume_text: str,
+) -> tuple[list[str], list[str], dict[str, str]]:
+    """
+    Word-boundary + synonym-aware matching for DISPLAY lists (gap #6 — the
+    previous naive substring check missed aliases like 'postgres' and
+    false-matched 'java' inside 'javascript'). Returns (matched, missing,
+    matched_via) where matched_via maps keyword -> the alias that hit, only
+    when it differs from the keyword itself.
+    """
+    text = resume_text.lower()
+    words = _tokenize(text)
+    matched: list[str] = []
+    missing: list[str] = []
+    via: dict[str, str] = {}
+    for kw in keywords:
+        hit = _match_one(kw.lower(), text, words)
+        if hit is None:
+            missing.append(kw)
+        else:
+            matched.append(kw)
+            if hit != kw.lower():
+                via[kw] = hit
+    return matched, missing, via
 
 
 def _adjacent_skill_score(required: set[str], resume_text: str) -> float:
