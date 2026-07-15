@@ -164,6 +164,14 @@ class ScanResult(BaseModel):
     # keyword -> the synonym/alias that actually matched, when it differs
     # (gap #6 — shown as ✓ postgresql ≈ "postgres"; never a fake exact hit).
     matched_via: dict[str, str] = {}
+    top_fixes: list[RankedFix] = []
+    simulation: ProfileSimulationResult | None = None
+    # Gating metadata. `gated` is True when the response has been reduced for
+    # an unauthenticated caller (issues truncated, preview/simulation/keyword
+    # gaps stripped server-side). `total_issues` is the true issue count
+    # before truncation, so the UI can show an accurate "N more — sign in".
+    gated: bool = False
+    total_issues: int = 0
 
 
 class RescanRequest(BaseModel):
@@ -187,14 +195,6 @@ class RescanResult(BaseModel):
     keyword_categories: dict[str, str] = {}
     keyword_frequencies: dict[str, dict[str, int]] = {}
     matched_via: dict[str, str] = {}
-    top_fixes: list[RankedFix] = []
-    simulation: ProfileSimulationResult | None = None
-    # Gating metadata. `gated` is True when the response has been reduced for
-    # an unauthenticated caller (issues truncated, preview/simulation/keyword
-    # gaps stripped server-side). `total_issues` is the true issue count
-    # before truncation, so the UI can show an accurate "N more — sign in".
-    gated: bool = False
-    total_issues: int = 0
 
 
 # ---------------------------------------------------------------------------
