@@ -5,6 +5,17 @@ and a stripped ATS-preview string (what a naive ATS parser would see).
 from __future__ import annotations
 import io
 import re
+import zipfile
+
+# A résumé PDF/DOCX should never inflate to this much text/content. Bounds a
+# zip-bomb or pathological file from OOM-ing the single-worker replica
+# (security audit). 40 MB decompressed and 50 pages are far above any real CV.
+_MAX_DECOMPRESSED_BYTES = 40 * 1024 * 1024
+_MAX_PAGES = 50
+
+
+class ResumeParseError(ValueError):
+    """Raised when a file is rejected before/while parsing (bomb, corrupt)."""
 
 
 def extract_resume_text(file_bytes: bytes, filename: str) -> dict:
@@ -72,6 +83,8 @@ def _extract_pdf(file_bytes: bytes) -> dict:
 
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         page_count = len(pdf.pages)
+        if page_count > _MAX_PAGES:
+            raise ResumeParseError(f"PDF has too many pages ({page_count}).")
         for page in pdf.pages:
             text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
             pages_text.append(text)
@@ -116,10 +129,23 @@ def _extract_pdf(file_bytes: bytes) -> dict:
     }
 
 
+def _guard_docx_bomb(file_bytes: bytes) -> None:
+    """Reject a DOCX whose entries decompress far beyond any real résumé,
+    before python-docx reads document.xml into memory (zip-bomb defense)."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            total = sum(info.file_size for info in zf.infolist())
+    except zipfile.BadZipFile:
+        raise ResumeParseError("File is not a valid DOCX.")
+    if total > _MAX_DECOMPRESSED_BYTES:
+        raise ResumeParseError("DOCX contents are too large.")
+
+
 def _extract_docx(file_bytes: bytes) -> dict:
     from docx import Document
 
     warnings: list[str] = []
+    _guard_docx_bomb(file_bytes)
     doc = Document(io.BytesIO(file_bytes))
     paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
     full_text = "\n".join(paragraphs)

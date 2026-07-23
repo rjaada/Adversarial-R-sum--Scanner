@@ -252,9 +252,11 @@ export default function WorkspacePage() {
     track("rewrite_requested", { issue_type: issue.issue_type })
     setRewriteLoading(prev => ({ ...prev, [issueIndex]: true }))
     try {
+      // /api/rewrite is signed-in only (paid LLM path) — carry the token.
+      const token = await getToken()
       const res = await fetch(`${API_BASE}/api/rewrite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           issue_type:      issue.issue_type,
           original_text:   issue.source_excerpt || issue.rewrite_starter || "",

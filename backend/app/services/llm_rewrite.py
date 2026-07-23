@@ -299,7 +299,7 @@ async def generate_rewrite_variants(
         "max_tokens": 400,
     }
 
-    log.debug("rewrite request | issue_type=%s original=%r", issue_type, original_text[:80])
+    log.debug("rewrite request | issue_type=%s original_len=%d", issue_type, len(original_text))
 
     headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
 

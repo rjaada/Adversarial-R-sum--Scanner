@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.auth import get_current_user_id
 from app.config import settings
 from app.schemas import LLMStatusResponse, RewriteRequest, RewriteResponse
 from app.services.llm_rewrite import (
@@ -6,6 +7,7 @@ from app.services.llm_rewrite import (
     generate_rewrite_variants,
     is_llm_configured,
 )
+from app.services.rate_limit import scan_rate_limit
 
 router = APIRouter()
 
@@ -23,7 +25,13 @@ async def rewrite_status():
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
-async def rewrite_issue(req: RewriteRequest):
+async def rewrite_issue(
+    req: RewriteRequest,
+    # Signed-in only + rate-limited: /rewrite triggers paid outbound LLM calls,
+    # so it gets the same abuse guards as /scan (security audit).
+    user_id: str = Depends(get_current_user_id),
+    _rate_limit: None = Depends(scan_rate_limit),
+):
     if not is_llm_configured():
         return RewriteResponse(variants=[], available=False)
 

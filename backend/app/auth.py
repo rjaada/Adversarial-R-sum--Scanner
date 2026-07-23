@@ -24,32 +24,41 @@ from app.config import settings
 
 log = logging.getLogger(__name__)
 
-# Cache: one entry ("jwks"), TTL = 3600 s
+# Cache: one entry ("client"), TTL = 3600 s. On expiry a fresh client is built;
+# `_last_good_client` survives the TTL and keeps its cached keys, so a transient
+# JWKS-fetch failure falls back to still-valid keys instead of 503-ing all auth.
 _jwks_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
-_last_good_keys: list[dict] | None = None
+_last_good_client: PyJWKClient | None = None
 
 
 def _get_jwks_client() -> PyJWKClient:
-    """Return a PyJWKClient, reading JWKS from cache or network."""
-    global _last_good_keys
-
+    """Return a PyJWKClient (cached for the TTL, else freshly built)."""
     cached = _jwks_cache.get("client")
     if cached is not None:
         return cached
-
     if not settings.clerk_jwks_url:
         raise HTTPException(503, "CLERK_JWKS_URL not configured")
+    client = PyJWKClient(settings.clerk_jwks_url, cache_keys=True)
+    _jwks_cache["client"] = client
+    return client
 
+
+def _signing_key(token: str):
+    """Resolve the signing key, falling back to the last client whose keys
+    worked if a fresh JWKS fetch fails transiently."""
+    global _last_good_client
+    client = _get_jwks_client()
     try:
-        client = PyJWKClient(settings.clerk_jwks_url, cache_keys=True)
-        _jwks_cache["client"] = client
-        return client
-    except Exception as exc:
-        log.warning("JWKS refresh failed: %s", exc)
-        # Try to return a stale client if we have one
-        if "client_stale" in _jwks_cache:
-            return _jwks_cache["client_stale"]  # type: ignore[return-value]
-        raise HTTPException(503, "Authentication service temporarily unavailable")
+        key = client.get_signing_key_from_jwt(token)
+        _last_good_client = client
+        return key
+    except PyJWKClientError as exc:
+        if _last_good_client is not None and _last_good_client is not client:
+            try:
+                return _last_good_client.get_signing_key_from_jwt(token)
+            except PyJWKClientError:
+                pass
+        raise exc
 
 
 def _expected_issuer() -> Optional[str]:
@@ -61,10 +70,9 @@ def _expected_issuer() -> Optional[str]:
 
 def _verify_token(token: str) -> str:
     """Verify a Clerk JWT and return the user_id (sub claim)."""
-    client = _get_jwks_client()
     issuer = _expected_issuer()
     try:
-        signing_key = client.get_signing_key_from_jwt(token)
+        signing_key = _signing_key(token)
         # Clerk session tokens carry no `aud`; identity is bound by the
         # instance-scoped signing key + `iss`, and (optionally) `azp` against an
         # origin allowlist. Verify issuer and require exp/sub; audience stays off

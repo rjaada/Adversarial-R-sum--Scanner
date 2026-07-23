@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,7 +9,13 @@ from app.config import settings
 from app.db import init_pool, close_pool
 from app.routes import scan, rewrite, report, analytics, health, account, feedback
 
-logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
+# DEBUG only in development — at DEBUG the app logs résumé-derived content, which
+# must never reach production log aggregation (security audit). Override with
+# LOG_LEVEL if needed.
+_default_level = "DEBUG" if settings.environment.lower() == "development" else "INFO"
+_level = os.getenv("LOG_LEVEL", _default_level).upper()
+logging.basicConfig(level=getattr(logging, _level, logging.INFO),
+                    format="%(name)s %(levelname)s %(message)s")
 
 
 @asynccontextmanager

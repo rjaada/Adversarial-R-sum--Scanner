@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, EmailStr
 from typing import Literal, Union, Optional
 
 EventPropertyValue = Union[str, int, float, bool, None]
@@ -81,13 +81,15 @@ class LLMStatusResponse(BaseModel):
 
 
 class RewriteRequest(BaseModel):
-    issue_type: str
-    original_text: str
-    evidence: str = ""
-    fix_pattern: str = ""
-    rewrite_starter: str = ""
-    jd_keywords: list[str] = []
-    count: int = 3
+    # Bounds cap the payload that reaches the (paid, outbound) LLM so a single
+    # request can't drive unbounded token spend or memory use (security audit).
+    issue_type: str = Field(max_length=100)
+    original_text: str = Field(max_length=8000)
+    evidence: str = Field(default="", max_length=8000)
+    fix_pattern: str = Field(default="", max_length=2000)
+    rewrite_starter: str = Field(default="", max_length=2000)
+    jd_keywords: list[str] = Field(default=[], max_length=100)
+    count: int = Field(default=3, ge=1, le=5)
 
 
 class RewriteResponse(BaseModel):

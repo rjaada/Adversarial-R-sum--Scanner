@@ -36,6 +36,9 @@ router = APIRouter()
 # Upload guardrails — matches the "MAX 10 MB" advertised in the upload UI.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 _READ_CHUNK = 1024 * 1024            # 1 MB
+# Cap the pasted JD so a huge paste can't drive memory/regex DoS (security
+# audit). 50k chars ~ a very long posting; real JDs are far shorter.
+MAX_JD_CHARS = 50_000
 
 # Magic-byte signatures so a renamed file can't slip past extension checks.
 _PDF_MAGIC = b"%PDF"
@@ -119,6 +122,8 @@ async def scan_resume(
     _rate_limit: None = Depends(scan_rate_limit),
 ):
     try:
+        if len(jd_text) > MAX_JD_CHARS:
+            raise HTTPException(413, "Job description is too long.")
         if not file.filename:
             raise HTTPException(400, "No file provided")
         filename = file.filename.lower()
